@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { TreePine, Bath, Bike, Briefcase, Users, ChevronRight } from "lucide-react";
+import { TreePine, Bath, Bike, Briefcase, Users, ChevronRight, Droplets } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ export default function LandingPage() {
   const [staffName, setStaffName] = useState("");
   const [staffRole, setStaffRole] = useState<UserRole>("ADMIN");
 
-  const handleGuestAction = (type: "bath" | "quads") => {
+  const handleGuestAction = (type: "bath" | "quads" | "spa") => {
     setLocation(`/guest/${type}`);
   };
 
@@ -78,6 +78,27 @@ export default function LandingPage() {
                     <h3 className="font-semibold">Русская баня</h3>
                     <p className="text-sm text-muted-foreground">
                       Традиционная парная с возможностью заказа купели
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="hover-elevate cursor-pointer"
+              onClick={() => handleGuestAction("spa")}
+              data-testid="card-book-spa"
+            >
+              <CardContent className="p-5">
+                <div className="flex items-center gap-4">
+                  <div className="rounded-full bg-primary/10 p-3">
+                    <Droplets className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">СПА-комплекс</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Баня, терраса, купель - отдых на любой вкус
                     </p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
