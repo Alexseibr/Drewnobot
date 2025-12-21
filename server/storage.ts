@@ -209,6 +209,16 @@ export class MemStorage implements IStorage {
       isActive: true,
     };
     this.users.set(demoUser.id, demoUser);
+
+    // Real owner
+    const realOwner: User = {
+      id: randomUUID(),
+      telegramId: "374243315",
+      name: "Владелец",
+      role: "OWNER",
+      isActive: true,
+    };
+    this.users.set(realOwner.id, realOwner);
   }
 
   async getUser(id: string): Promise<User | undefined> {
