@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -85,6 +86,7 @@ const ADDITIONAL_SERVICES = {
 };
 
 export default function SpaBookingPage() {
+  const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>("select");
   const { toast } = useToast();
   const { user } = useAuth();
@@ -278,13 +280,10 @@ export default function SpaBookingPage() {
             </p>
             <Button
               className="mt-8 w-full max-w-xs"
-              onClick={() => {
-                bookingForm.reset({ bookingType: "bath_only", spaResource: "", startTime: "", durationHours: 3, guestsCount: 2, grill: false, charcoal: false, fullName: user?.name || "", phone: "", comment: "" });
-                setStep("select");
-              }}
-              data-testid="button-new-booking"
+              onClick={() => setLocation("/")}
+              data-testid="button-back-home"
             >
-              Новое бронирование
+              На главную
             </Button>
           </div>
         </PageContainer>

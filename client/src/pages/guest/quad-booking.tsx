@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -78,6 +79,7 @@ const ROUTE_INFO = {
 };
 
 export default function QuadBookingPage() {
+  const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>("date");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | undefined>();
@@ -231,10 +233,10 @@ export default function QuadBookingPage() {
             </div>
             <Button
               className="mt-8 w-full max-w-xs"
-              onClick={handleReset}
-              data-testid="button-new-booking"
+              onClick={() => setLocation("/")}
+              data-testid="button-back-home"
             >
-              Новое бронирование
+              На главную
             </Button>
           </div>
         </PageContainer>

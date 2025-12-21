@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,6 +57,7 @@ const PRICES = {
 };
 
 export default function BathBookingPage() {
+  const [, setLocation] = useLocation();
   const [step, setStep] = useState<"select" | "details" | "confirm" | "success">("select");
   const { toast } = useToast();
 
@@ -189,13 +191,10 @@ export default function BathBookingPage() {
             </div>
             <Button 
               className="mt-8 w-full max-w-xs" 
-              onClick={() => {
-                form.reset();
-                setStep("select");
-              }}
-              data-testid="button-new-booking"
+              onClick={() => setLocation("/")}
+              data-testid="button-back-home"
             >
-              Новое бронирование
+              На главную
             </Button>
           </div>
         </PageContainer>
