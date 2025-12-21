@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { createHash } from "crypto";
 import { storage } from "./storage";
-import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole } from "@shared/schema";
+import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole, SpaBooking } from "@shared/schema";
 import { validateInitData, generateSessionToken, getSessionExpiresAt } from "./telegram-auth";
 import { handleTelegramUpdate, setupTelegramWebhook } from "./telegram-bot";
 
@@ -997,6 +997,71 @@ export async function registerRoutes(
     }
   });
 
+  // ============ INCASATION (Owner) ============
+  app.get("/api/owner/incasation/preview", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const preview = await storage.getIncasationPreview();
+      res.json(preview);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get incasation preview" });
+    }
+  });
+
+  app.post("/api/owner/incasation/perform", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const preview = await storage.getIncasationPreview();
+      
+      // Get all shifts since last incasation
+      const lastIncasation = await storage.getLastIncasation();
+      const allShifts = await storage.getCashShifts();
+      const shiftsToClose = allShifts.filter(s => 
+        !lastIncasation || s.openedAt > lastIncasation.performedAt
+      );
+      
+      // Close all open shifts
+      for (const shift of shiftsToClose) {
+        if (shift.isOpen) {
+          await storage.updateCashShift(shift.id, {
+            isOpen: false,
+            closedAt: new Date().toISOString(),
+            visibleToAdmin: false,
+          });
+        }
+      }
+      
+      // Create incasation record
+      const incasation = await storage.createIncasation({
+        performedAt: new Date().toISOString(),
+        performedBy: user.id,
+        periodStart: preview.periodStart,
+        periodEnd: preview.periodEnd,
+        summary: {
+          totalRevenue: preview.totalRevenue,
+          cashRevenue: preview.cashRevenue,
+          eripRevenue: preview.eripRevenue,
+          totalExpenses: preview.totalExpenses,
+          cashOnHand: preview.cashOnHand,
+          expensesByCategory: preview.expensesByCategory,
+        },
+        shiftsIncluded: shiftsToClose.map(s => s.id),
+      });
+      
+      res.json(incasation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to perform incasation" });
+    }
+  });
+
+  app.get("/api/owner/incasations", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const incasations = await storage.getIncasations();
+      res.json(incasations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch incasations" });
+    }
+  });
+
   // ============ WORK LOGS ============
   app.get("/api/owner/worklogs", async (req, res) => {
     try {
@@ -1242,8 +1307,8 @@ export async function registerRoutes(
       // Limit pending bookings per phone to prevent abuse
       if (!isVerified && parsed.data.customer.phone) {
         const phone = parsed.data.customer.phone;
-        const allBookings = await storage.getAllSpaBookings();
-        const pendingByPhone = allBookings.filter(b => 
+        const allBookings = await storage.getSpaBookings();
+        const pendingByPhone = allBookings.filter((b: SpaBooking) => 
           b.customer.phone === phone && 
           ["pending", "awaiting_prepayment"].includes(b.status)
         );

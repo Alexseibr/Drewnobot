@@ -245,6 +245,29 @@ export type CashTransaction = z.infer<typeof cashTransactionSchema>;
 export const insertCashTransactionSchema = cashTransactionSchema.omit({ id: true, createdAt: true });
 export type InsertCashTransaction = z.infer<typeof insertCashTransactionSchema>;
 
+// ============ INCASATION (Cash Collection) ============
+export const incasationSchema = z.object({
+  id: z.string(),
+  performedAt: z.string(),
+  performedBy: z.string(), // userId of owner who performed
+  periodStart: z.string(), // Date of last incasation or first transaction
+  periodEnd: z.string(), // Date of this incasation
+  summary: z.object({
+    totalRevenue: z.number(), // Total income during period
+    cashRevenue: z.number(), // Cash payments
+    eripRevenue: z.number(), // Card/ERIP payments
+    totalExpenses: z.number(), // Total expenses
+    cashOnHand: z.number(), // Cash balance at time of incasation
+    expensesByCategory: z.record(z.string(), z.number()).optional(),
+  }),
+  shiftsIncluded: z.array(z.string()), // IDs of shifts included in this collection
+  createdAt: z.string(),
+});
+export type Incasation = z.infer<typeof incasationSchema>;
+
+export const insertIncasationSchema = incasationSchema.omit({ id: true, createdAt: true });
+export type InsertIncasation = z.infer<typeof insertIncasationSchema>;
+
 // ============ WORK LOG ============
 export const workLogSchema = z.object({
   id: z.string(),
@@ -370,13 +393,13 @@ export const insertQuadBookingSchema = z.object({
 export type InsertQuadBooking = z.infer<typeof insertQuadBookingSchema>;
 
 // ============ INSTRUCTOR EXPENSE ============
-export const expenseCategoryEnum = z.enum(["fuel", "maintenance", "parts", "other"]);
-export type ExpenseCategory = z.infer<typeof expenseCategoryEnum>;
+export const instructorExpenseCategoryEnum = z.enum(["fuel", "maintenance", "parts", "other"]);
+export type InstructorExpenseCategory = z.infer<typeof instructorExpenseCategoryEnum>;
 
 export const instructorExpenseSchema = z.object({
   id: z.string(),
   date: z.string(),
-  category: expenseCategoryEnum,
+  category: instructorExpenseCategoryEnum,
   amount: z.number().positive(),
   description: z.string(),
   createdBy: z.string(), // instructor telegramId

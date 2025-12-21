@@ -135,7 +135,7 @@ export default function CashPage() {
   };
 
   const currentShift = cashData?.currentShift;
-  const transactions = cashData?.transactions || [];
+  const transactions: CashTransaction[] = cashData?.transactions || [];
   const balance = cashData?.balance || 0;
 
   return (

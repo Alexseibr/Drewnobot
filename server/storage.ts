@@ -9,6 +9,7 @@ import type {
   Task, InsertTask,
   CashShift, InsertCashShift,
   CashTransaction, InsertCashTransaction,
+  Incasation, InsertIncasation,
   WorkLog, InsertWorkLog,
   QuadSlot,
   QuadBooking, InsertQuadBooking,
@@ -69,7 +70,24 @@ export interface IStorage {
   updateCashShift(id: string, updates: Partial<CashShift>): Promise<CashShift | undefined>;
   
   getCashTransactions(shiftId?: string): Promise<CashTransaction[]>;
+  getCashTransactionsSinceLastIncasation(): Promise<CashTransaction[]>;
   createCashTransaction(tx: InsertCashTransaction): Promise<CashTransaction>;
+  
+  // Incasations
+  getIncasations(): Promise<Incasation[]>;
+  getLastIncasation(): Promise<Incasation | undefined>;
+  createIncasation(incasation: InsertIncasation): Promise<Incasation>;
+  getIncasationPreview(): Promise<{
+    periodStart: string;
+    periodEnd: string;
+    totalRevenue: number;
+    cashRevenue: number;
+    eripRevenue: number;
+    totalExpenses: number;
+    cashOnHand: number;
+    expensesByCategory: Record<string, number>;
+    shiftsCount: number;
+  }>;
   
   getWorkLogs(): Promise<WorkLog[]>;
   createWorkLog(log: InsertWorkLog): Promise<WorkLog>;
@@ -186,6 +204,7 @@ export class MemStorage implements IStorage {
   private blockedDates: Map<string, BlockedDate> = new Map();
   private authSessions: Map<string, AuthSession> = new Map();
   private quadPricing: Map<string, QuadPricing> = new Map();
+  private incasations: Map<string, Incasation> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -513,6 +532,113 @@ export class MemStorage implements IStorage {
     };
     this.cashTransactions.set(tx.id, tx);
     return tx;
+  }
+
+  async getCashTransactionsSinceLastIncasation(): Promise<CashTransaction[]> {
+    const lastIncasation = await this.getLastIncasation();
+    const allTransactions = Array.from(this.cashTransactions.values());
+    
+    if (!lastIncasation) {
+      return allTransactions;
+    }
+    
+    return allTransactions.filter(tx => tx.createdAt > lastIncasation.performedAt);
+  }
+
+  async getIncasations(): Promise<Incasation[]> {
+    return Array.from(this.incasations.values()).sort((a, b) => 
+      new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime()
+    );
+  }
+
+  async getLastIncasation(): Promise<Incasation | undefined> {
+    const incasations = await this.getIncasations();
+    return incasations[0];
+  }
+
+  async createIncasation(insertIncasation: InsertIncasation): Promise<Incasation> {
+    const incasation: Incasation = {
+      id: randomUUID(),
+      ...insertIncasation,
+      createdAt: new Date().toISOString(),
+    };
+    this.incasations.set(incasation.id, incasation);
+    return incasation;
+  }
+
+  async getIncasationPreview(): Promise<{
+    periodStart: string;
+    periodEnd: string;
+    totalRevenue: number;
+    cashRevenue: number;
+    eripRevenue: number;
+    totalExpenses: number;
+    cashOnHand: number;
+    expensesByCategory: Record<string, number>;
+    shiftsCount: number;
+  }> {
+    const lastIncasation = await this.getLastIncasation();
+    const transactions = await this.getCashTransactionsSinceLastIncasation();
+    const allShifts = Array.from(this.cashShifts.values());
+    
+    const periodStart = lastIncasation?.performedAt || 
+      (transactions.length > 0 ? transactions[0].createdAt : new Date().toISOString());
+    const periodEnd = new Date().toISOString();
+    
+    let cashRevenue = 0;
+    let eripRevenue = 0;
+    let totalExpenses = 0;
+    const expensesByCategory: Record<string, number> = {};
+    
+    for (const tx of transactions) {
+      if (tx.type === "cash_in") {
+        cashRevenue += tx.amount;
+      } else if (tx.type === "expense") {
+        totalExpenses += tx.amount;
+        const cat = tx.category || "other";
+        expensesByCategory[cat] = (expensesByCategory[cat] || 0) + tx.amount;
+      }
+    }
+    
+    // Calculate ERIP revenue from bookings (not tracked in cash transactions)
+    const allBathBookings = Array.from(this.bathBookings.values());
+    const allSpaBookings = Array.from(this.spaBookings.values());
+    const allQuadBookings = Array.from(this.quadBookings.values());
+    
+    for (const booking of allBathBookings) {
+      if (booking.createdAt > periodStart) {
+        eripRevenue += booking.payments?.eripPaid || 0;
+      }
+    }
+    for (const booking of allSpaBookings) {
+      if (booking.createdAt > periodStart) {
+        eripRevenue += booking.payments?.eripPaid || 0;
+      }
+    }
+    for (const booking of allQuadBookings) {
+      if (booking.createdAt > periodStart) {
+        eripRevenue += booking.payments?.eripPaid || 0;
+      }
+    }
+    
+    const shiftsCount = allShifts.filter(s => 
+      !lastIncasation || s.openedAt > lastIncasation.performedAt
+    ).length;
+    
+    const cashOnHand = cashRevenue - totalExpenses;
+    const totalRevenue = cashRevenue + eripRevenue;
+    
+    return {
+      periodStart,
+      periodEnd,
+      totalRevenue,
+      cashRevenue,
+      eripRevenue,
+      totalExpenses,
+      cashOnHand,
+      expensesByCategory,
+      shiftsCount,
+    };
   }
 
   async getWorkLogs(): Promise<WorkLog[]> {

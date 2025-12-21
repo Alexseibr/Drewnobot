@@ -12,6 +12,7 @@ import QuadBookingPage from "@/pages/guest/quad-booking";
 import SpaBookingPage from "@/pages/guest/spa-booking";
 import OpsDashboard from "@/pages/ops/dashboard";
 import BookingsPage from "@/pages/ops/bookings";
+import NewBookingPage from "@/pages/ops/new-booking";
 import CashPage from "@/pages/ops/cash";
 import TasksPage from "@/pages/ops/tasks";
 import InstructorSchedulePage from "@/pages/instructor/schedule";
@@ -19,6 +20,7 @@ import InstructorManagePage from "@/pages/instructor/manage";
 import InstructorFinancesPage from "@/pages/instructor/finances";
 import InstructorPricingPage from "@/pages/instructor/pricing";
 import OwnerAnalyticsPage from "@/pages/owner/analytics";
+import OwnerCashPage from "@/pages/owner/cash";
 import OwnerSettingsPage from "@/pages/owner/settings";
 import StaffManagementPage from "@/pages/admin/staff";
 import ClaimRolePage from "@/pages/claim-role";
@@ -35,6 +37,7 @@ function Router() {
       
       <Route path="/ops" component={OpsDashboard} />
       <Route path="/ops/bookings" component={BookingsPage} />
+      <Route path="/ops/bookings/new" component={NewBookingPage} />
       <Route path="/ops/cash" component={CashPage} />
       <Route path="/ops/tasks" component={TasksPage} />
       
@@ -45,6 +48,7 @@ function Router() {
       <Route path="/instructor/pricing" component={InstructorPricingPage} />
       
       <Route path="/owner/analytics" component={OwnerAnalyticsPage} />
+      <Route path="/owner/cash" component={OwnerCashPage} />
       <Route path="/owner/settings" component={OwnerSettingsPage} />
       
       <Route path="/admin/staff" component={StaffManagementPage} />

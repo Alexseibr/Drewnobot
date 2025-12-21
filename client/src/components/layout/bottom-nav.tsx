@@ -39,6 +39,7 @@ const instructorNavItems: NavItem[] = [
 ];
 
 const ownerNavItems: NavItem[] = [
+  { path: "/owner/cash", label: "Инкасация", icon: Wallet },
   { path: "/owner/analytics", label: "Аналитика", icon: BarChart3 },
   { path: "/owner/settings", label: "Настройки", icon: Settings },
 ];
