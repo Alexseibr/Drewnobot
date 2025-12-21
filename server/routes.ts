@@ -78,13 +78,30 @@ export async function registerRoutes(
         const fullName = [telegramUser.first_name, telegramUser.last_name]
           .filter(Boolean).join(" ");
         
+        // Check for staff invitation by phone number
+        let assignedRole: UserRole = "GUEST";
+        let invitation = null;
+        if (phone) {
+          invitation = await storage.getStaffInvitationByPhone(phone);
+          if (invitation) {
+            assignedRole = invitation.role;
+            console.log(`[Auth] Found staff invitation for phone ${phone}, assigning role: ${assignedRole}`);
+          }
+        }
+        
         user = await storage.createUser({
           telegramId: telegramIdStr,
           name: fullName || telegramUser.username || "Пользователь",
           phone: phone || undefined,
-          role: "GUEST",
+          role: assignedRole,
           isActive: true,
         });
+        
+        // Mark invitation as used
+        if (invitation) {
+          await storage.useStaffInvitation(invitation.id, user.id);
+          console.log(`[Auth] Staff invitation ${invitation.id} marked as used by user ${user.id}`);
+        }
       } else {
         const fullName = [telegramUser.first_name, telegramUser.last_name]
           .filter(Boolean).join(" ");
@@ -215,6 +232,62 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Ошибка обновления статуса" });
+    }
+  });
+  
+  // ============ STAFF INVITATIONS (Phone-based role pre-assignment) ============
+  app.get("/api/admin/invitations", authMiddleware, requireRole("SUPER_ADMIN", "OWNER"), async (req, res) => {
+    try {
+      const invitations = await storage.getStaffInvitations();
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка получения списка приглашений" });
+    }
+  });
+  
+  app.post("/api/admin/invitations", authMiddleware, requireRole("SUPER_ADMIN", "OWNER"), async (req, res) => {
+    try {
+      const { phone, role, note } = req.body;
+      const currentUser = (req as any).user;
+      
+      if (!phone || !role) {
+        return res.status(400).json({ error: "Укажите номер телефона и роль" });
+      }
+      
+      const validRoles = ["OWNER", "ADMIN", "INSTRUCTOR"];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: "Недопустимая роль" });
+      }
+      
+      // Check if invitation for this phone already exists
+      const existing = await storage.getStaffInvitationByPhone(phone);
+      if (existing) {
+        return res.status(400).json({ error: "Приглашение для этого номера уже существует" });
+      }
+      
+      const invitation = await storage.createStaffInvitation({
+        phone,
+        role: role as UserRole,
+        note,
+        createdBy: currentUser.id,
+      });
+      
+      console.log(`[Admin] Staff invitation created for phone ${phone} with role ${role} by ${currentUser.name}`);
+      res.json(invitation);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка создания приглашения" });
+    }
+  });
+  
+  app.delete("/api/admin/invitations/:id", authMiddleware, requireRole("SUPER_ADMIN", "OWNER"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteStaffInvitation(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Приглашение не найдено" });
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка удаления приглашения" });
     }
   });
   
