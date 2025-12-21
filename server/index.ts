@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { initTelegramBot } from "./telegram-bot";
+import { initScheduler } from "./scheduler";
 
 const app = express();
 const httpServer = createServer(app);
@@ -101,6 +102,9 @@ app.use((req, res, next) => {
       } catch (error) {
         console.error("[Telegram Bot] Failed to initialize:", error);
       }
+      
+      // Initialize scheduler for automatic shift closure at 23:00
+      initScheduler();
     },
   );
 })();
