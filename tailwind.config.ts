@@ -80,6 +80,11 @@ export default {
           away: "rgb(245 158 11)",
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
+          pending: "hsl(var(--status-pending) / <alpha-value>)",
+          confirmed: "hsl(var(--status-confirmed) / <alpha-value>)",
+          completed: "hsl(var(--status-completed) / <alpha-value>)",
+          cancelled: "hsl(var(--status-cancelled) / <alpha-value>)",
+          awaiting: "hsl(var(--status-awaiting) / <alpha-value>)",
         },
       },
       fontFamily: {

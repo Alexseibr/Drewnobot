@@ -3,14 +3,38 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/lib/theme-provider";
+import { AuthProvider } from "@/lib/auth-context";
+
+import LandingPage from "@/pages/landing";
+import BathBookingPage from "@/pages/guest/bath-booking";
+import QuadBookingPage from "@/pages/guest/quad-booking";
+import OpsDashboard from "@/pages/ops/dashboard";
+import BookingsPage from "@/pages/ops/bookings";
+import CashPage from "@/pages/ops/cash";
+import TasksPage from "@/pages/ops/tasks";
+import InstructorSchedulePage from "@/pages/instructor/schedule";
+import OwnerAnalyticsPage from "@/pages/owner/analytics";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
+      <Route path="/" component={LandingPage} />
+      
+      <Route path="/guest/bath" component={BathBookingPage} />
+      <Route path="/guest/quads" component={QuadBookingPage} />
+      
+      <Route path="/ops" component={OpsDashboard} />
+      <Route path="/ops/bookings" component={BookingsPage} />
+      <Route path="/ops/cash" component={CashPage} />
+      <Route path="/ops/tasks" component={TasksPage} />
+      
+      <Route path="/instructor" component={InstructorSchedulePage} />
+      <Route path="/instructor/sessions" component={InstructorSchedulePage} />
+      
+      <Route path="/owner/analytics" component={OwnerAnalyticsPage} />
+      
       <Route component={NotFound} />
     </Switch>
   );
@@ -18,12 +42,18 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="light" storageKey="drewno-theme">
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <div className="min-h-screen bg-background">
+              <Router />
+            </div>
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
