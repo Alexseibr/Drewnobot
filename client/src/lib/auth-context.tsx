@@ -19,6 +19,9 @@ declare global {
         ready: () => void;
         expand: () => void;
         close: () => void;
+        disableVerticalSwipes: () => void;
+        enableVerticalSwipes: () => void;
+        isVerticalSwipesEnabled: boolean;
       };
     };
   }
@@ -116,6 +119,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token, saveAuth]);
 
   useEffect(() => {
+    // Initialize Telegram WebApp - disable vertical swipes to prevent accidental closing
+    const tgWebApp = window.Telegram?.WebApp;
+    if (tgWebApp) {
+      tgWebApp.ready();
+      tgWebApp.expand();
+      if (typeof tgWebApp.disableVerticalSwipes === 'function') {
+        tgWebApp.disableVerticalSwipes();
+      }
+    }
+
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
