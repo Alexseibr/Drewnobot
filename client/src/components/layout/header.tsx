@@ -12,7 +12,7 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-export function Header({ title = "Drewno Ops", showBack, onMenuClick }: HeaderProps) {
+export function Header({ title = "Village Drewno", showBack, onMenuClick }: HeaderProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { user } = useAuth();
   const [, setLocation] = useLocation();

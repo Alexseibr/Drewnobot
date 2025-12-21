@@ -1,8 +1,10 @@
-# Drewno Ops
+# Village Drewno
 
 ## Overview
 
-Drewno Ops is a Telegram Mini App for managing cottage and bath booking operations. The system serves both internal staff (admins, owners, instructors) and guests, providing functionality for booking management, task scheduling, cash handling, and quad/ATV session coordination. The application is designed mobile-first for optimal Telegram WebApp integration.
+Village Drewno - загородный комплекс. Аренда домиков. Баня. Горячая купель.
+
+This is a Telegram Mini App for managing cottage and bath booking operations. The system serves both internal staff (admins, owners, instructors) and guests, providing functionality for booking management, task scheduling, cash handling, and quad/ATV session coordination. The application is designed mobile-first for optimal Telegram WebApp integration.
 
 ## User Preferences
 

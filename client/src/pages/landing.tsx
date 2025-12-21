@@ -1,11 +1,12 @@
 import { useLocation } from "wouter";
-import { TreePine, Bath, Bike, Briefcase, ChevronRight, Droplets, Users, Shield, BarChart3 } from "lucide-react";
+import { Bath, Bike, Briefcase, ChevronRight, Droplets, Users, Shield, BarChart3 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth-context";
+import drewnoLogo from "@assets/drewno-logo.webp";
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Супер-админ",
@@ -25,19 +26,24 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Дрэўна" />
+      <Header title="Village Drewno" />
       
       <PageContainer>
         <div className="space-y-8">
           <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center rounded-full bg-primary/10 p-4 mb-4">
-              <TreePine className="h-12 w-12 text-primary" />
+            <div className="inline-flex items-center justify-center rounded-lg overflow-hidden mb-4">
+              <img 
+                src={drewnoLogo} 
+                alt="Village Drewno" 
+                className="h-24 w-24 object-cover"
+                data-testid="img-hero-logo"
+              />
             </div>
             <h1 className="text-3xl font-bold mb-2" data-testid="text-hero-title">
-              Усадьба Дрэўна
+              Village Drewno
             </h1>
             <p className="text-muted-foreground max-w-sm mx-auto" data-testid="text-hero-description">
-              Добро пожаловать в наш уютный лесной курорт. Забронируйте расслабляющую баню или захватывающую поездку на квадроциклах.
+              Загородный комплекс. Аренда домиков. Баня. Горячая купель. Лучшее место, чтобы отдохнуть в гармонии с природой.
             </p>
             
             {user && (
