@@ -1,0 +1,44 @@
+1|drewno-ops  | [Telegram Bot] No bot token configured, skipping initialization
+^C
+root@server-srekbm:/var/www/drewno-ops# cat > ecosystem.config.js << 'EOF'
+module.exports = {
+  apps: [{
+    name: "drewno-ops",
+    script: "npm",
+    args: "start",
+    env: {
+      NODE_ENV: "production",
+      TELEGRAM_BOT_TOKEN: "7409502547:AAEIpGl2VdyNmC92q7NLrMDhSqMZiQqNCPA",
+      SESSION_SECRET: "DrewnoVillage2024xK9mP2nQ7wL4vR8tY3hF6jB1cZ5sA0"
+    }
+  }]
+}
+EOF
+root@server-srekbm:/var/www/drewno-ops# pm2 delete drewno-ops
+pm2 start ecosystem.config.js
+pm2 save
+pm2 logs drewno-ops --lines 15
+[PM2] Applying action deleteProcessId on app [drewno-ops](ids: [ 1 ])
+[PM2] [drewno-ops](1) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2][ERROR] File ecosystem.config.js malformated
+ReferenceError: module is not defined in ES module scope
+This file is being treated as an ES module because it has a '.js' file extension and '/var/www/drewno-ops/package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
+    at file:///var/www/drewno-ops/ecosystem.config.js:1:1
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:437:37)
+    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:389:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1363:24)
+    at Module._compile (node:internal/modules/cjs/loader:1503:5)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+[PM2] Saving current process list...
+[PM2][WARN] PM2 is not managing any process, skipping save...
+[PM2][WARN] To force saving use: pm2 save --force
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+
+echo "ecosystem.config.js" >> .gitignore
