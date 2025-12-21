@@ -273,47 +273,60 @@ export const insertWorkLogSchema = z.object({
 });
 export type InsertWorkLog = z.infer<typeof insertWorkLogSchema>;
 
-// ============ QUAD SESSION ============
-export const quadSessionSchema = z.object({
+// ============ QUAD ROUTE TYPE ============
+export const QuadRouteType = z.enum(["short", "long"]); // short = 30min/50 BYN, long = 60min/80 BYN
+export type QuadRouteType = z.infer<typeof QuadRouteType>;
+
+// ============ INSTRUCTOR BLOCKED TIME ============
+export const instructorBlockedTimeSchema = z.object({
   id: z.string(),
   date: z.string(),
-  startTime: z.string(),
-  endTime: z.string(),
-  bufferUntil: z.string(),
-  totalQuads: z.number().default(4),
-  bookedQuads: z.number().default(0),
-  status: QuadSessionStatus.default("open"),
-  priceRuleSnapshot: z.object({
-    base30: z.number(),
-    base60: z.number(),
-    groupDiscount: z.object({
-      type: z.enum(["percent", "amount"]),
-      value: z.number(),
-    }).optional(),
-  }).optional(),
-  createdBy: z.string(),
+  startTime: z.string().optional(), // If not set, whole day is blocked
+  endTime: z.string().optional(),
+  reason: z.string().optional(),
   createdAt: z.string(),
 });
-export type QuadSession = z.infer<typeof quadSessionSchema>;
+export type InstructorBlockedTime = z.infer<typeof instructorBlockedTimeSchema>;
 
-export const insertQuadSessionSchema = z.object({
+export const insertInstructorBlockedTimeSchema = z.object({
   date: z.string(),
-  startTime: z.string(),
-  endTime: z.string(),
-  createdBy: z.string(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  reason: z.string().optional(),
 });
-export type InsertQuadSession = z.infer<typeof insertQuadSessionSchema>;
+export type InsertInstructorBlockedTime = z.infer<typeof insertInstructorBlockedTimeSchema>;
+
+// ============ QUAD SLOT ============
+// A time slot for quad rides - created dynamically based on bookings
+export const quadSlotSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  startTime: z.string(), // HH:mm
+  endTime: z.string(), // HH:mm (startTime + duration)
+  routeType: QuadRouteType,
+  totalQuads: z.number().default(4),
+  bookedQuads: z.number().default(0),
+  basePrice: z.number(), // 50 for short, 80 for long
+  hasDiscount: z.boolean().default(false), // 5% discount if joining existing slot
+  createdAt: z.string(),
+});
+export type QuadSlot = z.infer<typeof quadSlotSchema>;
 
 // ============ QUAD BOOKING ============
 export const quadBookingSchema = z.object({
   id: z.string(),
-  sessionId: z.string(),
-  customer: customerSchema,
-  duration: z.union([z.literal(30), z.literal(60)]),
+  slotId: z.string().optional(), // If joining an existing slot
+  date: z.string(),
+  startTime: z.string(), // HH:mm
+  endTime: z.string(), // HH:mm
+  routeType: QuadRouteType,
   quadsCount: z.number().min(1).max(4),
+  customer: customerSchema,
   pricing: z.object({
+    basePrice: z.number(), // 50 or 80 per quad
     total: z.number(),
-    discountApplied: z.string().optional(),
+    discount: z.number().default(0), // 5% discount amount if applicable
+    discountApplied: z.boolean().default(false),
   }),
   payments: z.object({
     prepayment: prepaymentSchema.optional(),
@@ -321,16 +334,19 @@ export const quadBookingSchema = z.object({
     cashPaid: z.number().default(0),
   }),
   status: QuadBookingStatus.default("pending_call"),
-  assignedInstructor: z.string(),
+  comment: z.string().optional(),
   createdAt: z.string(),
 });
 export type QuadBooking = z.infer<typeof quadBookingSchema>;
 
 export const insertQuadBookingSchema = z.object({
-  sessionId: z.string(),
-  customer: customerSchema,
-  duration: z.union([z.literal(30), z.literal(60)]),
+  date: z.string(),
+  startTime: z.string(),
+  routeType: QuadRouteType,
   quadsCount: z.number().min(1).max(4),
+  customer: customerSchema,
+  comment: z.string().optional(),
+  slotId: z.string().optional(), // If joining existing slot for discount
 });
 export type InsertQuadBooking = z.infer<typeof insertQuadBookingSchema>;
 

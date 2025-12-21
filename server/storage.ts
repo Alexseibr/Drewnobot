@@ -10,8 +10,9 @@ import type {
   CashShift, InsertCashShift,
   CashTransaction, InsertCashTransaction,
   WorkLog, InsertWorkLog,
-  QuadSession, InsertQuadSession,
+  QuadSlot,
   QuadBooking, InsertQuadBooking,
+  InstructorBlockedTime, InsertInstructorBlockedTime,
   SiteSettings,
   AnalyticsSummary,
   SpaBooking, InsertSpaBooking,
@@ -70,17 +71,22 @@ export interface IStorage {
   getWorkLogs(): Promise<WorkLog[]>;
   createWorkLog(log: InsertWorkLog): Promise<WorkLog>;
   
-  getQuadSessions(): Promise<QuadSession[]>;
-  getQuadSessionsForDate(date: string): Promise<QuadSession[]>;
-  getQuadSession(id: string): Promise<QuadSession | undefined>;
-  createQuadSession(session: InsertQuadSession): Promise<QuadSession>;
-  updateQuadSession(id: string, updates: Partial<QuadSession>): Promise<QuadSession | undefined>;
-  
+  // Quad Bookings
   getQuadBookings(): Promise<QuadBooking[]>;
-  getQuadBookingsForSession(sessionId: string): Promise<QuadBooking[]>;
+  getQuadBookingsForDate(date: string): Promise<QuadBooking[]>;
+  getQuadBookingsUpcoming(): Promise<QuadBooking[]>;
   getQuadBooking(id: string): Promise<QuadBooking | undefined>;
   createQuadBooking(booking: InsertQuadBooking): Promise<QuadBooking>;
   updateQuadBooking(id: string, updates: Partial<QuadBooking>): Promise<QuadBooking | undefined>;
+  
+  // Quad Slots (dynamic based on bookings)
+  getQuadSlotsForDate(date: string): Promise<QuadSlot[]>;
+  
+  // Instructor blocked times
+  getInstructorBlockedTimes(): Promise<InstructorBlockedTime[]>;
+  getInstructorBlockedTimesForDate(date: string): Promise<InstructorBlockedTime[]>;
+  createInstructorBlockedTime(blocked: InsertInstructorBlockedTime): Promise<InstructorBlockedTime>;
+  deleteInstructorBlockedTime(id: string): Promise<boolean>;
   
   getSiteSettings(): Promise<SiteSettings>;
   updateSiteSettings(updates: Partial<SiteSettings>): Promise<SiteSettings>;
@@ -155,8 +161,8 @@ export class MemStorage implements IStorage {
   private cashShifts: Map<string, CashShift> = new Map();
   private cashTransactions: Map<string, CashTransaction> = new Map();
   private workLogs: Map<string, WorkLog> = new Map();
-  private quadSessions: Map<string, QuadSession> = new Map();
   private quadBookings: Map<string, QuadBooking> = new Map();
+  private instructorBlockedTimes: Map<string, InstructorBlockedTime> = new Map();
   private spaBookings: Map<string, SpaBooking> = new Map();
   private smsCodes: Map<string, SmsCode> = new Map();
   private verificationTokens: Map<string, VerificationToken> = new Map();
@@ -494,60 +500,20 @@ export class MemStorage implements IStorage {
     return log;
   }
 
-  async getQuadSessions(): Promise<QuadSession[]> {
-    return Array.from(this.quadSessions.values());
-  }
-
-  async getQuadSessionsForDate(date: string): Promise<QuadSession[]> {
-    return Array.from(this.quadSessions.values()).filter(s => s.date === date);
-  }
-
-  async getQuadSession(id: string): Promise<QuadSession | undefined> {
-    return this.quadSessions.get(id);
-  }
-
-  async createQuadSession(insertSession: InsertQuadSession): Promise<QuadSession> {
-    const prices = await this.getServicePrices();
-    const base30 = prices.find(p => p.key === "quad_30m")?.price || PRICES.quad_30m;
-    const base60 = prices.find(p => p.key === "quad_60m")?.price || PRICES.quad_60m;
-
-    const endHour = parseInt(insertSession.endTime.split(":")[0]);
-    const endMin = parseInt(insertSession.endTime.split(":")[1]) || 0;
-    const bufferHour = endHour + (endMin >= 30 ? 1 : 0);
-    const bufferMin = (endMin + 30) % 60;
-    const bufferUntil = `${bufferHour.toString().padStart(2, "0")}:${bufferMin.toString().padStart(2, "0")}`;
-
-    const session: QuadSession = {
-      id: randomUUID(),
-      date: insertSession.date,
-      startTime: insertSession.startTime,
-      endTime: insertSession.endTime,
-      bufferUntil,
-      totalQuads: 4,
-      bookedQuads: 0,
-      status: "open",
-      priceRuleSnapshot: { base30, base60 },
-      createdBy: insertSession.createdBy,
-      createdAt: new Date().toISOString(),
-    };
-    this.quadSessions.set(session.id, session);
-    return session;
-  }
-
-  async updateQuadSession(id: string, updates: Partial<QuadSession>): Promise<QuadSession | undefined> {
-    const session = this.quadSessions.get(id);
-    if (!session) return undefined;
-    const updated = { ...session, ...updates };
-    this.quadSessions.set(id, updated);
-    return updated;
-  }
-
+  // ============ QUAD BOOKINGS ============
   async getQuadBookings(): Promise<QuadBooking[]> {
     return Array.from(this.quadBookings.values());
   }
 
-  async getQuadBookingsForSession(sessionId: string): Promise<QuadBooking[]> {
-    return Array.from(this.quadBookings.values()).filter(b => b.sessionId === sessionId);
+  async getQuadBookingsForDate(date: string): Promise<QuadBooking[]> {
+    return Array.from(this.quadBookings.values()).filter(b => b.date === date);
+  }
+
+  async getQuadBookingsUpcoming(): Promise<QuadBooking[]> {
+    const today = new Date().toISOString().split("T")[0];
+    return Array.from(this.quadBookings.values()).filter(
+      b => b.date >= today && b.status !== "cancelled" && b.status !== "completed"
+    );
   }
 
   async getQuadBooking(id: string): Promise<QuadBooking | undefined> {
@@ -555,33 +521,57 @@ export class MemStorage implements IStorage {
   }
 
   async createQuadBooking(insertBooking: InsertQuadBooking): Promise<QuadBooking> {
-    const session = await this.getQuadSession(insertBooking.sessionId);
-    if (!session) throw new Error("Session not found");
-
-    const basePrice = insertBooking.duration === 30 
-      ? (session.priceRuleSnapshot?.base30 || PRICES.quad_30m)
-      : (session.priceRuleSnapshot?.base60 || PRICES.quad_60m);
-    const total = basePrice * insertBooking.quadsCount;
+    const duration = insertBooking.routeType === "short" ? 30 : 60;
+    const basePrice = insertBooking.routeType === "short" ? PRICES.quad_30m : PRICES.quad_60m;
+    
+    // Calculate end time
+    const startHour = parseInt(insertBooking.startTime.split(":")[0]);
+    const startMin = parseInt(insertBooking.startTime.split(":")[1]) || 0;
+    const endMinTotal = startHour * 60 + startMin + duration;
+    const endHour = Math.floor(endMinTotal / 60);
+    const endMin = endMinTotal % 60;
+    const endTime = `${endHour.toString().padStart(2, "0")}:${endMin.toString().padStart(2, "0")}`;
+    
+    // Check if joining existing slot for discount
+    let discountApplied = false;
+    let discount = 0;
+    
+    if (insertBooking.slotId) {
+      const existingBookings = await this.getQuadBookingsForDate(insertBooking.date);
+      const sameSlot = existingBookings.find(b => 
+        b.startTime === insertBooking.startTime && 
+        b.routeType === insertBooking.routeType &&
+        b.status !== "cancelled"
+      );
+      if (sameSlot) {
+        discountApplied = true;
+        discount = Math.round(basePrice * insertBooking.quadsCount * 0.05);
+      }
+    }
+    
+    const total = basePrice * insertBooking.quadsCount - discount;
 
     const booking: QuadBooking = {
       id: randomUUID(),
-      sessionId: insertBooking.sessionId,
-      customer: insertBooking.customer,
-      duration: insertBooking.duration,
+      slotId: insertBooking.slotId,
+      date: insertBooking.date,
+      startTime: insertBooking.startTime,
+      endTime,
+      routeType: insertBooking.routeType,
       quadsCount: insertBooking.quadsCount,
-      pricing: { total },
+      customer: insertBooking.customer,
+      pricing: { 
+        basePrice, 
+        total, 
+        discount, 
+        discountApplied 
+      },
       payments: { eripPaid: 0, cashPaid: 0 },
       status: "pending_call",
-      assignedInstructor: session.createdBy,
+      comment: insertBooking.comment,
       createdAt: new Date().toISOString(),
     };
     this.quadBookings.set(booking.id, booking);
-
-    await this.updateQuadSession(session.id, {
-      bookedQuads: session.bookedQuads + insertBooking.quadsCount,
-      status: session.bookedQuads + insertBooking.quadsCount >= session.totalQuads ? "full" : "open",
-    });
-
     return booking;
   }
 
@@ -591,6 +581,65 @@ export class MemStorage implements IStorage {
     const updated = { ...booking, ...updates };
     this.quadBookings.set(id, updated);
     return updated;
+  }
+
+  // ============ QUAD SLOTS ============
+  async getQuadSlotsForDate(date: string): Promise<QuadSlot[]> {
+    const bookings = await this.getQuadBookingsForDate(date);
+    const blockedTimes = await this.getInstructorBlockedTimesForDate(date);
+    
+    // Group bookings by startTime + routeType to create slots
+    const slotMap = new Map<string, QuadSlot>();
+    
+    for (const booking of bookings) {
+      if (booking.status === "cancelled") continue;
+      
+      const key = `${booking.startTime}-${booking.routeType}`;
+      const existing = slotMap.get(key);
+      
+      if (existing) {
+        existing.bookedQuads += booking.quadsCount;
+        existing.hasDiscount = true; // Others can join with discount
+      } else {
+        slotMap.set(key, {
+          id: key,
+          date,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          routeType: booking.routeType,
+          totalQuads: 4,
+          bookedQuads: booking.quadsCount,
+          basePrice: booking.pricing.basePrice,
+          hasDiscount: false,
+          createdAt: booking.createdAt,
+        });
+      }
+    }
+    
+    return Array.from(slotMap.values());
+  }
+
+  // ============ INSTRUCTOR BLOCKED TIMES ============
+  async getInstructorBlockedTimes(): Promise<InstructorBlockedTime[]> {
+    return Array.from(this.instructorBlockedTimes.values());
+  }
+
+  async getInstructorBlockedTimesForDate(date: string): Promise<InstructorBlockedTime[]> {
+    return Array.from(this.instructorBlockedTimes.values()).filter(b => b.date === date);
+  }
+
+  async createInstructorBlockedTime(insertBlocked: InsertInstructorBlockedTime): Promise<InstructorBlockedTime> {
+    const blocked: InstructorBlockedTime = {
+      id: randomUUID(),
+      ...insertBlocked,
+      createdAt: new Date().toISOString(),
+    };
+    this.instructorBlockedTimes.set(blocked.id, blocked);
+    return blocked;
+  }
+
+  async deleteInstructorBlockedTime(id: string): Promise<boolean> {
+    return this.instructorBlockedTimes.delete(id);
   }
 
   async getSiteSettings(): Promise<SiteSettings> {
@@ -605,16 +654,12 @@ export class MemStorage implements IStorage {
   async getAnalyticsSummary(month: string): Promise<AnalyticsSummary> {
     const cottageBookings = Array.from(this.cottageBookings.values()).filter(b => b.createdAt.startsWith(month));
     const bathBookings = Array.from(this.bathBookings.values()).filter(b => b.date.startsWith(month));
-    const quadSessions = Array.from(this.quadSessions.values()).filter(s => s.date.startsWith(month));
-    const quadBookings = Array.from(this.quadBookings.values());
+    const quadBookings = Array.from(this.quadBookings.values()).filter(b => b.date.startsWith(month));
     const workLogs = Array.from(this.workLogs.values()).filter(l => l.createdAt.startsWith(month));
 
     const cottageRevenue = cottageBookings.reduce((sum, b) => sum + b.totalAmount, 0);
     const bathRevenue = bathBookings.reduce((sum, b) => sum + b.pricing.total, 0);
-    const quadRevenue = quadBookings.reduce((sum, b) => {
-      const session = this.quadSessions.get(b.sessionId);
-      return session?.date.startsWith(month) ? sum + b.pricing.total : sum;
-    }, 0);
+    const quadRevenue = quadBookings.reduce((sum, b) => sum + b.pricing.total, 0);
 
     const cashTotal = cottageBookings.reduce((sum, b) => sum + b.payments.cash, 0) +
       bathBookings.reduce((sum, b) => sum + b.payments.cashPaid, 0);
@@ -630,7 +675,7 @@ export class MemStorage implements IStorage {
       cottageRevenue,
       bathBookingsCount: bathBookings.length,
       bathRevenue,
-      quadSessionsCount: quadSessions.length,
+      quadSessionsCount: quadBookings.length,
       quadRevenue,
       cashTotal,
       eripTotal,
@@ -688,8 +733,10 @@ export class MemStorage implements IStorage {
       date: insertBooking.date,
       startTime: insertBooking.startTime,
       endTime: insertBooking.endTime,
+      durationHours: insertBooking.durationHours || 3,
       guestsCount: insertBooking.guestsCount,
       customer: insertBooking.customer,
+      comment: insertBooking.comment,
       pricing: { base: basePrice, total: basePrice },
       payments: { eripPaid: 0, cashPaid: 0 },
       status: "pending_call",
