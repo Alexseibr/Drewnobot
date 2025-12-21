@@ -11,7 +11,8 @@ import {
   Clock,
   Users,
   ArrowRight,
-  Plus
+  Plus,
+  Timer
 } from "lucide-react";
 import { Link } from "wouter";
 import { Header } from "@/components/layout/header";
@@ -157,6 +158,25 @@ export default function OpsDashboard() {
               </Card>
             </div>
           )}
+
+          <Link href="/ops/worklogs">
+            <Card className="hover-elevate cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-accent/50 p-2">
+                      <Timer className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Учет рабочего времени</p>
+                      <p className="text-sm text-muted-foreground">Добавить записи смен</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
           <div>
             <div className="flex items-center justify-between mb-3">

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { pgTable, text, varchar, boolean, integer, real, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 // ============ ENUMS ============
 export const UserRole = z.enum(["SUPER_ADMIN", "OWNER", "ADMIN", "INSTRUCTOR", "GUEST"]);
@@ -756,3 +758,323 @@ export type StaffInvitation = z.infer<typeof staffInvitationSchema>;
 
 export const insertStaffInvitationSchema = staffInvitationSchema.omit({ id: true, usedBy: true, usedAt: true, createdAt: true });
 export type InsertStaffInvitation = z.infer<typeof insertStaffInvitationSchema>;
+
+// ============================================================================
+// DRIZZLE POSTGRESQL TABLES
+// These table definitions are used for database persistence with Drizzle ORM
+// ============================================================================
+
+// ============ USERS TABLE ============
+export const usersTable = pgTable("users", {
+  id: text("id").primaryKey(),
+  telegramId: text("telegram_id").notNull().unique(),
+  name: text("name").notNull(),
+  phone: text("phone"),
+  role: text("role").notNull().default("GUEST"),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+// ============ UNITS TABLE ============
+export const unitsTable = pgTable("units", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(), // cottage or bath
+  code: text("code").notNull().unique(),
+  title: text("title").notNull(),
+  cleaningTariffCode: text("cleaning_tariff_code").notNull(),
+  tubPolicy: text("tub_policy").notNull(),
+  images: jsonb("images").default([]),
+});
+
+// ============ CLEANING TARIFFS TABLE ============
+export const cleaningTariffsTable = pgTable("cleaning_tariffs", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  title: text("title").notNull(),
+  price: real("price").notNull(),
+});
+
+// ============ SERVICE PRICES TABLE ============
+export const servicePricesTable = pgTable("service_prices", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  price: real("price").notNull(),
+  currency: text("currency").notNull().default("BYN"),
+  activeFrom: text("active_from"),
+  activeTo: text("active_to"),
+});
+
+// ============ COTTAGE BOOKINGS TABLE ============
+export const cottageBookingsTable = pgTable("cottage_bookings", {
+  id: text("id").primaryKey(),
+  unitCode: text("unit_code").notNull(),
+  dateCheckIn: text("date_check_in").notNull(),
+  dateCheckOut: text("date_check_out").notNull(),
+  guestsCount: integer("guests_count").notNull(),
+  tubSmall: boolean("tub_small").notNull().default(false),
+  totalAmount: real("total_amount").notNull(),
+  payments: jsonb("payments").notNull(), // { erip, cash, prepayment }
+  customer: jsonb("customer").notNull(), // { fullName, phone, telegramId }
+  status: text("status").notNull().default("planned"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ BATH BOOKINGS TABLE ============
+export const bathBookingsTable = pgTable("bath_bookings", {
+  id: text("id").primaryKey(),
+  bathCode: text("bath_code").notNull(),
+  date: text("date").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  customer: jsonb("customer").notNull(),
+  options: jsonb("options").notNull(), // { tub, grill, charcoal }
+  pricing: jsonb("pricing").notNull(), // { base, extras, total }
+  payments: jsonb("payments").notNull(),
+  status: text("status").notNull().default("pending_call"),
+  holdUntil: text("hold_until"),
+  assignedAdmin: text("assigned_admin"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ SPA BOOKINGS TABLE ============
+export const spaBookingsTable = pgTable("spa_bookings", {
+  id: text("id").primaryKey(),
+  spaResource: text("spa_resource").notNull(),
+  bookingType: text("booking_type").notNull(),
+  date: text("date").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  durationHours: integer("duration_hours").notNull().default(3),
+  guestsCount: integer("guests_count").notNull(),
+  customer: jsonb("customer").notNull(),
+  comment: text("comment"),
+  pricing: jsonb("pricing").notNull(),
+  payments: jsonb("payments").notNull(),
+  status: text("status").notNull().default("pending_call"),
+  holdUntil: text("hold_until"),
+  assignedAdmin: text("assigned_admin"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ QUAD BOOKINGS TABLE ============
+export const quadBookingsTable = pgTable("quad_bookings", {
+  id: text("id").primaryKey(),
+  slotId: text("slot_id"),
+  date: text("date").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  routeType: text("route_type").notNull(),
+  quadsCount: integer("quads_count").notNull(),
+  customer: jsonb("customer").notNull(),
+  pricing: jsonb("pricing").notNull(),
+  payments: jsonb("payments").notNull(),
+  status: text("status").notNull().default("pending_call"),
+  comment: text("comment"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ TASKS TABLE ============
+export const tasksTable = pgTable("tasks", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  unitCode: text("unit_code"),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  checklist: jsonb("checklist"),
+  status: text("status").notNull().default("open"),
+  assignedTo: text("assigned_to"),
+  createdBySystem: boolean("created_by_system").notNull().default(false),
+  meta: jsonb("meta"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ CASH SHIFTS TABLE ============
+export const cashShiftsTable = pgTable("cash_shifts", {
+  id: text("id").primaryKey(),
+  openedAt: text("opened_at").notNull(),
+  closedAt: text("closed_at"),
+  openedBy: text("opened_by").notNull(),
+  isOpen: boolean("is_open").notNull().default(true),
+  visibleToAdmin: boolean("visible_to_admin").notNull().default(true),
+});
+
+// ============ CASH TRANSACTIONS TABLE ============
+export const cashTransactionsTable = pgTable("cash_transactions", {
+  id: text("id").primaryKey(),
+  shiftId: text("shift_id").notNull(),
+  type: text("type").notNull(), // cash_in, cash_out, expense
+  amount: real("amount").notNull(),
+  category: text("category"),
+  comment: text("comment"),
+  createdAt: text("created_at").notNull(),
+  createdBy: text("created_by").notNull(),
+  location: jsonb("location"),
+});
+
+// ============ INCASATIONS TABLE ============
+export const incasationsTable = pgTable("incasations", {
+  id: text("id").primaryKey(),
+  performedAt: text("performed_at").notNull(),
+  performedBy: text("performed_by").notNull(),
+  periodStart: text("period_start").notNull(),
+  periodEnd: text("period_end").notNull(),
+  summary: jsonb("summary").notNull(),
+  shiftsIncluded: jsonb("shifts_included").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ WORK LOGS TABLE ============
+export const workLogsTable = pgTable("work_logs", {
+  id: text("id").primaryKey(),
+  employeeName: text("employee_name").notNull(),
+  byAdmin: text("by_admin").notNull(),
+  startAt: text("start_at").notNull(),
+  endAt: text("end_at").notNull(),
+  durationMinutes: integer("duration_minutes").notNull(),
+  workType: text("work_type").notNull(),
+  hourlyRate: real("hourly_rate"),
+  note: text("note"),
+  createdAt: text("created_at").notNull(),
+  location: jsonb("location"),
+});
+
+// ============ QUAD PRICING TABLE ============
+export const quadPricingTable = pgTable("quad_pricing", {
+  id: text("id").primaryKey(),
+  routeType: text("route_type").notNull(),
+  price: real("price").notNull(),
+  date: text("date"),
+  createdBy: text("created_by"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ INSTRUCTOR BLOCKED TIMES TABLE ============
+export const instructorBlockedTimesTable = pgTable("instructor_blocked_times", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  startTime: text("start_time"),
+  endTime: text("end_time"),
+  reason: text("reason"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ INSTRUCTOR EXPENSES TABLE ============
+export const instructorExpensesTable = pgTable("instructor_expenses", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  category: text("category").notNull(),
+  amount: real("amount").notNull(),
+  description: text("description").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ AUTH SESSIONS TABLE ============
+export const authSessionsTable = pgTable("auth_sessions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ STAFF INVITATIONS TABLE ============
+export const staffInvitationsTable = pgTable("staff_invitations", {
+  id: text("id").primaryKey(),
+  phone: text("phone").notNull(),
+  role: text("role").notNull(),
+  note: text("note"),
+  createdBy: text("created_by").notNull(),
+  usedBy: text("used_by"),
+  usedAt: text("used_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ QUAD MACHINES TABLE ============
+export const quadMachinesTable = pgTable("quad_machines", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  ownerType: text("owner_type").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  currentMileageKm: integer("current_mileage_km").notNull().default(0),
+  commissioningDate: text("commissioning_date"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ QUAD MILEAGE LOGS TABLE ============
+export const quadMileageLogsTable = pgTable("quad_mileage_logs", {
+  id: text("id").primaryKey(),
+  quadId: text("quad_id").notNull(),
+  mileageKm: integer("mileage_km").notNull(),
+  previousMileageKm: integer("previous_mileage_km"),
+  notes: text("notes"),
+  loggedBy: text("logged_by").notNull(),
+  loggedAt: text("logged_at").notNull(),
+});
+
+// ============ QUAD MAINTENANCE RULES TABLE ============
+export const quadMaintenanceRulesTable = pgTable("quad_maintenance_rules", {
+  id: text("id").primaryKey(),
+  quadId: text("quad_id"),
+  title: text("title").notNull(),
+  description: text("description"),
+  triggerType: text("trigger_type").notNull(),
+  intervalKm: integer("interval_km"),
+  intervalDays: integer("interval_days"),
+  warningKm: integer("warning_km"),
+  warningDays: integer("warning_days"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ QUAD MAINTENANCE EVENTS TABLE ============
+export const quadMaintenanceEventsTable = pgTable("quad_maintenance_events", {
+  id: text("id").primaryKey(),
+  quadId: text("quad_id").notNull(),
+  ruleId: text("rule_id"),
+  title: text("title").notNull(),
+  description: text("description"),
+  mileageKm: integer("mileage_km").notNull(),
+  partsUsed: jsonb("parts_used"),
+  totalCost: real("total_cost"),
+  performedBy: text("performed_by").notNull(),
+  performedAt: text("performed_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ SITE SETTINGS TABLE ============
+export const siteSettingsTable = pgTable("site_settings", {
+  id: text("id").primaryKey(),
+  geofenceCenter: jsonb("geofence_center").notNull(),
+  geofenceRadiusM: integer("geofence_radius_m").notNull().default(300),
+  closeTime: text("close_time").notNull().default("22:00"),
+  timezone: text("timezone").notNull().default("Europe/Minsk"),
+  adminChatId: text("admin_chat_id"),
+  ownerChatId: text("owner_chat_id"),
+  instructorChatId: text("instructor_chat_id"),
+});
+
+// ============ BLOCKED DATES TABLE ============
+export const blockedDatesTable = pgTable("blocked_dates", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  reason: text("reason"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ REVIEWS TABLE ============
+export const reviewsTable = pgTable("reviews", {
+  id: text("id").primaryKey(),
+  bookingRef: jsonb("booking_ref").notNull(),
+  customer: jsonb("customer").notNull(),
+  rating: integer("rating").notNull(),
+  text: text("text").notNull(),
+  isPublished: boolean("is_published").notNull().default(false),
+  publishedAt: text("published_at"),
+  publishedBy: text("published_by"),
+  createdAt: text("created_at").notNull(),
+});

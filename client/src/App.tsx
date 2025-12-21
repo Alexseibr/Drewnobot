@@ -15,6 +15,7 @@ import BookingsPage from "@/pages/ops/bookings";
 import NewBookingPage from "@/pages/ops/new-booking";
 import CashPage from "@/pages/ops/cash";
 import TasksPage from "@/pages/ops/tasks";
+import WorkLogsPage from "@/pages/ops/worklogs";
 import InstructorSchedulePage from "@/pages/instructor/schedule";
 import InstructorManagePage from "@/pages/instructor/manage";
 import InstructorFinancesPage from "@/pages/instructor/finances";
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/ops/bookings/new" component={NewBookingPage} />
       <Route path="/ops/cash" component={CashPage} />
       <Route path="/ops/tasks" component={TasksPage} />
+      <Route path="/ops/worklogs" component={WorkLogsPage} />
       
       <Route path="/instructor" component={InstructorSchedulePage} />
       <Route path="/instructor/sessions" component={InstructorSchedulePage} />

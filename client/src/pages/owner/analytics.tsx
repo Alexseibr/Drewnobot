@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { format, subMonths } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format, subMonths, subDays, subWeeks, addDays, addWeeks, addMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   BarChart3, 
@@ -13,28 +13,81 @@ import {
   Banknote,
   Clock,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Timer
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatsCardSkeleton } from "@/components/ui/loading-skeleton";
-import { cn } from "@/lib/utils";
 import type { AnalyticsSummary } from "@shared/schema";
 
+type PeriodType = "day" | "week" | "month";
+
 export default function OwnerAnalyticsPage() {
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [periodType, setPeriodType] = useState<PeriodType>("day");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const period = `${periodType}:${format(selectedDate, "yyyy-MM-dd")}`;
 
   const { data: analytics, isLoading } = useQuery<AnalyticsSummary>({
-    queryKey: ["/api/owner/analytics/summary", format(selectedMonth, "yyyy-MM")],
+    queryKey: ["/api/owner/analytics/summary", periodType, format(selectedDate, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner/analytics/summary?period=${encodeURIComponent(period)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch analytics");
+      return res.json();
+    },
   });
 
-  const navigateMonth = (direction: "prev" | "next") => {
-    setSelectedMonth(prev => 
-      direction === "prev" ? subMonths(prev, 1) : subMonths(prev, -1)
-    );
+  const navigate = (direction: "prev" | "next") => {
+    setSelectedDate(prev => {
+      switch (periodType) {
+        case "day":
+          return direction === "prev" ? subDays(prev, 1) : addDays(prev, 1);
+        case "week":
+          return direction === "prev" ? subWeeks(prev, 1) : addWeeks(prev, 1);
+        case "month":
+          return direction === "prev" ? subMonths(prev, 1) : addMonths(prev, 1);
+        default:
+          return prev;
+      }
+    });
+  };
+
+  const getPeriodLabel = () => {
+    switch (periodType) {
+      case "day":
+        return format(selectedDate, "d MMMM yyyy", { locale: ru });
+      case "week": {
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+        return `${format(weekStart, "d MMM", { locale: ru })} - ${format(weekEnd, "d MMM yyyy", { locale: ru })}`;
+      }
+      case "month":
+        return format(selectedDate, "LLLL yyyy", { locale: ru });
+      default:
+        return "";
+    }
+  };
+
+  const isCurrentPeriod = () => {
+    const now = new Date();
+    switch (periodType) {
+      case "day":
+        return format(selectedDate, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
+      case "week":
+        return format(startOfWeek(selectedDate, { weekStartsOn: 1 }), "yyyy-MM-dd") === 
+               format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
+      case "month":
+        return format(selectedDate, "yyyy-MM") === format(now, "yyyy-MM");
+      default:
+        return false;
+    }
   };
 
   const totalRevenue = analytics 
@@ -47,24 +100,35 @@ export default function OwnerAnalyticsPage() {
       
       <PageContainer>
         <div className="space-y-6">
+          <Tabs value={periodType} onValueChange={(v) => {
+            setPeriodType(v as PeriodType);
+            setSelectedDate(new Date());
+          }}>
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="day" data-testid="tab-day">День</TabsTrigger>
+              <TabsTrigger value="week" data-testid="tab-week">Неделя</TabsTrigger>
+              <TabsTrigger value="month" data-testid="tab-month">Месяц</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigateMonth("prev")}
-              data-testid="button-prev-month"
+              onClick={() => navigate("prev")}
+              data-testid="button-prev-period"
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h2 className="text-xl font-semibold capitalize" data-testid="text-selected-month">
-              {format(selectedMonth, "LLLL yyyy", { locale: ru })}
+            <h2 className="text-xl font-semibold capitalize" data-testid="text-selected-period">
+              {getPeriodLabel()}
             </h2>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigateMonth("next")}
-              disabled={format(selectedMonth, "yyyy-MM") === format(new Date(), "yyyy-MM")}
-              data-testid="button-next-month"
+              onClick={() => navigate("next")}
+              disabled={isCurrentPeriod()}
+              data-testid="button-next-period"
             >
               <ChevronRight className="h-5 w-5" />
             </Button>
@@ -150,7 +214,7 @@ export default function OwnerAnalyticsPage() {
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="rounded-full bg-primary/10 p-2">
-                        <Clock className="h-4 w-4 text-primary" />
+                        <Timer className="h-4 w-4 text-primary" />
                       </div>
                       <span className="text-sm font-medium">Рабочие часы</span>
                     </div>
@@ -229,7 +293,7 @@ export default function OwnerAnalyticsPage() {
             <Card>
               <CardContent className="p-6 text-center">
                 <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Нет данных за этот месяц</p>
+                <p className="text-muted-foreground">Нет данных за этот период</p>
               </CardContent>
             </Card>
           )}

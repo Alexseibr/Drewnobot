@@ -1371,8 +1371,8 @@ export async function registerRoutes(
   // ============ ANALYTICS ============
   app.get("/api/owner/analytics/summary", async (req, res) => {
     try {
-      const month = req.query.month as string || new Date().toISOString().slice(0, 7);
-      const summary = await storage.getAnalyticsSummary(month);
+      const period = req.query.period as string || `month:${new Date().toISOString().slice(0, 7)}`;
+      const summary = await storage.getAnalyticsSummary(period);
       res.json(summary);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch analytics" });

@@ -124,7 +124,7 @@ export interface IStorage {
   getSiteSettings(): Promise<SiteSettings>;
   updateSiteSettings(updates: Partial<SiteSettings>): Promise<SiteSettings>;
   
-  getAnalyticsSummary(month: string): Promise<AnalyticsSummary>;
+  getAnalyticsSummary(period: string): Promise<AnalyticsSummary>;
   
   // SPA Bookings
   getSpaBookings(): Promise<SpaBooking[]>;
@@ -1012,11 +1012,42 @@ export class MemStorage implements IStorage {
     return this.siteSettings;
   }
 
-  async getAnalyticsSummary(month: string): Promise<AnalyticsSummary> {
-    const cottageBookings = Array.from(this.cottageBookings.values()).filter(b => b.createdAt.startsWith(month));
-    const bathBookings = Array.from(this.bathBookings.values()).filter(b => b.date.startsWith(month));
-    const quadBookings = Array.from(this.quadBookings.values()).filter(b => b.date.startsWith(month));
-    const workLogs = Array.from(this.workLogs.values()).filter(l => l.createdAt.startsWith(month));
+  async getAnalyticsSummary(period: string): Promise<AnalyticsSummary> {
+    const [periodType, dateStr] = period.includes(":") ? period.split(":") : ["month", period];
+    const baseDate = new Date(dateStr);
+    
+    let startDate: string;
+    let endDate: string;
+    
+    if (periodType === "day") {
+      startDate = dateStr;
+      endDate = dateStr;
+    } else if (periodType === "week") {
+      const d = new Date(dateStr);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(d.setDate(diff));
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      startDate = monday.toISOString().slice(0, 10);
+      endDate = sunday.toISOString().slice(0, 10);
+    } else {
+      const monthStr = dateStr.slice(0, 7);
+      startDate = `${monthStr}-01`;
+      const nextMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+      endDate = nextMonth.toISOString().slice(0, 10);
+    }
+    
+    const cottageBookings = Array.from(this.cottageBookings.values()).filter(b => {
+      const bDate = b.dateCheckIn || b.createdAt.slice(0, 10);
+      return bDate >= startDate && bDate <= endDate;
+    });
+    const bathBookings = Array.from(this.bathBookings.values()).filter(b => b.date >= startDate && b.date <= endDate);
+    const quadBookings = Array.from(this.quadBookings.values()).filter(b => b.date >= startDate && b.date <= endDate);
+    const workLogs = Array.from(this.workLogs.values()).filter(l => {
+      const wDate = l.startAt.slice(0, 10);
+      return wDate >= startDate && wDate <= endDate;
+    });
 
     const cottageRevenue = cottageBookings.reduce((sum, b) => sum + b.totalAmount, 0);
     const bathRevenue = bathBookings.reduce((sum, b) => sum + b.pricing.total, 0);
@@ -1031,7 +1062,7 @@ export class MemStorage implements IStorage {
     const tubLarge = bathBookings.filter(b => b.options.tub === "large");
 
     return {
-      month,
+      month: period,
       cottageBookingsCount: cottageBookings.length,
       cottageRevenue,
       bathBookingsCount: bathBookings.length,
@@ -1591,4 +1622,7 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from "./database-storage";
+
+// Use DatabaseStorage for persistent PostgreSQL storage
+export const storage: IStorage = new DatabaseStorage();
