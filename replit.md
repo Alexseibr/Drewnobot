@@ -45,13 +45,20 @@ Five user roles with hierarchical permissions:
 - **Tasks**: Scheduled reminders (climate control, trash, meters) and manual tasks
 - **Cash Management**: Shift-based cash tracking with transactions and incasation
 - **Quad Bookings**: Dynamic slot-based ATV booking system with:
-  - Short route (30 min, 50 BYN) and Long route (60 min, 80 BYN)
+  - Short route (30 min) and Long route (60 min)
+  - Dynamic pricing managed by instructors (base prices + date-specific overrides for holidays/events)
   - 4 quads available, operating hours 09:00-19:00
   - 15 min buffer between rides
   - 5% discount when joining existing slot (group booking incentive)
   - Phone-based rate limiting (max 3 pending per phone)
   - Instructor blocked times with overlap validation
   - Telegram notifications for instructors (new bookings, morning summary, evening reminder)
+- **Quad Pricing**: Instructor-managed pricing system
+  - Base prices for short/long routes (default: 50/80 BYN)
+  - Date-specific price overrides for holidays/special events
+  - Public API: `/api/quads/price` for guests
+  - Instructor API: `/api/instructor/quads/pricing` (authenticated)
+  - Instructor UI: `/instructor/pricing` for managing all pricing
 
 ### Project Structure
 ```
