@@ -481,6 +481,8 @@ export const spaBookingSchema = z.object({
   pricing: z.object({
     base: z.number(),
     total: z.number(),
+    discountPercent: z.number().min(0).max(100).default(0),
+    discountAmount: z.number().default(0),
     priceSnapshot: z.string().optional(),
   }),
   payments: z.object({

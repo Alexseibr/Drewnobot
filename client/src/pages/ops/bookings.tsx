@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, isSameDay, isAfter, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -11,7 +12,8 @@ import {
   X,
   CreditCard,
   Banknote,
-  Droplets
+  Droplets,
+  Percent
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -21,10 +23,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { BookingCardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { useAuth } from "@/lib/auth-context";
 import type { CottageBooking, BathBooking, SpaBooking } from "@shared/schema";
 
 interface BookingsData {
@@ -34,6 +40,12 @@ interface BookingsData {
 
 export default function BookingsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isOwner = user?.role === "OWNER" || user?.role === "SUPER_ADMIN";
+  
+  const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
+  const [selectedBookingForDiscount, setSelectedBookingForDiscount] = useState<SpaBooking | null>(null);
+  const [discountPercent, setDiscountPercent] = useState("");
 
   const { data: bookingsData, isLoading } = useQuery<BookingsData>({
     queryKey: ["/api/admin/bookings/upcoming"],
@@ -135,6 +147,44 @@ export default function BookingsPage() {
       toast({ title: "Ошибка закрытия оплаты SPA", variant: "destructive" });
     },
   });
+
+  const applySpaDiscountMutation = useMutation({
+    mutationFn: async ({ bookingId, discountPercent }: { bookingId: string; discountPercent: number }) => {
+      const response = await apiRequest("POST", `/api/owner/spa-bookings/${bookingId}/discount`, {
+        discountPercent,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/spa-bookings/upcoming"] });
+      setDiscountDialogOpen(false);
+      setSelectedBookingForDiscount(null);
+      setDiscountPercent("");
+      toast({ title: "Скидка применена" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка применения скидки", variant: "destructive" });
+    },
+  });
+
+  const handleOpenDiscountDialog = (booking: SpaBooking) => {
+    setSelectedBookingForDiscount(booking);
+    setDiscountPercent(String(booking.pricing.discountPercent || 0));
+    setDiscountDialogOpen(true);
+  };
+
+  const handleApplyDiscount = () => {
+    if (!selectedBookingForDiscount) return;
+    const percent = parseInt(discountPercent) || 0;
+    if (percent < 0 || percent > 100) {
+      toast({ title: "Скидка должна быть от 0 до 100%", variant: "destructive" });
+      return;
+    }
+    applySpaDiscountMutation.mutate({
+      bookingId: selectedBookingForDiscount.id,
+      discountPercent: percent,
+    });
+  };
 
   const cottageBookings = bookingsData?.cottageBookings || [];
   const bathBookings = bookingsData?.bathBookings || [];
@@ -240,10 +290,32 @@ export default function BookingsPage() {
                             </Badge>
                           </div>
                           <div className="flex items-center justify-between pt-3 border-t gap-2">
-                            <p className="font-semibold">
-                              {booking.pricing.total} BYN
-                            </p>
+                            <div>
+                              <p className="font-semibold">
+                                {booking.pricing.total} BYN
+                                {booking.pricing.discountPercent > 0 && (
+                                  <span className="text-xs text-status-confirmed ml-1">
+                                    (-{booking.pricing.discountPercent}%)
+                                  </span>
+                                )}
+                              </p>
+                              {booking.pricing.discountAmount > 0 && (
+                                <p className="text-xs text-muted-foreground line-through">
+                                  {booking.pricing.base} BYN
+                                </p>
+                              )}
+                            </div>
                             <div className="flex gap-2">
+                              {isOwner && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenDiscountDialog(booking)}
+                                  data-testid={`button-discount-spa-${booking.id}`}
+                                >
+                                  <Percent className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -287,6 +359,28 @@ export default function BookingsPage() {
                           </div>
                           <p className="font-medium">{booking.customer.fullName}</p>
                           <p className="text-sm text-muted-foreground">{booking.customer.phone}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <div>
+                              <span className="font-semibold">
+                                {booking.pricing.total} BYN
+                              </span>
+                              {booking.pricing.discountPercent > 0 && (
+                                <span className="text-xs text-status-confirmed ml-1">
+                                  (-{booking.pricing.discountPercent}%)
+                                </span>
+                              )}
+                            </div>
+                            {isOwner && booking.status !== "completed" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenDiscountDialog(booking)}
+                                data-testid={`button-discount-today-spa-${booking.id}`}
+                              >
+                                <Percent className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                           
                           {booking.status === "confirmed" && (
                             <div className="flex gap-2 mt-3 pt-3 border-t">
@@ -348,6 +442,28 @@ export default function BookingsPage() {
                           </div>
                           <p className="font-medium">{booking.customer.fullName}</p>
                           <p className="text-sm text-muted-foreground">{booking.customer.phone}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <div>
+                              <span className="font-semibold">
+                                {booking.pricing.total} BYN
+                              </span>
+                              {booking.pricing.discountPercent > 0 && (
+                                <span className="text-xs text-status-confirmed ml-1">
+                                  (-{booking.pricing.discountPercent}%)
+                                </span>
+                              )}
+                            </div>
+                            {isOwner && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenDiscountDialog(booking)}
+                                data-testid={`button-discount-upcoming-spa-${booking.id}`}
+                              >
+                                <Percent className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
@@ -622,6 +738,67 @@ export default function BookingsPage() {
           </TabsContent>
         </Tabs>
       </PageContainer>
+
+      <Dialog open={discountDialogOpen} onOpenChange={setDiscountDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Применить скидку</DialogTitle>
+          </DialogHeader>
+          {selectedBookingForDiscount && (
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                {selectedBookingForDiscount.customer.fullName} - {selectedBookingForDiscount.spaResource}
+                <br />
+                {format(parseISO(selectedBookingForDiscount.date), "d MMMM", { locale: ru })} | {selectedBookingForDiscount.startTime} - {selectedBookingForDiscount.endTime}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discount">Скидка (%)</Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                  placeholder="0-100"
+                  data-testid="input-discount-percent"
+                />
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Базовая цена: </span>
+                <span className="font-mono">{selectedBookingForDiscount.pricing.base} BYN</span>
+              </div>
+              {parseInt(discountPercent) > 0 && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">После скидки: </span>
+                  <span className="font-mono font-semibold">
+                    {Math.round(selectedBookingForDiscount.pricing.base * (1 - parseInt(discountPercent) / 100))} BYN
+                  </span>
+                  <span className="text-status-confirmed ml-2">
+                    (-{Math.round(selectedBookingForDiscount.pricing.base * parseInt(discountPercent) / 100)} BYN)
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDiscountDialogOpen(false)}
+              data-testid="button-cancel-discount"
+            >
+              Отмена
+            </Button>
+            <Button 
+              onClick={handleApplyDiscount}
+              disabled={applySpaDiscountMutation.isPending}
+              data-testid="button-apply-discount"
+            >
+              {applySpaDiscountMutation.isPending ? "Применение..." : "Применить"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

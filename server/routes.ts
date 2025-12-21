@@ -1419,6 +1419,38 @@ export async function registerRoutes(
     }
   });
 
+  // Owner: Apply discount to SPA booking
+  app.post("/api/owner/spa-bookings/:id/discount", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { discountPercent } = req.body;
+      
+      if (typeof discountPercent !== "number" || discountPercent < 0 || discountPercent > 100) {
+        return res.status(400).json({ error: "Скидка должна быть от 0 до 100%" });
+      }
+      
+      const existing = await storage.getSpaBooking(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Бронирование не найдено" });
+      }
+      
+      const discountAmount = Math.round(existing.pricing.base * discountPercent / 100);
+      const newTotal = existing.pricing.base - discountAmount;
+      
+      const booking = await storage.updateSpaBooking(req.params.id, {
+        pricing: {
+          ...existing.pricing,
+          discountPercent,
+          discountAmount,
+          total: newTotal,
+        },
+      });
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось применить скидку" });
+    }
+  });
+
   // ============ REVIEWS - GUEST ============
   app.post("/api/guest/reviews", async (req, res) => {
     try {
