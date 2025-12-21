@@ -486,9 +486,10 @@ export async function registerRoutes(
 
   // ============ QUADS - GUEST ============
   // Get available slots for a date with route type pricing info
-  app.get("/api/guest/quads/availability", async (req, res) => {
+  // Support both /api/guest/quads/availability/:date and /api/guest/quads/availability?date=...
+  app.get("/api/guest/quads/availability/:date?", async (req, res) => {
     try {
-      const date = req.query.date as string;
+      const date = req.params.date || (req.query.date as string);
       if (!date) return res.status(400).json({ error: "Date is required" });
       
       // Check if date is blocked
