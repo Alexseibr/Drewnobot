@@ -815,16 +815,14 @@ export async function registerRoutes(
 
   app.post("/api/guest/spa-bookings", async (req, res) => {
     try {
-      // Verify token (Telegram auth or phone verification)
+      // Check for auth token (optional - web users can book with phone number)
       const token = req.headers["x-verify-token"] as string || req.body.verificationToken;
-      if (!token) {
-        return res.status(401).json({ error: "Требуется верификация" });
-      }
+      let isVerified = false;
       
-      const verification = await storage.getVerificationToken(token);
-      const authSession = await storage.getAuthSession(token);
-      if (!verification && !authSession) {
-        return res.status(401).json({ error: "Недействительный токен верификации" });
+      if (token) {
+        const verification = await storage.getVerificationToken(token);
+        const authSession = await storage.getAuthSession(token);
+        isVerified = !!(verification || authSession);
       }
       
       const parsed = insertSpaBookingSchema.safeParse(req.body);
@@ -859,6 +857,11 @@ export async function registerRoutes(
       
       if (conflict) {
         return res.status(400).json({ error: "Это время уже занято" });
+      }
+      
+      // Ensure phone is provided for unverified users
+      if (!isVerified && !parsed.data.customer.phone) {
+        return res.status(400).json({ error: "Укажите номер телефона для связи" });
       }
       
       const booking = await storage.createSpaBooking(parsed.data);

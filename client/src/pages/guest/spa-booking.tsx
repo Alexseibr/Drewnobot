@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus } from "lucide-react";
+import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus, MessageCircle, Phone } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
@@ -123,21 +123,41 @@ export default function SpaBookingPage() {
       const endHour = parseInt(data.startTime.split(":")[0]) + data.durationHours;
       const endTime = `${endHour.toString().padStart(2, "0")}:00`;
       
-      const response = await apiRequest("POST", "/api/guest/spa-bookings", {
-        spaResource: data.spaResource,
-        bookingType: data.bookingType,
-        date: format(data.date, "yyyy-MM-dd"),
-        startTime: data.startTime,
-        endTime,
-        durationHours: data.durationHours,
-        guestsCount: data.guestsCount,
-        customer: {
-          fullName: data.fullName,
-          phone: data.phone,
-          telegramId: user?.telegramId,
-        },
-        comment: data.comment || undefined,
+      const storedAuth = localStorage.getItem("drewno-auth");
+      const authToken = storedAuth ? JSON.parse(storedAuth).token : null;
+      
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (authToken) {
+        headers["x-verify-token"] = authToken;
+      }
+      
+      const response = await fetch("/api/guest/spa-bookings", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          spaResource: data.spaResource,
+          bookingType: data.bookingType,
+          date: format(data.date, "yyyy-MM-dd"),
+          startTime: data.startTime,
+          endTime,
+          durationHours: data.durationHours,
+          guestsCount: data.guestsCount,
+          customer: {
+            fullName: data.fullName,
+            phone: data.phone,
+            telegramId: user?.telegramId,
+          },
+          comment: data.comment || undefined,
+        }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Ошибка бронирования");
+      }
+      
       return response.json();
     },
     onSuccess: () => {
@@ -205,7 +225,7 @@ export default function SpaBookingPage() {
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Время</span>
-                <span className="font-medium">{watchedValues.startTime} - {calculateEndTime()}</span>
+                <span className="font-medium">{watchedValues.startTime} - {calculateEndTime()} ({watchedValues.durationHours} ч.)</span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Гости</span>
@@ -216,6 +236,9 @@ export default function SpaBookingPage() {
                 <span className="font-semibold text-primary">{calculatePrice()} BYN</span>
               </div>
             </div>
+            <p className="text-sm text-muted-foreground text-center mt-4">
+              Мы свяжемся с вами для подтверждения и оплаты.
+            </p>
             <Button
               className="mt-8 w-full max-w-xs"
               onClick={() => {
@@ -610,9 +633,36 @@ export default function SpaBookingPage() {
                   </CardContent>
                 </Card>
                 
-                <p className="text-sm text-muted-foreground text-center">
-                  После подтверждения брони вам придёт уведомление с деталями оплаты.
-                </p>
+                {!user ? (
+                  <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <MessageCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium">Подтверждение через Telegram</p>
+                          <p className="text-xs text-muted-foreground">
+                            После отправки заявки мы свяжемся с вами по телефону для подтверждения брони и оплаты.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => window.open("https://t.me/Drewno_bot?start=verify", "_blank")}
+                            data-testid="button-telegram-verify"
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            Открыть бот для уведомлений
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center">
+                    После подтверждения брони вам придёт уведомление в Telegram.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
