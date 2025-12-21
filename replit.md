@@ -65,7 +65,7 @@ Five user roles with hierarchical permissions:
 - connect-pg-simple for session storage
 
 ### Telegram Integration
-- **Bot**: @Drewnoo_bot with inline keyboard menu
+- **Bot**: @Drewno_bot with inline keyboard menu
 - **WebApp SDK**: Telegram WebApp SDK for mini-app functionality
 - **Authentication**: HMAC-SHA256 initData verification with 24h expiry
 - **Sessions**: 7-day session tokens stored in localStorage
