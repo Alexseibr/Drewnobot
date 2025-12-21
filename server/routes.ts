@@ -813,6 +813,12 @@ export async function registerRoutes(
     }
   });
 
+  // Rate limit map for unauthenticated bookings
+  const bookingAttempts = new Map<string, { count: number; resetAt: number }>();
+  const MAX_UNVERIFIED_PENDING = 3; // Max pending bookings per phone
+  const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
+  const MAX_REQUESTS_PER_HOUR = 10;
+  
   app.post("/api/guest/spa-bookings", async (req, res) => {
     try {
       // Check for auth token (optional - web users can book with phone number)
@@ -823,6 +829,25 @@ export async function registerRoutes(
         const verification = await storage.getVerificationToken(token);
         const authSession = await storage.getAuthSession(token);
         isVerified = !!(verification || authSession);
+      }
+      
+      // Rate limiting for unauthenticated requests
+      if (!isVerified) {
+        const clientIP = req.ip || req.socket.remoteAddress || "unknown";
+        const now = Date.now();
+        const rateKey = `ip:${clientIP}`;
+        
+        let attempts = bookingAttempts.get(rateKey);
+        if (!attempts || now > attempts.resetAt) {
+          attempts = { count: 0, resetAt: now + RATE_LIMIT_WINDOW };
+        }
+        
+        if (attempts.count >= MAX_REQUESTS_PER_HOUR) {
+          return res.status(429).json({ error: "Слишком много запросов. Попробуйте позже." });
+        }
+        
+        attempts.count++;
+        bookingAttempts.set(rateKey, attempts);
       }
       
       const parsed = insertSpaBookingSchema.safeParse(req.body);
@@ -862,6 +887,22 @@ export async function registerRoutes(
       // Ensure phone is provided for unverified users
       if (!isVerified && !parsed.data.customer.phone) {
         return res.status(400).json({ error: "Укажите номер телефона для связи" });
+      }
+      
+      // Limit pending bookings per phone to prevent abuse
+      if (!isVerified && parsed.data.customer.phone) {
+        const phone = parsed.data.customer.phone;
+        const allBookings = await storage.getAllSpaBookings();
+        const pendingByPhone = allBookings.filter(b => 
+          b.customer.phone === phone && 
+          ["pending", "awaiting_prepayment"].includes(b.status)
+        );
+        
+        if (pendingByPhone.length >= MAX_UNVERIFIED_PENDING) {
+          return res.status(400).json({ 
+            error: `У вас уже есть ${MAX_UNVERIFIED_PENDING} ожидающих бронирований. Дождитесь подтверждения.` 
+          });
+        }
       }
       
       const booking = await storage.createSpaBooking(parsed.data);
