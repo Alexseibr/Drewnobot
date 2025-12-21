@@ -54,7 +54,15 @@ async function telegramApi(method: string, body: object = {}) {
   return result;
 }
 
+// Production domain for Village Drewno
+const PRODUCTION_URL = "https://d.drewno.by";
+
 function getWebAppUrl(): string {
+  // Always use production URL if set
+  if (process.env.NODE_ENV === "production") {
+    return PRODUCTION_URL;
+  }
+  
   // Use REPL_SLUG and REPL_OWNER for Replit deployment
   const replSlug = process.env.REPL_SLUG;
   const replOwner = process.env.REPL_OWNER;
@@ -63,8 +71,8 @@ function getWebAppUrl(): string {
     return `https://${replSlug}.${replOwner}.repl.co`;
   }
   
-  // Fallback for local development
-  return process.env.WEBAPP_URL || "https://localhost:5000";
+  // Fallback for local development - use Replit dev URL
+  return process.env.WEBAPP_URL || `https://${process.env.REPL_ID}.id.repl.co`;
 }
 
 async function sendMessage(chatId: number, text: string, options: object = {}) {
@@ -424,4 +432,67 @@ export async function sendEveningReminder() {
   } catch (error) {
     console.error("[Telegram Bot] Failed to send evening reminder:", error);
   }
+}
+
+// ============ AUTO-INITIALIZATION ============
+
+export async function initTelegramBot() {
+  if (!BOT_TOKEN) {
+    console.log("[Telegram Bot] No bot token configured, skipping initialization");
+    return;
+  }
+  
+  // Only set up webhook in production (d.drewno.by)
+  // In development, Telegram can't reach the dev server
+  if (process.env.NODE_ENV === "production") {
+    console.log(`[Telegram Bot] Setting up webhook for production: ${PRODUCTION_URL}`);
+    await setupTelegramWebhook(PRODUCTION_URL);
+  } else {
+    console.log("[Telegram Bot] Development mode - webhook will be set when deployed to production");
+    console.log("[Telegram Bot] Web App URL for development:", getWebAppUrl());
+  }
+  
+  // Schedule daily notifications (only in production to avoid duplicate notifications)
+  if (process.env.NODE_ENV === "production") {
+    scheduleNotifications();
+  }
+}
+
+function scheduleNotifications() {
+  // Schedule morning summary at 08:00 Minsk time (UTC+3)
+  const now = new Date();
+  const morningTime = new Date();
+  morningTime.setHours(8, 0, 0, 0);
+  
+  // If it's already past 8am, schedule for tomorrow
+  if (now > morningTime) {
+    morningTime.setDate(morningTime.getDate() + 1);
+  }
+  
+  const msUntilMorning = morningTime.getTime() - now.getTime();
+  
+  setTimeout(() => {
+    sendMorningSummary();
+    // Then schedule daily at 24h intervals
+    setInterval(sendMorningSummary, 24 * 60 * 60 * 1000);
+  }, msUntilMorning);
+  
+  // Schedule evening reminder at 20:00 Minsk time (UTC+3)
+  const eveningTime = new Date();
+  eveningTime.setHours(20, 0, 0, 0);
+  
+  // If it's already past 8pm, schedule for tomorrow
+  if (now > eveningTime) {
+    eveningTime.setDate(eveningTime.getDate() + 1);
+  }
+  
+  const msUntilEvening = eveningTime.getTime() - now.getTime();
+  
+  setTimeout(() => {
+    sendEveningReminder();
+    // Then schedule daily at 24h intervals
+    setInterval(sendEveningReminder, 24 * 60 * 60 * 1000);
+  }, msUntilEvening);
+  
+  console.log("[Telegram Bot] Notifications scheduled");
 }
