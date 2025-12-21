@@ -434,6 +434,87 @@ export async function sendEveningReminder() {
   }
 }
 
+// ============ MAINTENANCE ALERTS ============
+
+export async function sendMaintenanceAlerts() {
+  try {
+    const statuses = await storage.getQuadMaintenanceStatuses();
+    const machines = await storage.getQuadMachines();
+    const rules = await storage.getQuadMaintenanceRules();
+    
+    // Filter to only items that are due, overdue, or have warnings
+    const alertItems = statuses.filter(s => s.status === "due" || s.status === "overdue" || s.status === "warning");
+    
+    if (alertItems.length === 0) {
+      return; // No maintenance alerts needed
+    }
+    
+    const users = await storage.getUsers();
+    const instructors = users.filter(u => u.role === "INSTRUCTOR" && u.isActive);
+    
+    let message = `<b>Напоминание: техобслуживание квадроциклов</b>\n\n`;
+    
+    // Group by machine
+    const groupedByMachine: Record<string, typeof alertItems> = {};
+    for (const item of alertItems) {
+      if (!groupedByMachine[item.quadId]) {
+        groupedByMachine[item.quadId] = [];
+      }
+      groupedByMachine[item.quadId].push(item);
+    }
+    
+    for (const quadId of Object.keys(groupedByMachine)) {
+      const items = groupedByMachine[quadId];
+      const machine = machines.find(m => m.id === quadId);
+      if (!machine) continue;
+      
+      message += `<b>${machine.name}</b> (${machine.currentMileageKm} км)\n`;
+      
+      for (const item of items) {
+        const rule = rules.find(r => r.id === item.ruleId);
+        if (!rule) continue;
+        
+        const statusLabels: Record<string, string> = {
+          overdue: "[ПРОСРОЧЕНО]",
+          due: "[ТРЕБУЕТСЯ]",
+          warning: "[СКОРО]",
+        };
+        const statusText = statusLabels[item.status] || "[СКОРО]";
+        message += `  ${statusText} ${rule.title}`;
+        
+        if (item.remainingKm !== undefined) {
+          if (item.remainingKm <= 0) {
+            message += ` (превышено на ${Math.abs(item.remainingKm)} км)`;
+          } else {
+            message += ` (осталось ${item.remainingKm} км)`;
+          }
+        }
+        
+        if (item.remainingDays !== undefined) {
+          if (item.remainingDays <= 0) {
+            message += ` (просрочено на ${Math.abs(item.remainingDays)} дн.)`;
+          } else {
+            message += ` (${item.remainingDays} дн.)`;
+          }
+        }
+        
+        message += "\n";
+      }
+      message += "\n";
+    }
+    
+    for (const instructor of instructors) {
+      if (instructor.telegramId) {
+        await sendMessage(parseInt(instructor.telegramId), message);
+      }
+    }
+    
+    console.log(`[Telegram Bot] Sent maintenance alerts to ${instructors.length} instructors (${alertItems.length} items)`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send maintenance alerts:", error);
+  }
+}
+
 // ============ AUTO-INITIALIZATION ============
 
 export async function initTelegramBot() {
@@ -473,8 +554,12 @@ function scheduleNotifications() {
   
   setTimeout(() => {
     sendMorningSummary();
+    sendMaintenanceAlerts();
     // Then schedule daily at 24h intervals
-    setInterval(sendMorningSummary, 24 * 60 * 60 * 1000);
+    setInterval(() => {
+      sendMorningSummary();
+      sendMaintenanceAlerts();
+    }, 24 * 60 * 60 * 1000);
   }, msUntilMorning);
   
   // Schedule evening reminder at 20:00 Minsk time (UTC+3)

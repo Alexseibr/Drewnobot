@@ -721,6 +721,9 @@ export const insertQuadMaintenanceEventSchema = quadMaintenanceEventSchema.omit(
 export type InsertQuadMaintenanceEvent = z.infer<typeof insertQuadMaintenanceEventSchema>;
 
 // ============ QUAD MAINTENANCE STATUS (Tracking next service) ============
+export const maintenanceStatusEnum = z.enum(["ok", "warning", "due", "overdue"]);
+export type MaintenanceStatusType = z.infer<typeof maintenanceStatusEnum>;
+
 export const quadMaintenanceStatusSchema = z.object({
   id: z.string(),
   quadId: z.string(),
@@ -729,8 +732,9 @@ export const quadMaintenanceStatusSchema = z.object({
   lastServiceDate: z.string().optional(),
   nextDueMileage: z.number().optional(),
   nextDueDate: z.string().optional(),
-  isDue: z.boolean().default(false),
-  isWarning: z.boolean().default(false),
+  remainingKm: z.number().optional(), // negative = overdue
+  remainingDays: z.number().optional(), // negative = overdue
+  status: maintenanceStatusEnum.default("ok"),
 });
 export type QuadMaintenanceStatus = z.infer<typeof quadMaintenanceStatusSchema>;
 

@@ -217,8 +217,8 @@ export default function InstructorMaintenancePage() {
 
   const getQuadAlertLevel = (quadId: string): "due" | "warning" | "ok" => {
     const quadStatuses = getQuadStatuses(quadId);
-    if (quadStatuses.some(s => s.isDue)) return "due";
-    if (quadStatuses.some(s => s.isWarning)) return "warning";
+    if (quadStatuses.some(s => s.status === "overdue" || s.status === "due")) return "due";
+    if (quadStatuses.some(s => s.status === "warning")) return "warning";
     return "ok";
   };
 
@@ -298,8 +298,8 @@ export default function InstructorMaintenancePage() {
                   const alertLevel = getQuadAlertLevel(machine.id);
                   const quadStatuses = getQuadStatuses(machine.id);
                   const isExpanded = expandedQuad === machine.id;
-                  const dueStatuses = quadStatuses.filter(s => s.isDue);
-                  const warningStatuses = quadStatuses.filter(s => s.isWarning);
+                  const dueStatuses = quadStatuses.filter(s => s.status === "overdue" || s.status === "due");
+                  const warningStatuses = quadStatuses.filter(s => s.status === "warning");
 
                   return (
                     <Card key={machine.id} data-testid={`card-quad-${machine.code}`}>

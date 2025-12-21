@@ -1384,40 +1384,51 @@ export class MemStorage implements IStorage {
 
         let nextDueMileage: number | undefined;
         let nextDueDate: string | undefined;
-        let isDue = false;
-        let isWarning = false;
+        let remainingKm: number | undefined;
+        let remainingDays: number | undefined;
+        let status: "ok" | "warning" | "due" | "overdue" = "ok";
         const now = new Date();
 
+        // Mileage-based trigger
         if (rule.triggerType === "mileage" || rule.triggerType === "both") {
           if (rule.intervalKm) {
             const lastMileage = lastEvent?.mileageKm ?? 0;
             nextDueMileage = lastMileage + rule.intervalKm;
+            remainingKm = nextDueMileage - machine.currentMileageKm;
             
-            if (machine.currentMileageKm >= nextDueMileage) {
-              isDue = true;
-            } else if (rule.warningKm && machine.currentMileageKm >= (nextDueMileage - rule.warningKm)) {
-              isWarning = true;
+            if (remainingKm <= 0) {
+              status = "overdue";
+            } else if (rule.warningKm && remainingKm <= rule.warningKm) {
+              if (status !== "overdue") status = "warning";
             }
           }
         }
 
+        // Time-based trigger
         if (rule.triggerType === "time" || rule.triggerType === "both") {
           if (rule.intervalDays) {
-            const lastDate = lastEvent?.performedAt ? new Date(lastEvent.performedAt) : new Date(machine.createdAt);
-            const dueDate = new Date(lastDate);
+            // Guard against missing createdAt - use now as fallback
+            const baseDate = lastEvent?.performedAt 
+              ? new Date(lastEvent.performedAt) 
+              : (machine.createdAt ? new Date(machine.createdAt) : now);
+            const dueDate = new Date(baseDate);
             dueDate.setDate(dueDate.getDate() + rule.intervalDays);
             nextDueDate = dueDate.toISOString().split('T')[0];
+            remainingDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-            if (now >= dueDate) {
-              isDue = true;
-            } else if (rule.warningDays) {
-              const warningDate = new Date(dueDate);
-              warningDate.setDate(warningDate.getDate() - rule.warningDays);
-              if (now >= warningDate) {
-                isWarning = true;
-              }
+            if (remainingDays <= 0) {
+              status = "overdue";
+            } else if (rule.warningDays && remainingDays <= rule.warningDays) {
+              if (status !== "overdue") status = status === "ok" ? "warning" : status;
             }
           }
+        }
+
+        // For "both" trigger type, if either is overdue, status is overdue
+        // If either is in warning (and nothing is overdue), status is warning
+        // "due" is used when exactly at the threshold (remainingKm=0 or remainingDays=0)
+        if (status === "overdue" && ((remainingKm !== undefined && remainingKm === 0) || (remainingDays !== undefined && remainingDays === 0))) {
+          status = "due";
         }
 
         statuses.push({
@@ -1428,8 +1439,9 @@ export class MemStorage implements IStorage {
           lastServiceDate: lastEvent?.performedAt,
           nextDueMileage,
           nextDueDate,
-          isDue,
-          isWarning: isWarning && !isDue,
+          remainingKm,
+          remainingDays,
+          status,
         });
       }
     }
