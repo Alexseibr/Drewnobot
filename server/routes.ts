@@ -1686,6 +1686,215 @@ export async function registerRoutes(
     }
   });
 
+  // ============ QUAD MAINTENANCE (SERVICE BOOK) ============
+  
+  // Get all quad machines
+  app.get("/api/quads/machines", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const machines = await storage.getQuadMachines();
+      res.json(machines);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить список квадроциклов" });
+    }
+  });
+
+  // Get maintenance statuses for all quads
+  app.get("/api/quads/maintenance/statuses", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const statuses = await storage.getQuadMaintenanceStatuses();
+      res.json(statuses);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить статусы ТО" });
+    }
+  });
+
+  // Get maintenance status for a specific quad
+  app.get("/api/quads/:quadId/maintenance/status", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const statuses = await storage.getQuadMaintenanceStatusesForQuad(req.params.quadId);
+      res.json(statuses);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить статус ТО" });
+    }
+  });
+
+  // Get mileage logs
+  app.get("/api/quads/mileage", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const quadId = req.query.quadId as string | undefined;
+      const logs = await storage.getQuadMileageLogs(quadId);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить журнал пробега" });
+    }
+  });
+
+  // Log mileage after a ride
+  app.post("/api/quads/mileage", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { quadId, mileageKm, notes } = req.body;
+      const user = (req as any).user;
+      
+      if (!quadId || typeof mileageKm !== "number" || mileageKm < 0) {
+        return res.status(400).json({ error: "Неверные данные пробега" });
+      }
+      
+      const machine = await storage.getQuadMachine(quadId);
+      if (!machine) {
+        return res.status(404).json({ error: "Квадроцикл не найден" });
+      }
+      
+      if (mileageKm < machine.currentMileageKm) {
+        return res.status(400).json({ error: "Новый пробег не может быть меньше текущего" });
+      }
+      
+      const log = await storage.createQuadMileageLog({
+        quadId,
+        mileageKm,
+        notes,
+        loggedBy: user.id,
+      });
+      
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось записать пробег" });
+    }
+  });
+
+  // Get maintenance rules
+  app.get("/api/quads/maintenance/rules", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const quadId = req.query.quadId as string | undefined;
+      const rules = await storage.getQuadMaintenanceRules(quadId);
+      res.json(rules);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить правила ТО" });
+    }
+  });
+
+  // Create maintenance rule
+  app.post("/api/quads/maintenance/rules", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { quadId, title, description, triggerType, intervalKm, intervalDays, warningKm, warningDays } = req.body;
+      const user = (req as any).user;
+      
+      if (!title || !triggerType || !["mileage", "time", "both"].includes(triggerType)) {
+        return res.status(400).json({ error: "Неверные данные правила" });
+      }
+      
+      if (triggerType === "mileage" && (!intervalKm || intervalKm <= 0)) {
+        return res.status(400).json({ error: "Укажите интервал в км" });
+      }
+      
+      if (triggerType === "time" && (!intervalDays || intervalDays <= 0)) {
+        return res.status(400).json({ error: "Укажите интервал в днях" });
+      }
+      
+      if (triggerType === "both" && ((!intervalKm || intervalKm <= 0) || (!intervalDays || intervalDays <= 0))) {
+        return res.status(400).json({ error: "Укажите интервалы в км и днях" });
+      }
+      
+      const rule = await storage.createQuadMaintenanceRule({
+        quadId: quadId || null,
+        title,
+        description,
+        triggerType,
+        intervalKm: intervalKm || null,
+        intervalDays: intervalDays || null,
+        warningKm: warningKm || null,
+        warningDays: warningDays || null,
+        createdBy: user.id,
+      });
+      
+      res.json(rule);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось создать правило ТО" });
+    }
+  });
+
+  // Update maintenance rule
+  app.patch("/api/quads/maintenance/rules/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const rule = await storage.updateQuadMaintenanceRule(req.params.id, req.body);
+      if (!rule) {
+        return res.status(404).json({ error: "Правило не найдено" });
+      }
+      res.json(rule);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось обновить правило ТО" });
+    }
+  });
+
+  // Delete maintenance rule
+  app.delete("/api/quads/maintenance/rules/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteQuadMaintenanceRule(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Правило не найдено" });
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось удалить правило ТО" });
+    }
+  });
+
+  // Get maintenance events (service history)
+  app.get("/api/quads/maintenance/events", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const quadId = req.query.quadId as string | undefined;
+      const events = await storage.getQuadMaintenanceEvents(quadId);
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить историю ТО" });
+    }
+  });
+
+  // Record maintenance event
+  app.post("/api/quads/maintenance/events", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { quadId, ruleId, title, description, mileageKm, partsUsed, totalCost, performedAt } = req.body;
+      const user = (req as any).user;
+      
+      if (!quadId || !title || typeof mileageKm !== "number") {
+        return res.status(400).json({ error: "Неверные данные ТО" });
+      }
+      
+      const machine = await storage.getQuadMachine(quadId);
+      if (!machine) {
+        return res.status(404).json({ error: "Квадроцикл не найден" });
+      }
+      
+      const event = await storage.createQuadMaintenanceEvent({
+        quadId,
+        ruleId: ruleId || null,
+        title,
+        description,
+        mileageKm,
+        partsUsed,
+        totalCost: totalCost || null,
+        performedBy: user.id,
+        performedAt: performedAt || new Date().toISOString(),
+      });
+      
+      res.json(event);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось записать ТО" });
+    }
+  });
+
+  // Update quad machine (name, notes, active status)
+  app.patch("/api/quads/machines/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const machine = await storage.updateQuadMachine(req.params.id, req.body);
+      if (!machine) {
+        return res.status(404).json({ error: "Квадроцикл не найден" });
+      }
+      res.json(machine);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось обновить квадроцикл" });
+    }
+  });
+
   // ============ DEV AUTH ============
   app.post("/api/auth/dev-login", async (req, res) => {
     if (process.env.NODE_ENV !== "development") {
