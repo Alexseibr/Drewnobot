@@ -466,68 +466,256 @@ export async function registerRoutes(
   });
 
   // ============ QUADS - GUEST ============
+  // Get available slots for a date with route type pricing info
   app.get("/api/guest/quads/availability", async (req, res) => {
     try {
       const date = req.query.date as string;
       if (!date) return res.status(400).json({ error: "Date is required" });
       
-      const sessions = await storage.getQuadSessionsForDate(date);
-      res.json(sessions.filter(s => s.status !== "blocked"));
+      // Check if date is blocked
+      const blockedDate = await storage.getBlockedDate(date);
+      if (blockedDate) {
+        return res.json({ 
+          slots: [], 
+          blockedTimes: [], 
+          blocked: true,
+          message: blockedDate.reason || "День недоступен для бронирования"
+        });
+      }
+      
+      // Get existing slots and blocked times
+      const slots = await storage.getQuadSlotsForDate(date);
+      const blockedTimes = await storage.getInstructorBlockedTimesForDate(date);
+      
+      // Generate available time slots (09:00 - 19:00)
+      const availableSlots: Array<{
+        startTime: string;
+        routeType: "short" | "long";
+        price: number;
+        availableQuads: number;
+        hasDiscount: boolean;
+        discountPrice?: number;
+      }> = [];
+      
+      for (let hour = 9; hour < 19; hour++) {
+        for (let min = 0; min < 60; min += 30) {
+          const startTime = `${hour.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
+          
+          // Check if time is blocked
+          const isBlocked = blockedTimes.some(bt => {
+            if (!bt.startTime) return true; // Whole day blocked
+            return startTime >= bt.startTime && startTime < (bt.endTime || "23:59");
+          });
+          
+          if (isBlocked) continue;
+          
+          // For short route (30 min)
+          const shortSlot = slots.find(s => s.startTime === startTime && s.routeType === "short");
+          const shortAvailable = shortSlot ? 4 - shortSlot.bookedQuads : 4;
+          if (shortAvailable > 0) {
+            availableSlots.push({
+              startTime,
+              routeType: "short",
+              price: 50,
+              availableQuads: shortAvailable,
+              hasDiscount: !!shortSlot,
+              discountPrice: shortSlot ? Math.round(50 * 0.95) : undefined,
+            });
+          }
+          
+          // For long route (60 min) - check if doesn't overlap with next hour
+          if (hour < 18 || (hour === 18 && min === 0)) {
+            const longSlot = slots.find(s => s.startTime === startTime && s.routeType === "long");
+            const longAvailable = longSlot ? 4 - longSlot.bookedQuads : 4;
+            if (longAvailable > 0) {
+              availableSlots.push({
+                startTime,
+                routeType: "long",
+                price: 80,
+                availableQuads: longAvailable,
+                hasDiscount: !!longSlot,
+                discountPrice: longSlot ? Math.round(80 * 0.95) : undefined,
+              });
+            }
+          }
+        }
+      }
+      
+      res.json({ 
+        slots: availableSlots, 
+        blockedTimes,
+        blocked: false 
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch availability" });
     }
   });
 
+  // Create quad booking (guest)
   app.post("/api/guest/quad-bookings", async (req, res) => {
     try {
-      const { sessionId, quadsCount } = req.body;
+      const { date, startTime, routeType, quadsCount, customer, comment, slotId } = req.body;
       
-      const session = await storage.getQuadSession(sessionId);
-      if (!session) return res.status(404).json({ error: "Session not found" });
-      
-      const remaining = session.totalQuads - session.bookedQuads;
-      if (quadsCount > remaining) {
-        return res.status(400).json({ error: `Only ${remaining} quads available` });
+      if (!date || !startTime || !routeType || !quadsCount || !customer?.phone || !customer?.fullName) {
+        return res.status(400).json({ error: "Missing required fields" });
       }
       
-      const booking = await storage.createQuadBooking(req.body);
+      // Check availability
+      const existingBookings = await storage.getQuadBookingsForDate(date);
+      const sameSlotBookings = existingBookings.filter(b => 
+        b.startTime === startTime && 
+        b.routeType === routeType && 
+        b.status !== "cancelled"
+      );
+      
+      const bookedQuads = sameSlotBookings.reduce((sum, b) => sum + b.quadsCount, 0);
+      if (bookedQuads + quadsCount > 4) {
+        return res.status(400).json({ 
+          error: `Доступно только ${4 - bookedQuads} квадроцикл(ов) на это время` 
+        });
+      }
+      
+      // Check rate limit for unauthenticated users - check across all dates
+      const allUpcomingBookings = await storage.getQuadBookingsUpcoming();
+      const pendingByPhone = allUpcomingBookings.filter(b => 
+        b.customer.phone === customer.phone && 
+        b.status === "pending_call"
+      );
+      if (pendingByPhone.length >= 3) {
+        return res.status(429).json({ 
+          error: "Превышен лимит незавершённых бронирований. Дождитесь подтверждения." 
+        });
+      }
+      
+      const booking = await storage.createQuadBooking({
+        date,
+        startTime,
+        routeType,
+        quadsCount,
+        customer,
+        comment,
+        slotId: sameSlotBookings.length > 0 ? `${startTime}-${routeType}` : undefined,
+      });
+      
+      // Notify instructors about new booking (async, don't wait)
+      import("./telegram-bot").then(({ notifyNewQuadBooking }) => {
+        notifyNewQuadBooking(booking).catch(console.error);
+      });
+      
       res.json(booking);
     } catch (error) {
       res.status(500).json({ error: "Failed to create booking" });
     }
   });
 
-  // ============ QUADS - INSTRUCTOR ============
+  // ============ QUADS - INSTRUCTOR/ADMIN ============
+  // Get schedule for date
   app.get("/api/instructor/quad-schedule", async (req, res) => {
     try {
       const date = req.query.date as string || new Date().toISOString().split("T")[0];
-      const sessions = await storage.getQuadSessionsForDate(date);
       
-      const sessionsWithBookings = await Promise.all(
-        sessions.map(async (session) => {
-          const bookings = await storage.getQuadBookingsForSession(session.id);
-          return { ...session, bookings };
-        })
-      );
+      const bookings = await storage.getQuadBookingsForDate(date);
+      const slots = await storage.getQuadSlotsForDate(date);
+      const blockedTimes = await storage.getInstructorBlockedTimesForDate(date);
       
-      res.json({ sessions: sessionsWithBookings });
+      res.json({ bookings, slots, blockedTimes });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch schedule" });
     }
   });
 
-  app.post("/api/instructor/quad-sessions", async (req, res) => {
+  // Get all upcoming bookings
+  app.get("/api/instructor/quad-bookings", async (req, res) => {
     try {
-      const session = await storage.createQuadSession({
-        ...req.body,
-        createdBy: req.body.createdBy || "instructor",
-      });
-      res.json(session);
+      const bookings = await storage.getQuadBookingsUpcoming();
+      res.json(bookings);
     } catch (error) {
-      res.status(500).json({ error: "Failed to create session" });
+      res.status(500).json({ error: "Failed to fetch bookings" });
     }
   });
 
+  // Get instructor schedule (bookings + blocked times for a date)
+  app.get("/api/instructor/schedule", async (req, res) => {
+    try {
+      const { date } = req.query;
+      if (!date || typeof date !== "string") {
+        return res.status(400).json({ error: "Date is required" });
+      }
+      
+      const bookings = await storage.getQuadBookingsForDate(date);
+      const blockedTimes = await storage.getInstructorBlockedTimesForDate(date);
+      
+      res.json({
+        bookings: bookings.filter(b => b.status !== "cancelled"),
+        blockedTimes,
+      });
+    } catch (error) {
+      console.error("Error fetching instructor schedule:", error);
+      res.status(500).json({ error: "Failed to fetch schedule" });
+    }
+  });
+
+  // Block instructor time
+  app.post("/api/instructor/blocked-times", async (req, res) => {
+    try {
+      const { date, startTime, endTime, reason } = req.body;
+      
+      if (!date) {
+        return res.status(400).json({ error: "Date is required" });
+      }
+      
+      // Check for overlapping blocked times
+      const existingBlocked = await storage.getInstructorBlockedTimesForDate(date);
+      
+      // If no times specified, it's a full day block
+      if (!startTime) {
+        // Check if any partial blocks exist for this day
+        if (existingBlocked.length > 0) {
+          return res.status(400).json({ 
+            error: "На этот день уже есть заблокированное время. Сначала удалите его." 
+          });
+        }
+      } else {
+        // Check for overlapping time ranges
+        const hasOverlap = existingBlocked.some(bt => {
+          if (!bt.startTime) return true; // Whole day is blocked
+          const btStart = bt.startTime;
+          const btEnd = bt.endTime || "23:59";
+          const newEnd = endTime || "23:59";
+          return !(newEnd <= btStart || startTime >= btEnd);
+        });
+        
+        if (hasOverlap) {
+          return res.status(400).json({ 
+            error: "Выбранное время пересекается с уже заблокированным периодом" 
+          });
+        }
+      }
+      
+      const blocked = await storage.createInstructorBlockedTime({
+        date,
+        startTime,
+        endTime,
+        reason,
+      });
+      res.json(blocked);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create blocked time" });
+    }
+  });
+
+  // Delete blocked time
+  app.delete("/api/instructor/blocked-times/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteInstructorBlockedTime(req.params.id);
+      if (!deleted) return res.status(404).json({ error: "Not found" });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete blocked time" });
+    }
+  });
+
+  // Confirm booking
   app.post("/api/instructor/quad-bookings/:id/confirm", async (req, res) => {
     try {
       const booking = await storage.updateQuadBooking(req.params.id, { 
@@ -540,25 +728,53 @@ export async function registerRoutes(
     }
   });
 
+  // Cancel booking
   app.post("/api/instructor/quad-bookings/:id/cancel", async (req, res) => {
     try {
-      const booking = await storage.getQuadBooking(req.params.id);
-      if (!booking) return res.status(404).json({ error: "Booking not found" });
-      
-      const session = await storage.getQuadSession(booking.sessionId);
-      if (session) {
-        await storage.updateQuadSession(session.id, {
-          bookedQuads: Math.max(0, session.bookedQuads - booking.quadsCount),
-          status: "open",
-        });
-      }
-      
       const updated = await storage.updateQuadBooking(req.params.id, { 
         status: "cancelled" 
       });
+      if (!updated) return res.status(404).json({ error: "Booking not found" });
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to cancel booking" });
+    }
+  });
+
+  // Complete booking
+  app.post("/api/instructor/quad-bookings/:id/complete", async (req, res) => {
+    try {
+      const { paymentMethod } = req.body;
+      const booking = await storage.getQuadBooking(req.params.id);
+      if (!booking) return res.status(404).json({ error: "Booking not found" });
+      
+      const updates: Partial<import("@shared/schema").QuadBooking> = {
+        status: "completed",
+        payments: {
+          ...booking.payments,
+          [paymentMethod === "erip" ? "eripPaid" : "cashPaid"]: booking.pricing.total,
+        },
+      };
+      
+      const updated = await storage.updateQuadBooking(req.params.id, updates);
+      
+      // Record cash transaction if paid in cash
+      if (paymentMethod === "cash") {
+        const currentShift = await storage.getCurrentShift();
+        if (currentShift) {
+          await storage.createCashTransaction({
+            shiftId: currentShift.id,
+            type: "cash_in",
+            amount: booking.pricing.total,
+            comment: `Квадроцикл ${booking.routeType === "short" ? "30мин" : "60мин"} x${booking.quadsCount}`,
+            createdBy: "instructor",
+          });
+        }
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to complete booking" });
     }
   });
 
@@ -1117,29 +1333,6 @@ export async function registerRoutes(
       res.json({ ok: true });
     } catch (error) {
       res.status(500).json({ error: "Не удалось разблокировать дату" });
-    }
-  });
-
-  // Update quad availability to check blocked dates
-  app.get("/api/guest/quads/availability", async (req, res) => {
-    try {
-      const date = req.query.date as string;
-      if (!date) return res.status(400).json({ error: "Требуется дата" });
-      
-      // Check if date is blocked
-      const blockedDate = await storage.getBlockedDate(date);
-      if (blockedDate) {
-        return res.json({ 
-          blocked: true, 
-          reason: blockedDate.reason || "Квадроциклы недоступны на эту дату",
-          sessions: [] 
-        });
-      }
-      
-      const sessions = await storage.getQuadSessionsForDate(date);
-      res.json({ blocked: false, sessions: sessions.filter(s => s.status !== "blocked") });
-    } catch (error) {
-      res.status(500).json({ error: "Не удалось получить доступность" });
     }
   });
 

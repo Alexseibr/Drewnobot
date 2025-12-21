@@ -310,3 +310,118 @@ export async function removeTelegramWebhook() {
   await telegramApi("deleteWebhook");
   console.log("[Telegram Bot] Webhook removed");
 }
+
+// ============ NOTIFICATION FUNCTIONS ============
+
+export async function notifyNewQuadBooking(booking: {
+  date: string;
+  startTime: string;
+  endTime: string;
+  routeType: "short" | "long";
+  quadsCount: number;
+  customer: { fullName?: string; phone?: string };
+  pricing: { total: number; discountApplied?: boolean };
+}) {
+  try {
+    // Get all instructors
+    const users = await storage.getUsers();
+    const instructors = users.filter(u => u.role === "INSTRUCTOR" && u.isActive);
+    
+    const routeName = booking.routeType === "short" ? "Малый маршрут (30мин)" : "Большой маршрут (60мин)";
+    const discountText = booking.pricing.discountApplied ? " (со скидкой 5%)" : "";
+    
+    const message = 
+      `<b>Новая заявка на квадроциклы</b>\n\n` +
+      `Дата: ${booking.date}\n` +
+      `Время: ${booking.startTime} - ${booking.endTime}\n` +
+      `Маршрут: ${routeName}\n` +
+      `Квадроциклов: ${booking.quadsCount}\n` +
+      `Сумма: ${booking.pricing.total} BYN${discountText}\n\n` +
+      `Клиент: ${booking.customer.fullName || "Гость"}\n` +
+      `Телефон: ${booking.customer.phone || "-"}`;
+    
+    for (const instructor of instructors) {
+      if (instructor.telegramId) {
+        await sendMessage(parseInt(instructor.telegramId), message);
+      }
+    }
+    
+    console.log(`[Telegram Bot] Notified ${instructors.length} instructors about new quad booking`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to notify instructors:", error);
+  }
+}
+
+export async function sendMorningSummary() {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const bookings = await storage.getQuadBookingsForDate(today);
+    const activeBookings = bookings.filter(b => b.status !== "cancelled");
+    
+    if (activeBookings.length === 0) {
+      return; // No bookings today, no need to send summary
+    }
+    
+    const users = await storage.getUsers();
+    const instructors = users.filter(u => u.role === "INSTRUCTOR" && u.isActive);
+    
+    let message = `<b>Расписание квадроциклов на сегодня</b>\n\n`;
+    message += `Всего заявок: ${activeBookings.length}\n\n`;
+    
+    const sortedBookings = activeBookings.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    
+    for (const booking of sortedBookings) {
+      const routeName = booking.routeType === "short" ? "30мин" : "60мин";
+      const statusEmoji = booking.status === "confirmed" ? "[OK]" : "[?]";
+      message += `${statusEmoji} ${booking.startTime} - ${routeName} x${booking.quadsCount} - ${booking.customer.fullName || "Гость"}\n`;
+    }
+    
+    for (const instructor of instructors) {
+      if (instructor.telegramId) {
+        await sendMessage(parseInt(instructor.telegramId), message);
+      }
+    }
+    
+    console.log(`[Telegram Bot] Sent morning summary to ${instructors.length} instructors`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send morning summary:", error);
+  }
+}
+
+export async function sendEveningReminder() {
+  try {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    
+    const bookings = await storage.getQuadBookingsForDate(tomorrowStr);
+    const activeBookings = bookings.filter(b => b.status !== "cancelled");
+    
+    if (activeBookings.length === 0) {
+      return;
+    }
+    
+    const users = await storage.getUsers();
+    const instructors = users.filter(u => u.role === "INSTRUCTOR" && u.isActive);
+    
+    let message = `<b>Напоминание: завтрашние поездки</b>\n\n`;
+    message += `Заявок на завтра: ${activeBookings.length}\n\n`;
+    
+    const sortedBookings = activeBookings.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    
+    for (const booking of sortedBookings) {
+      const routeName = booking.routeType === "short" ? "30мин" : "60мин";
+      message += `${booking.startTime} - ${routeName} x${booking.quadsCount} - ${booking.customer.fullName || "Гость"}\n`;
+    }
+    
+    for (const instructor of instructors) {
+      if (instructor.telegramId) {
+        await sendMessage(parseInt(instructor.telegramId), message);
+      }
+    }
+    
+    console.log(`[Telegram Bot] Sent evening reminder to ${instructors.length} instructors`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send evening reminder:", error);
+  }
+}

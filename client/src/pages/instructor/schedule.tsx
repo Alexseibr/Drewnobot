@@ -8,87 +8,116 @@ import { ru } from "date-fns/locale";
 import { 
   CalendarDays, 
   Bike, 
-  Users, 
   Clock, 
   Phone,
-  Plus,
   Check,
   X,
-  ChevronRight,
-  UserPlus
+  UserPlus,
+  Ban,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { Link } from "wouter";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { BookingCardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { QuadSession, QuadBooking } from "@shared/schema";
+import type { QuadBooking, InstructorBlockedTime } from "@shared/schema";
 
-const sessionFormSchema = z.object({
+const blockedTimeSchema = z.object({
   date: z.date({ required_error: "Выберите дату" }),
   startTime: z.string().min(1, "Укажите время начала"),
   endTime: z.string().min(1, "Укажите время окончания"),
+  reason: z.string().optional(),
 });
 
-type SessionFormData = z.infer<typeof sessionFormSchema>;
+type BlockedTimeFormData = z.infer<typeof blockedTimeSchema>;
 
 const timeSlots = Array.from({ length: 12 }, (_, i) => {
   const hour = 9 + i;
   return `${hour.toString().padStart(2, "0")}:00`;
 });
 
-interface InstructorData {
-  sessions: (QuadSession & { bookings: QuadBooking[] })[];
+interface InstructorScheduleData {
+  bookings: QuadBooking[];
+  blockedTimes: InstructorBlockedTime[];
 }
 
 export default function InstructorSchedulePage() {
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { toast } = useToast();
 
-  const form = useForm<SessionFormData>({
-    resolver: zodResolver(sessionFormSchema),
+  const form = useForm<BlockedTimeFormData>({
+    resolver: zodResolver(blockedTimeSchema),
     defaultValues: {
       startTime: "10:00",
-      endTime: "11:00",
+      endTime: "12:00",
+      reason: "",
     },
   });
 
-  const { data: instructorData, isLoading } = useQuery<InstructorData>({
-    queryKey: ["/api/instructor/quad-schedule", format(selectedDate, "yyyy-MM-dd")],
+  const dateStr = format(selectedDate, "yyyy-MM-dd");
+  
+  const { data: scheduleData, isLoading } = useQuery<InstructorScheduleData>({
+    queryKey: ["/api/instructor/schedule", dateStr],
   });
 
-  const createSessionMutation = useMutation({
-    mutationFn: async (data: SessionFormData) => {
-      const response = await apiRequest("POST", "/api/instructor/quad-sessions", {
+  const bookings = scheduleData?.bookings || [];
+  const blockedTimes = scheduleData?.blockedTimes || [];
+  
+  const pendingBookings = bookings.filter(b => b.status === "pending_call");
+  const confirmedBookings = bookings.filter(b => b.status === "confirmed");
+  const activeBookings = [...pendingBookings, ...confirmedBookings].sort(
+    (a, b) => a.startTime.localeCompare(b.startTime)
+  );
+
+  const createBlockMutation = useMutation({
+    mutationFn: async (data: BlockedTimeFormData) => {
+      const response = await apiRequest("POST", "/api/instructor/blocked-times", {
         date: format(data.date, "yyyy-MM-dd"),
         startTime: data.startTime,
         endTime: data.endTime,
+        reason: data.reason || undefined,
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/quad-schedule"] });
-      setShowCreateDialog(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/schedule"] });
+      setShowBlockDialog(false);
       form.reset();
-      toast({ title: "Сессия создана" });
+      toast({ title: "Время заблокировано" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteBlockMutation = useMutation({
+    mutationFn: async (blockId: string) => {
+      const response = await apiRequest("DELETE", `/api/instructor/blocked-times/${blockId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/schedule"] });
+      toast({ title: "Блокировка снята" });
     },
     onError: () => {
-      toast({ title: "Ошибка создания сессии", variant: "destructive" });
+      toast({ title: "Ошибка удаления", variant: "destructive" });
     },
   });
 
@@ -98,7 +127,7 @@ export default function InstructorSchedulePage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/quad-schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/schedule"] });
       toast({ title: "Бронь подтверждена" });
     },
     onError: () => {
@@ -112,7 +141,7 @@ export default function InstructorSchedulePage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/quad-schedule"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/instructor/schedule"] });
       toast({ title: "Бронь отменена" });
     },
     onError: () => {
@@ -120,10 +149,12 @@ export default function InstructorSchedulePage() {
     },
   });
 
-  const sessions = instructorData?.sessions || [];
+  const handleSubmitBlock = (data: BlockedTimeFormData) => {
+    createBlockMutation.mutate(data);
+  };
 
-  const handleSubmitSession = (data: SessionFormData) => {
-    createSessionMutation.mutate(data);
+  const getRouteName = (routeType: string) => {
+    return routeType === "short" ? "Малый (30мин)" : "Большой (60мин)";
   };
 
   return (
@@ -132,7 +163,7 @@ export default function InstructorSchedulePage() {
       
       <PageContainer>
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="gap-2" data-testid="button-date-picker">
@@ -145,7 +176,7 @@ export default function InstructorSchedulePage() {
                   mode="single"
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(date)}
-                  disabled={(date) => date < addDays(new Date(), -1)}
+                  disabled={(date) => date < addDays(new Date(), -7)}
                   locale={ru}
                   initialFocus
                 />
@@ -159,140 +190,177 @@ export default function InstructorSchedulePage() {
                 </Button>
               </Link>
               <Button 
+                variant="outline"
                 onClick={() => {
                   form.setValue("date", selectedDate);
-                  setShowCreateDialog(true);
+                  setShowBlockDialog(true);
                 }}
-                data-testid="button-create-session"
+                data-testid="button-block-time"
               >
-                <Plus className="h-4 w-4 mr-1" />
-                Новая сессия
+                <Ban className="h-4 w-4 mr-1" />
+                Закрыть время
               </Button>
             </div>
           </div>
+
+          {blockedTimes.length > 0 && (
+            <Card className="border-destructive/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Ban className="h-4 w-4 text-destructive" />
+                  Заблокированное время
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {blockedTimes.map((block) => (
+                  <div 
+                    key={block.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-destructive/10"
+                    data-testid={`blocked-time-${block.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">{block.startTime} - {block.endTime}</span>
+                        {block.reason && (
+                          <p className="text-xs text-muted-foreground">{block.reason}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteBlockMutation.mutate(block.id)}
+                      disabled={deleteBlockMutation.isPending}
+                      data-testid={`button-delete-block-${block.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {pendingBookings.length > 0 && (
+            <Card className="border-status-pending/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-status-pending" />
+                  Ожидают подтверждения
+                  <Badge className="bg-status-pending text-black ml-auto">
+                    {pendingBookings.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {pendingBookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-status-pending/10"
+                    data-testid={`booking-pending-${booking.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Bike className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-mono text-sm">{booking.quadsCount}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {booking.startTime} - {booking.endTime}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {booking.customer.fullName || "Гость"} | {getRouteName(booking.routeType)}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {booking.customer.phone}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => cancelBookingMutation.mutate(booking.id)}
+                        disabled={cancelBookingMutation.isPending}
+                        data-testid={`button-cancel-${booking.id}`}
+                      >
+                        <X className="h-4 w-4 text-destructive" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => confirmBookingMutation.mutate(booking.id)}
+                        disabled={confirmBookingMutation.isPending}
+                        data-testid={`button-confirm-${booking.id}`}
+                      >
+                        <Check className="h-4 w-4 text-status-confirmed" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {isLoading ? (
             <div className="space-y-4">
               <BookingCardSkeleton />
               <BookingCardSkeleton />
             </div>
-          ) : sessions.length > 0 ? (
-            <div className="space-y-4">
-              {sessions.map((session) => {
-                const remaining = session.totalQuads - session.bookedQuads;
-                const pendingBookings = session.bookings.filter(b => b.status === "pending_call");
-                
-                return (
-                  <Card key={session.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          {session.startTime} - {session.endTime}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          {pendingBookings.length > 0 && (
-                            <Badge className="bg-status-pending text-black">
-                              {pendingBookings.length} ожидают
-                            </Badge>
-                          )}
-                          <div className="flex gap-0.5">
-                            {[...Array(4)].map((_, i) => (
-                              <div
-                                key={i}
-                                className={cn(
-                                  "w-2 h-6 rounded-sm",
-                                  i < remaining
-                                    ? "bg-status-confirmed"
-                                    : "bg-muted"
-                                )}
-                              />
-                            ))}
-                          </div>
-                        </div>
+          ) : activeBookings.length > 0 ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Bike className="h-4 w-4" />
+                  Все бронирования на {format(selectedDate, "d MMMM", { locale: ru })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {activeBookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                    data-testid={`booking-${booking.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Bike className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-mono text-sm">{booking.quadsCount}</span>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {session.bookings.length > 0 ? (
-                        session.bookings.map((booking) => (
-                          <div
-                            key={booking.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-1">
-                                <Bike className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-mono text-sm">{booking.quadsCount}</span>
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">{booking.customer.fullName}</p>
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  {booking.customer.phone}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {booking.duration} мин
-                              </Badge>
-                              {booking.status === "pending_call" ? (
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => cancelBookingMutation.mutate(booking.id)}
-                                    disabled={cancelBookingMutation.isPending}
-                                    data-testid={`button-cancel-${booking.id}`}
-                                  >
-                                    <X className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => confirmBookingMutation.mutate(booking.id)}
-                                    disabled={confirmBookingMutation.isPending}
-                                    data-testid={`button-confirm-${booking.id}`}
-                                  >
-                                    <Check className="h-4 w-4 text-status-confirmed" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <StatusBadge status={booking.status} />
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Пока нет бронирований
+                      <div>
+                        <p className="font-medium text-sm">
+                          {booking.startTime} - {booking.endTime}
                         </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                        <p className="text-xs text-muted-foreground">
+                          {booking.customer.fullName || "Гость"} | {getRouteName(booking.routeType)}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {booking.customer.phone}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {booking.pricing.total} BYN
+                      </Badge>
+                      <StatusBadge status={booking.status} />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           ) : (
             <Card>
               <CardContent className="p-6">
                 <EmptyState
                   icon={Bike}
-                  title="Нет сессий"
-                  description="Создайте сессию для начала работы"
-                  action={
-                    <Button
-                      onClick={() => {
-                        form.setValue("date", selectedDate);
-                        setShowCreateDialog(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Создать сессию
-                    </Button>
-                  }
+                  title="Нет бронирований"
+                  description="На этот день пока нет заявок"
                 />
               </CardContent>
             </Card>
@@ -300,17 +368,17 @@ export default function InstructorSchedulePage() {
         </div>
       </PageContainer>
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+      <Dialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Создать сессию квадро</DialogTitle>
+            <DialogTitle>Заблокировать время</DialogTitle>
             <DialogDescription>
-              Добавьте новую сессию для бронирования гостями
+              Укажите период, когда бронирование невозможно
             </DialogDescription>
           </DialogHeader>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmitSession)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmitBlock)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="date"
@@ -400,19 +468,36 @@ export default function InstructorSchedulePage() {
                 />
               </div>
 
+              <FormField
+                control={form.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Причина (необязательно)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Например: обед, техобслуживание..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowCreateDialog(false)}
+                  onClick={() => setShowBlockDialog(false)}
                 >
                   Отмена
                 </Button>
                 <Button
                   type="submit"
-                  disabled={createSessionMutation.isPending}
+                  disabled={createBlockMutation.isPending}
                 >
-                  {createSessionMutation.isPending ? "Создание..." : "Создать сессию"}
+                  {createBlockMutation.isPending ? "Сохранение..." : "Заблокировать"}
                 </Button>
               </DialogFooter>
             </form>

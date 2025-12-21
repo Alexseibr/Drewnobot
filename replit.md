@@ -42,7 +42,14 @@ Five user roles with hierarchical permissions:
 - **Bookings**: Cottage check-ins/outs and bath reservations with status workflows
 - **Tasks**: Scheduled reminders (climate control, trash, meters) and manual tasks
 - **Cash Management**: Shift-based cash tracking with transactions and incasation
-- **Quad Sessions**: Instructor-managed ATV booking slots
+- **Quad Bookings**: Dynamic slot-based ATV booking system with:
+  - Short route (30 min, 50 BYN) and Long route (60 min, 80 BYN)
+  - 4 quads available, operating hours 09:00-19:00
+  - 15 min buffer between rides
+  - 5% discount when joining existing slot (group booking incentive)
+  - Phone-based rate limiting (max 3 pending per phone)
+  - Instructor blocked times with overlap validation
+  - Telegram notifications for instructors (new bookings, morning summary, evening reminder)
 
 ### Project Structure
 ```
