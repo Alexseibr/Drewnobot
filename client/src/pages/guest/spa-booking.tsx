@@ -30,7 +30,7 @@ const bookingFormSchema = z.object({
   spaResource: z.string().min(1, "Выберите СПА"),
   date: z.date({ required_error: "Выберите дату" }),
   startTime: z.string().min(1, "Выберите время начала"),
-  guestsCount: z.number().min(1, "Укажите количество гостей").max(10, "Максимум 10 гостей"),
+  guestsCount: z.number().min(1, "Укажите количество гостей").max(12, "Максимум 12 гостей"),
   fullName: z.string().min(2, "Укажите имя"),
 });
 
@@ -41,11 +41,27 @@ const timeSlots = [
 ];
 
 const BOOKING_TYPES: { value: BookingType; label: string; description: string; icon: typeof Bath }[] = [
-  { value: "bath_only", label: "Только баня", description: "3 часа, до 5 гостей", icon: Bath },
-  { value: "terrace_only", label: "Только терраса", description: "3 часа, до 6 гостей", icon: Sun },
-  { value: "tub_only", label: "Только купель", description: "3 часа, до 8 гостей", icon: Droplets },
-  { value: "bath_with_tub", label: "Баня + Купель", description: "3 часа, до 9 гостей", icon: Bath },
+  { value: "bath_only", label: "Только баня", description: "3 часа, до 6 гостей", icon: Bath },
+  { value: "terrace_only", label: "Только терраса", description: "3 часа, до 12 гостей (лето)", icon: Sun },
+  { value: "tub_only", label: "Только купель", description: "3 часа, 4-6 гостей", icon: Droplets },
+  { value: "bath_with_tub", label: "Баня + Купель", description: "3 часа, 6-10 гостей", icon: Bath },
 ];
+
+const getMaxGuests = (bookingType: BookingType, spaResource: string): number => {
+  const isComplex1 = spaResource === "SPA1";
+  switch (bookingType) {
+    case "bath_only":
+      return 6;
+    case "terrace_only":
+      return 12;
+    case "tub_only":
+      return isComplex1 ? 6 : 4;
+    case "bath_with_tub":
+      return isComplex1 ? 10 : 6;
+    default:
+      return 6;
+  }
+};
 
 const PRICES: Record<BookingType, { base: number; guestThreshold?: number; higherPrice?: number }> = {
   bath_only: { base: 150 },
@@ -317,9 +333,9 @@ export default function SpaBookingPage() {
                                     )} />
                                   </div>
                                   <div>
-                                    <p className="font-medium">СПА {code.slice(3)}</p>
+                                    <p className="font-medium">Комплекс {code.slice(3)}</p>
                                     <p className="text-sm text-muted-foreground">
-                                      {code === "SPA1" ? "Уютный, камерный" : "Просторный"}
+                                      {code === "SPA1" ? "Большая купель (до 6 чел.)" : "Малая купель (до 4 чел.)"}
                                     </p>
                                   </div>
                                 </div>
@@ -424,13 +440,19 @@ export default function SpaBookingPage() {
                               type="button"
                               size="icon"
                               variant="outline"
-                              onClick={() => field.onChange(Math.min(10, field.value + 1))}
-                              disabled={field.value >= 10}
+                              onClick={() => {
+                                const maxGuests = getMaxGuests(selectedType, selectedResource);
+                                field.onChange(Math.min(maxGuests, field.value + 1));
+                              }}
+                              disabled={field.value >= getMaxGuests(selectedType, selectedResource)}
                               data-testid="button-guests-plus"
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>
+                          <p className="text-sm text-muted-foreground text-center mt-2">
+                            Максимум для этого типа: {getMaxGuests(selectedType, selectedResource)} гостей
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}
