@@ -815,23 +815,39 @@ export async function registerRoutes(
 
   app.post("/api/guest/spa-bookings", async (req, res) => {
     try {
-      // Verify token
+      // Verify token (Telegram auth or phone verification)
       const token = req.headers["x-verify-token"] as string || req.body.verificationToken;
       if (!token) {
-        return res.status(401).json({ error: "Требуется верификация телефона" });
+        return res.status(401).json({ error: "Требуется верификация" });
       }
       
       const verification = await storage.getVerificationToken(token);
-      if (!verification) {
+      const authSession = await storage.getAuthSession(token);
+      if (!verification && !authSession) {
         return res.status(401).json({ error: "Недействительный токен верификации" });
       }
       
       const parsed = insertSpaBookingSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ error: "Неверные данные бронирования" });
+        return res.status(400).json({ error: "Неверные данные бронирования", details: parsed.error.errors });
       }
       
-      const { spaResource, date, startTime, endTime } = parsed.data;
+      const { spaResource, date, startTime, endTime, durationHours } = parsed.data;
+      
+      // Validate close time (22:00)
+      const settings = await storage.getSiteSettings();
+      const closeHour = parseInt(settings.closeTime.split(":")[0]) || 22;
+      const endHour = parseInt(endTime.split(":")[0]);
+      
+      if (endHour > closeHour) {
+        return res.status(400).json({ error: `Комплекс закрывается в ${closeHour}:00. Выберите более раннее время.` });
+      }
+      
+      // Validate duration matches times
+      const startHour = parseInt(startTime.split(":")[0]);
+      if (endHour - startHour !== durationHours) {
+        return res.status(400).json({ error: "Время окончания не соответствует продолжительности" });
+      }
       
       // Check for conflicts
       const existingBookings = await storage.getSpaBookingsForDate(date);
@@ -843,14 +859,6 @@ export async function registerRoutes(
       
       if (conflict) {
         return res.status(400).json({ error: "Это время уже занято" });
-      }
-      
-      // Validate end time
-      const settings = await storage.getSiteSettings();
-      const closeHour = parseInt(settings.closeTime.split(":")[0]) || 22;
-      const endHour = parseInt(endTime.split(":")[0]);
-      if (endHour > closeHour) {
-        return res.status(400).json({ error: `Окончание должно быть не позже ${settings.closeTime}` });
       }
       
       const booking = await storage.createSpaBooking(parsed.data);

@@ -30,11 +30,16 @@ const bookingFormSchema = z.object({
   spaResource: z.string().min(1, "Выберите СПА"),
   date: z.date({ required_error: "Выберите дату" }),
   startTime: z.string().min(1, "Выберите время начала"),
+  durationHours: z.number().min(3).max(5).default(3),
   guestsCount: z.number().min(1, "Укажите количество гостей").max(12, "Максимум 12 гостей"),
   fullName: z.string().min(2, "Укажите имя"),
+  phone: z.string().min(10, "Укажите номер телефона").regex(/^[\d\s+()-]+$/, "Неверный формат телефона"),
+  comment: z.string().optional(),
 });
 
 type BookingFormData = z.infer<typeof bookingFormSchema>;
+
+const CLOSE_HOUR = 22;
 
 const timeSlots = [
   "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
@@ -81,15 +86,26 @@ export default function SpaBookingPage() {
       bookingType: "bath_only",
       spaResource: "",
       startTime: "",
+      durationHours: 3,
       guestsCount: 2,
       fullName: user?.name || "",
+      phone: "",
+      comment: "",
     },
   });
 
   const selectedDate = bookingForm.watch("date");
   const selectedType = bookingForm.watch("bookingType");
   const selectedResource = bookingForm.watch("spaResource");
+  const selectedStartTime = bookingForm.watch("startTime");
+  const selectedDuration = bookingForm.watch("durationHours");
   const watchedValues = bookingForm.watch();
+  
+  const getMaxDuration = (startTime: string): number => {
+    if (!startTime) return 5;
+    const startHour = parseInt(startTime.split(":")[0]);
+    return Math.min(5, CLOSE_HOUR - startHour);
+  };
 
   const { data: availability, isLoading: loadingAvailability } = useQuery<Array<{
     spaResource: string;
@@ -104,7 +120,7 @@ export default function SpaBookingPage() {
 
   const bookingMutation = useMutation({
     mutationFn: async (data: BookingFormData) => {
-      const endHour = parseInt(data.startTime.split(":")[0]) + 3;
+      const endHour = parseInt(data.startTime.split(":")[0]) + data.durationHours;
       const endTime = `${endHour.toString().padStart(2, "0")}:00`;
       
       const response = await apiRequest("POST", "/api/guest/spa-bookings", {
@@ -113,11 +129,14 @@ export default function SpaBookingPage() {
         date: format(data.date, "yyyy-MM-dd"),
         startTime: data.startTime,
         endTime,
+        durationHours: data.durationHours,
         guestsCount: data.guestsCount,
         customer: {
           fullName: data.fullName,
+          phone: data.phone,
           telegramId: user?.telegramId,
         },
+        comment: data.comment || undefined,
       });
       return response.json();
     },
@@ -145,10 +164,10 @@ export default function SpaBookingPage() {
   };
 
   const calculateEndTime = () => {
-    const { startTime } = watchedValues;
+    const { startTime, durationHours } = watchedValues;
     if (!startTime) return "";
     const [hours, minutes] = startTime.split(":").map(Number);
-    const endHour = hours + 3;
+    const endHour = hours + (durationHours || 3);
     return `${endHour.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
   };
 
@@ -200,7 +219,7 @@ export default function SpaBookingPage() {
             <Button
               className="mt-8 w-full max-w-xs"
               onClick={() => {
-                bookingForm.reset({ bookingType: "bath_only", spaResource: "", startTime: "", guestsCount: 2, fullName: user?.name || "" });
+                bookingForm.reset({ bookingType: "bath_only", spaResource: "", startTime: "", durationHours: 3, guestsCount: 2, fullName: user?.name || "", phone: "", comment: "" });
                 setStep("select");
               }}
               data-testid="button-new-booking"
@@ -411,6 +430,47 @@ export default function SpaBookingPage() {
 
                 <Card>
                   <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Продолжительность</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={bookingForm.control}
+                      name="durationHours"
+                      render={({ field }) => {
+                        const maxDuration = getMaxDuration(selectedStartTime);
+                        return (
+                          <FormItem>
+                            <div className="flex items-center justify-center gap-3">
+                              {[3, 4, 5].map((hours) => {
+                                const isDisabled = hours > maxDuration;
+                                return (
+                                  <Button
+                                    key={hours}
+                                    type="button"
+                                    variant={field.value === hours ? "default" : "outline"}
+                                    className={cn("flex-1", isDisabled && "opacity-50")}
+                                    onClick={() => !isDisabled && field.onChange(hours)}
+                                    disabled={isDisabled}
+                                    data-testid={`button-duration-${hours}`}
+                                  >
+                                    {hours} часа
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                            <p className="text-sm text-muted-foreground text-center mt-2">
+                              {watchedValues.startTime} - {calculateEndTime()} (комплекс закрывается в 22:00)
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
                     <CardTitle className="text-base">Количество гостей</CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -486,6 +546,40 @@ export default function SpaBookingPage() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={bookingForm.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Телефон</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="+375 (__) ___-__-__"
+                              {...field}
+                              data-testid="input-phone"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={bookingForm.control}
+                      name="comment"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Комментарий (необязательно)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Пожелания, уточнения..."
+                              {...field}
+                              data-testid="input-comment"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </CardContent>
                 </Card>
 
@@ -501,7 +595,11 @@ export default function SpaBookingPage() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Время</span>
-                      <span>{watchedValues.startTime} - {calculateEndTime()}</span>
+                      <span>{watchedValues.startTime} - {calculateEndTime()} ({watchedValues.durationHours} ч.)</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Гости</span>
+                      <span>{watchedValues.guestsCount} чел.</span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t">
                       <span className="font-medium">Итого:</span>
@@ -511,6 +609,10 @@ export default function SpaBookingPage() {
                     </div>
                   </CardContent>
                 </Card>
+                
+                <p className="text-sm text-muted-foreground text-center">
+                  После подтверждения брони вам придёт уведомление с деталями оплаты.
+                </p>
               </div>
 
               <div className="space-y-2">
