@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 import type {
   User, InsertUser,
   Unit, InsertUnit,
@@ -14,6 +14,11 @@ import type {
   QuadBooking, InsertQuadBooking,
   SiteSettings,
   AnalyticsSummary,
+  SpaBooking, InsertSpaBooking,
+  SmsCode,
+  VerificationToken,
+  Review, InsertReview,
+  BlockedDate, InsertBlockedDate,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -78,6 +83,34 @@ export interface IStorage {
   updateSiteSettings(updates: Partial<SiteSettings>): Promise<SiteSettings>;
   
   getAnalyticsSummary(month: string): Promise<AnalyticsSummary>;
+  
+  // SPA Bookings
+  getSpaBookings(): Promise<SpaBooking[]>;
+  getSpaBookingsUpcoming(): Promise<SpaBooking[]>;
+  getSpaBooking(id: string): Promise<SpaBooking | undefined>;
+  getSpaBookingsForDate(date: string): Promise<SpaBooking[]>;
+  createSpaBooking(booking: InsertSpaBooking): Promise<SpaBooking>;
+  updateSpaBooking(id: string, updates: Partial<SpaBooking>): Promise<SpaBooking | undefined>;
+  
+  // SMS & Verification
+  createSmsCode(phone: string, code: string): Promise<SmsCode>;
+  getSmsCode(phone: string): Promise<SmsCode | undefined>;
+  updateSmsCode(id: string, updates: Partial<SmsCode>): Promise<SmsCode | undefined>;
+  createVerificationToken(phone: string): Promise<VerificationToken>;
+  getVerificationToken(token: string): Promise<VerificationToken | undefined>;
+  
+  // Reviews
+  getReviews(): Promise<Review[]>;
+  getReviewsPublished(): Promise<Review[]>;
+  getReview(id: string): Promise<Review | undefined>;
+  createReview(review: InsertReview): Promise<Review>;
+  updateReview(id: string, updates: Partial<Review>): Promise<Review | undefined>;
+  
+  // Blocked Dates
+  getBlockedDates(): Promise<BlockedDate[]>;
+  getBlockedDate(date: string): Promise<BlockedDate | undefined>;
+  createBlockedDate(blockedDate: InsertBlockedDate): Promise<BlockedDate>;
+  deleteBlockedDate(date: string): Promise<boolean>;
 }
 
 const PRICES: Record<string, number> = {
@@ -89,6 +122,13 @@ const PRICES: Record<string, number> = {
   charcoal: 15,
   quad_30m: 40,
   quad_60m: 80,
+  // SPA prices
+  spa_bath_only_base3h: 150,
+  spa_terrace_only_base3h: 90,
+  spa_tub_only_up_to_4: 150,
+  spa_tub_only_6_to_8: 180,
+  spa_bath_with_tub_up_to_9: 330,
+  spa_bath_with_tub_alt: 300,
 };
 
 export class MemStorage implements IStorage {
@@ -104,6 +144,11 @@ export class MemStorage implements IStorage {
   private workLogs: Map<string, WorkLog> = new Map();
   private quadSessions: Map<string, QuadSession> = new Map();
   private quadBookings: Map<string, QuadBooking> = new Map();
+  private spaBookings: Map<string, SpaBooking> = new Map();
+  private smsCodes: Map<string, SmsCode> = new Map();
+  private verificationTokens: Map<string, VerificationToken> = new Map();
+  private reviews: Map<string, Review> = new Map();
+  private blockedDates: Map<string, BlockedDate> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -541,6 +586,185 @@ export class MemStorage implements IStorage {
       tubLargeRevenue: tubLarge.length * PRICES.tub_large,
       workHoursTotal: workLogs.reduce((sum, l) => sum + l.durationMinutes / 60, 0),
     };
+  }
+
+  // ============ SPA BOOKINGS ============
+  async getSpaBookings(): Promise<SpaBooking[]> {
+    return Array.from(this.spaBookings.values());
+  }
+
+  async getSpaBookingsUpcoming(): Promise<SpaBooking[]> {
+    const today = new Date().toISOString().split("T")[0];
+    return Array.from(this.spaBookings.values()).filter(
+      b => b.date >= today && b.status !== "cancelled" && b.status !== "expired"
+    );
+  }
+
+  async getSpaBooking(id: string): Promise<SpaBooking | undefined> {
+    return this.spaBookings.get(id);
+  }
+
+  async getSpaBookingsForDate(date: string): Promise<SpaBooking[]> {
+    return Array.from(this.spaBookings.values()).filter(b => b.date === date);
+  }
+
+  private calculateSpaPrice(bookingType: string, guestsCount: number): number {
+    switch (bookingType) {
+      case "bath_only":
+        return PRICES.spa_bath_only_base3h;
+      case "terrace_only":
+        return PRICES.spa_terrace_only_base3h;
+      case "tub_only":
+        return guestsCount <= 4 ? PRICES.spa_tub_only_up_to_4 : PRICES.spa_tub_only_6_to_8;
+      case "bath_with_tub":
+        return guestsCount <= 9 ? PRICES.spa_bath_with_tub_up_to_9 : PRICES.spa_bath_with_tub_alt;
+      default:
+        return 0;
+    }
+  }
+
+  async createSpaBooking(insertBooking: InsertSpaBooking): Promise<SpaBooking> {
+    const basePrice = this.calculateSpaPrice(insertBooking.bookingType, insertBooking.guestsCount);
+    
+    const booking: SpaBooking = {
+      id: randomUUID(),
+      spaResource: insertBooking.spaResource,
+      bookingType: insertBooking.bookingType,
+      date: insertBooking.date,
+      startTime: insertBooking.startTime,
+      endTime: insertBooking.endTime,
+      guestsCount: insertBooking.guestsCount,
+      customer: insertBooking.customer,
+      pricing: { base: basePrice, total: basePrice },
+      payments: { eripPaid: 0, cashPaid: 0 },
+      status: "pending_call",
+      createdAt: new Date().toISOString(),
+    };
+    this.spaBookings.set(booking.id, booking);
+    return booking;
+  }
+
+  async updateSpaBooking(id: string, updates: Partial<SpaBooking>): Promise<SpaBooking | undefined> {
+    const booking = this.spaBookings.get(id);
+    if (!booking) return undefined;
+    const updated = { ...booking, ...updates };
+    this.spaBookings.set(id, updated);
+    return updated;
+  }
+
+  // ============ SMS & VERIFICATION ============
+  async createSmsCode(phone: string, code: string): Promise<SmsCode> {
+    const codeHash = createHash("sha256").update(code).digest("hex");
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
+    
+    const smsCode: SmsCode = {
+      id: randomUUID(),
+      phone,
+      codeHash,
+      expiresAt,
+      attempts: 0,
+      verified: false,
+      createdAt: new Date().toISOString(),
+    };
+    this.smsCodes.set(smsCode.id, smsCode);
+    return smsCode;
+  }
+
+  async getSmsCode(phone: string): Promise<SmsCode | undefined> {
+    return Array.from(this.smsCodes.values())
+      .filter(c => c.phone === phone && !c.verified && new Date(c.expiresAt) > new Date())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  }
+
+  async updateSmsCode(id: string, updates: Partial<SmsCode>): Promise<SmsCode | undefined> {
+    const code = this.smsCodes.get(id);
+    if (!code) return undefined;
+    const updated = { ...code, ...updates };
+    this.smsCodes.set(id, updated);
+    return updated;
+  }
+
+  async createVerificationToken(phone: string): Promise<VerificationToken> {
+    const token = randomUUID();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
+    
+    const verificationToken: VerificationToken = {
+      id: randomUUID(),
+      phone,
+      token,
+      expiresAt,
+      createdAt: new Date().toISOString(),
+    };
+    this.verificationTokens.set(verificationToken.id, verificationToken);
+    return verificationToken;
+  }
+
+  async getVerificationToken(token: string): Promise<VerificationToken | undefined> {
+    return Array.from(this.verificationTokens.values())
+      .find(t => t.token === token && new Date(t.expiresAt) > new Date());
+  }
+
+  // ============ REVIEWS ============
+  async getReviews(): Promise<Review[]> {
+    return Array.from(this.reviews.values());
+  }
+
+  async getReviewsPublished(): Promise<Review[]> {
+    return Array.from(this.reviews.values()).filter(r => r.isPublished);
+  }
+
+  async getReview(id: string): Promise<Review | undefined> {
+    return this.reviews.get(id);
+  }
+
+  async createReview(insertReview: InsertReview): Promise<Review> {
+    const review: Review = {
+      id: randomUUID(),
+      bookingRef: insertReview.bookingRef,
+      customer: insertReview.customer,
+      rating: insertReview.rating,
+      text: insertReview.text,
+      isPublished: false,
+      createdAt: new Date().toISOString(),
+    };
+    this.reviews.set(review.id, review);
+    return review;
+  }
+
+  async updateReview(id: string, updates: Partial<Review>): Promise<Review | undefined> {
+    const review = this.reviews.get(id);
+    if (!review) return undefined;
+    const updated = { ...review, ...updates };
+    this.reviews.set(id, updated);
+    return updated;
+  }
+
+  // ============ BLOCKED DATES ============
+  async getBlockedDates(): Promise<BlockedDate[]> {
+    return Array.from(this.blockedDates.values());
+  }
+
+  async getBlockedDate(date: string): Promise<BlockedDate | undefined> {
+    return Array.from(this.blockedDates.values()).find(b => b.date === date);
+  }
+
+  async createBlockedDate(insertBlockedDate: InsertBlockedDate): Promise<BlockedDate> {
+    const blockedDate: BlockedDate = {
+      id: randomUUID(),
+      date: insertBlockedDate.date,
+      reason: insertBlockedDate.reason,
+      createdBy: insertBlockedDate.createdBy,
+      createdAt: new Date().toISOString(),
+    };
+    this.blockedDates.set(blockedDate.id, blockedDate);
+    return blockedDate;
+  }
+
+  async deleteBlockedDate(date: string): Promise<boolean> {
+    const blockedDate = Array.from(this.blockedDates.values()).find(b => b.date === date);
+    if (!blockedDate) return false;
+    this.blockedDates.delete(blockedDate.id);
+    return true;
   }
 }
 

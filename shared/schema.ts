@@ -28,6 +28,16 @@ export type QuadSessionStatus = z.infer<typeof QuadSessionStatus>;
 export const QuadBookingStatus = z.enum(["pending_call", "confirmed", "cancelled", "completed"]);
 export type QuadBookingStatus = z.infer<typeof QuadBookingStatus>;
 
+// SPA Booking Type and Status
+export const SpaBookingType = z.enum(["bath_only", "tub_only", "bath_with_tub", "terrace_only"]);
+export type SpaBookingType = z.infer<typeof SpaBookingType>;
+
+export const SpaBookingStatus = z.enum(["pending_call", "awaiting_prepayment", "confirmed", "completed", "cancelled", "expired"]);
+export type SpaBookingStatus = z.infer<typeof SpaBookingStatus>;
+
+export const SpaResource = z.enum(["SPA1", "SPA2"]);
+export type SpaResource = z.infer<typeof SpaResource>;
+
 export const TaskType = z.enum(["climate_off", "climate_on", "trash_prep", "meters", "cleaning", "call_guest", "other"]);
 export type TaskType = z.infer<typeof TaskType>;
 
@@ -370,15 +380,136 @@ export const bathAvailabilitySlotSchema = z.object({
 });
 export type BathAvailabilitySlot = z.infer<typeof bathAvailabilitySlotSchema>;
 
+// ============ SPA BOOKING ============
+export const spaBookingSchema = z.object({
+  id: z.string(),
+  spaResource: SpaResource,
+  bookingType: SpaBookingType,
+  date: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  guestsCount: z.number().min(1).max(10),
+  customer: customerSchema,
+  pricing: z.object({
+    base: z.number(),
+    total: z.number(),
+    priceSnapshot: z.string().optional(),
+  }),
+  payments: z.object({
+    prepayment: prepaymentSchema.optional(),
+    eripPaid: z.number().default(0),
+    cashPaid: z.number().default(0),
+  }),
+  status: SpaBookingStatus.default("pending_call"),
+  holdUntil: z.string().optional(),
+  assignedAdmin: z.string().optional(),
+  createdAt: z.string(),
+});
+export type SpaBooking = z.infer<typeof spaBookingSchema>;
+
+export const insertSpaBookingSchema = z.object({
+  spaResource: SpaResource,
+  bookingType: SpaBookingType,
+  date: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  guestsCount: z.number().min(1).max(10),
+  customer: customerSchema,
+});
+export type InsertSpaBooking = z.infer<typeof insertSpaBookingSchema>;
+
+// ============ SMS CODE ============
+export const smsCodeSchema = z.object({
+  id: z.string(),
+  phone: z.string(),
+  codeHash: z.string(),
+  expiresAt: z.string(),
+  attempts: z.number().default(0),
+  verified: z.boolean().default(false),
+  createdAt: z.string(),
+});
+export type SmsCode = z.infer<typeof smsCodeSchema>;
+
+// ============ VERIFICATION TOKEN ============
+export const verificationTokenSchema = z.object({
+  id: z.string(),
+  phone: z.string(),
+  token: z.string(),
+  expiresAt: z.string(),
+  createdAt: z.string(),
+});
+export type VerificationToken = z.infer<typeof verificationTokenSchema>;
+
+// ============ REVIEW ============
+export const reviewBookingRefSchema = z.object({
+  kind: z.enum(["spa", "bath", "quad", "cottage"]),
+  id: z.string(),
+});
+export type ReviewBookingRef = z.infer<typeof reviewBookingRefSchema>;
+
+export const reviewSchema = z.object({
+  id: z.string(),
+  bookingRef: reviewBookingRefSchema,
+  customer: z.object({
+    name: z.string().optional(),
+    phone: z.string(),
+  }),
+  rating: z.number().min(1).max(5),
+  text: z.string(),
+  isPublished: z.boolean().default(false),
+  publishedAt: z.string().optional(),
+  publishedBy: z.string().optional(),
+  createdAt: z.string(),
+});
+export type Review = z.infer<typeof reviewSchema>;
+
+export const insertReviewSchema = z.object({
+  bookingRef: reviewBookingRefSchema,
+  customer: z.object({
+    name: z.string().optional(),
+    phone: z.string(),
+  }),
+  rating: z.number().min(1).max(5),
+  text: z.string(),
+});
+export type InsertReview = z.infer<typeof insertReviewSchema>;
+
+// ============ BLOCKED DATE (Instructor) ============
+export const blockedDateSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  reason: z.string().optional(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type BlockedDate = z.infer<typeof blockedDateSchema>;
+
+export const insertBlockedDateSchema = z.object({
+  date: z.string(),
+  reason: z.string().optional(),
+  createdBy: z.string(),
+});
+export type InsertBlockedDate = z.infer<typeof insertBlockedDateSchema>;
+
 // ============ WORK TYPE SUGGESTIONS ============
 export const WORK_TYPE_SUGGESTIONS = [
-  "Cleaning",
-  "Repairs",
-  "Landscaping",
-  "Maintenance",
-  "Guest Service",
-  "Inventory",
-  "Kitchen",
-  "Security",
-  "Other",
+  "Уборка",
+  "Ремонт",
+  "Благоустройство",
+  "Обслуживание",
+  "Работа с гостями",
+  "Инвентаризация",
+  "Кухня",
+  "Охрана",
+  "Другое",
 ] as const;
+
+// ============ SPA PRICE KEYS ============
+export const SPA_PRICE_KEYS = {
+  bath_only_base3h: "spa_bath_only_base3h",
+  terrace_only_base3h: "spa_terrace_only_base3h",
+  tub_only_up_to_4: "spa_tub_only_up_to_4",
+  tub_only_6_to_8: "spa_tub_only_6_to_8",
+  bath_with_tub_up_to_9: "spa_bath_with_tub_up_to_9",
+  bath_with_tub_alt: "spa_bath_with_tub_alt",
+} as const;
