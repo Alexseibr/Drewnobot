@@ -51,7 +51,7 @@ const PRICES = {
   extra_hour: 30,
   tub_small: 150,
   tub_large: 180,
-  grill: 10,
+  grill: 15,
   charcoal: 15,
 };
 

@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus, MessageCircle, Phone } from "lucide-react";
+import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus, MessageCircle, Phone, Flame } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -32,6 +33,8 @@ const bookingFormSchema = z.object({
   startTime: z.string().min(1, "Выберите время начала"),
   durationHours: z.number().min(3).max(5).default(3),
   guestsCount: z.number().min(1, "Укажите количество гостей").max(12, "Максимум 12 гостей"),
+  grill: z.boolean().default(false),
+  charcoal: z.boolean().default(false),
   fullName: z.string().min(2, "Укажите имя"),
   phone: z.string().min(10, "Укажите номер телефона").regex(/^[\d\s+()-]+$/, "Неверный формат телефона"),
   comment: z.string().optional(),
@@ -75,6 +78,12 @@ const PRICES: Record<BookingType, { base: number; guestThreshold?: number; highe
   bath_with_tub: { base: 300, guestThreshold: 9, higherPrice: 330 },
 };
 
+const EXTRA_HOUR_PRICE = 30;
+const ADDITIONAL_SERVICES = {
+  grill: { name: "Аренда мангала", price: 15 },
+  charcoal: { name: "Угли", price: 15 },
+};
+
 export default function SpaBookingPage() {
   const [step, setStep] = useState<Step>("select");
   const { toast } = useToast();
@@ -88,6 +97,8 @@ export default function SpaBookingPage() {
       startTime: "",
       durationHours: 3,
       guestsCount: 2,
+      grill: false,
+      charcoal: false,
       fullName: user?.name || "",
       phone: "",
       comment: "",
@@ -144,6 +155,10 @@ export default function SpaBookingPage() {
           endTime,
           durationHours: data.durationHours,
           guestsCount: data.guestsCount,
+          options: {
+            grill: data.grill,
+            charcoal: data.charcoal,
+          },
           customer: {
             fullName: data.fullName,
             phone: data.phone,
@@ -174,13 +189,24 @@ export default function SpaBookingPage() {
   });
 
   const calculatePrice = () => {
-    const { bookingType, guestsCount } = watchedValues;
+    const { bookingType, guestsCount, durationHours, grill, charcoal } = watchedValues;
     const priceConfig = PRICES[bookingType];
     
+    let basePrice = priceConfig.base;
     if (priceConfig.guestThreshold && guestsCount > priceConfig.guestThreshold) {
-      return priceConfig.higherPrice || priceConfig.base;
+      basePrice = priceConfig.higherPrice || priceConfig.base;
     }
-    return priceConfig.base;
+    
+    // Add extra hours (base is 3 hours)
+    const extraHours = Math.max(0, durationHours - 3);
+    const extraHoursPrice = extraHours * EXTRA_HOUR_PRICE;
+    
+    // Add additional services
+    let servicesPrice = 0;
+    if (grill) servicesPrice += ADDITIONAL_SERVICES.grill.price;
+    if (charcoal) servicesPrice += ADDITIONAL_SERVICES.charcoal.price;
+    
+    return basePrice + extraHoursPrice + servicesPrice;
   };
 
   const calculateEndTime = () => {
@@ -231,6 +257,17 @@ export default function SpaBookingPage() {
                 <span className="text-muted-foreground">Гости</span>
                 <span className="font-medium">{watchedValues.guestsCount} чел.</span>
               </div>
+              {(watchedValues.grill || watchedValues.charcoal) && (
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-muted-foreground">Доп. услуги</span>
+                  <span className="font-medium">
+                    {[
+                      watchedValues.grill && "Мангал",
+                      watchedValues.charcoal && "Угли"
+                    ].filter(Boolean).join(", ")}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between py-2">
                 <span className="text-muted-foreground">Стоимость</span>
                 <span className="font-semibold text-primary">{calculatePrice()} BYN</span>
@@ -242,7 +279,7 @@ export default function SpaBookingPage() {
             <Button
               className="mt-8 w-full max-w-xs"
               onClick={() => {
-                bookingForm.reset({ bookingType: "bath_only", spaResource: "", startTime: "", durationHours: 3, guestsCount: 2, fullName: user?.name || "", phone: "", comment: "" });
+                bookingForm.reset({ bookingType: "bath_only", spaResource: "", startTime: "", durationHours: 3, guestsCount: 2, grill: false, charcoal: false, fullName: user?.name || "", phone: "", comment: "" });
                 setStep("select");
               }}
               data-testid="button-new-booking"
@@ -537,6 +574,66 @@ export default function SpaBookingPage() {
                             Максимум для этого типа: {getMaxGuests(selectedType, selectedResource)} гостей
                           </p>
                           <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Дополнительные услуги</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <FormField
+                      control={bookingForm.control}
+                      name="grill"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="flex items-center gap-3">
+                            <Flame className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <FormLabel className="text-sm font-medium cursor-pointer">
+                                {ADDITIONAL_SERVICES.grill.name}
+                              </FormLabel>
+                              <p className="text-xs text-muted-foreground">
+                                {ADDITIONAL_SERVICES.grill.price} BYN
+                              </p>
+                            </div>
+                          </div>
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-grill"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={bookingForm.control}
+                      name="charcoal"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="flex items-center gap-3">
+                            <Flame className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <FormLabel className="text-sm font-medium cursor-pointer">
+                                {ADDITIONAL_SERVICES.charcoal.name}
+                              </FormLabel>
+                              <p className="text-xs text-muted-foreground">
+                                {ADDITIONAL_SERVICES.charcoal.price} BYN
+                              </p>
+                            </div>
+                          </div>
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-charcoal"
+                            />
+                          </FormControl>
                         </FormItem>
                       )}
                     />
