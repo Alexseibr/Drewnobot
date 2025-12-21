@@ -328,6 +328,17 @@ export class MemStorage implements IStorage {
     };
     this.users.set(leadInstructor.id, leadInstructor);
 
+    // Pre-register staff invitations by phone
+    const adminInvitation: StaffInvitation = {
+      id: randomUUID(),
+      phone: "+79268904468",
+      role: "ADMIN",
+      note: "Администратор по запросу",
+      createdBy: realOwner.id,
+      createdAt: new Date().toISOString(),
+    };
+    this.staffInvitations.set(adminInvitation.id, adminInvitation);
+
     // Initialize default quad pricing
     const defaultShortPrice: QuadPricing = {
       id: randomUUID(),
@@ -368,12 +379,12 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByPhone(phone: string): Promise<User | undefined> {
-    // Normalize phone for comparison
-    const normalizedPhone = phone.replace(/[\s\-\(\)]/g, "");
+    // Use same normalization as staff invitations for consistent matching
+    const normalizedPhone = this.normalizePhoneOrNull(phone);
+    if (!normalizedPhone) return undefined;
     return Array.from(this.users.values()).find(u => {
       if (!u.phone) return false;
-      const userPhone = u.phone.replace(/[\s\-\(\)]/g, "");
-      return userPhone === normalizedPhone;
+      return u.phone === normalizedPhone;
     });
   }
 
@@ -382,7 +393,16 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const user: User = { id: randomUUID(), ...insertUser };
+    // Normalize phone if provided, keep original if normalization fails (short numbers)
+    let normalizedPhone: string | undefined = undefined;
+    if (insertUser.phone) {
+      normalizedPhone = this.normalizePhoneOrNull(insertUser.phone) ?? undefined;
+    }
+    const user: User = { 
+      id: randomUUID(), 
+      ...insertUser,
+      phone: normalizedPhone,
+    };
     this.users.set(user.id, user);
     return user;
   }
@@ -390,7 +410,23 @@ export class MemStorage implements IStorage {
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
     const user = this.users.get(id);
     if (!user) return undefined;
-    const updated = { ...user, ...updates };
+    
+    // Build updates carefully to preserve existing phone if not explicitly being changed
+    const { phone: updatePhone, ...otherUpdates } = updates;
+    const updated = { ...user, ...otherUpdates };
+    
+    // Only update phone if explicitly provided in updates
+    if ('phone' in updates) {
+      if (updatePhone) {
+        // Normalize the new phone, or keep existing if normalization fails
+        updated.phone = this.normalizePhoneOrNull(updatePhone) ?? user.phone;
+      } else {
+        // Explicitly setting phone to null/undefined clears it
+        updated.phone = undefined;
+      }
+    }
+    // If 'phone' not in updates, user.phone is preserved via spread
+    
     this.users.set(id, updated);
     return updated;
   }
@@ -1056,7 +1092,7 @@ export class MemStorage implements IStorage {
       guestsCount: insertBooking.guestsCount,
       customer: insertBooking.customer,
       comment: insertBooking.comment,
-      pricing: { base: basePrice, total: basePrice },
+      pricing: { base: basePrice, total: basePrice, discountPercent: 0, discountAmount: 0 },
       payments: { eripPaid: 0, cashPaid: 0 },
       status: "pending_call",
       createdAt: new Date().toISOString(),
@@ -1084,8 +1120,8 @@ export class MemStorage implements IStorage {
       pricing: { 
         base: basePrice, 
         total: totalPrice,
-        discountPercent: discountPercent > 0 ? discountPercent : undefined,
-        discountAmount: discountAmount > 0 ? discountAmount : undefined,
+        discountPercent: discountPercent,
+        discountAmount: discountAmount,
       },
       payments: { eripPaid: 0, cashPaid: 0 },
       status: "confirmed",
@@ -1439,7 +1475,7 @@ export class MemStorage implements IStorage {
             if (remainingKm <= 0) {
               status = "overdue";
             } else if (rule.warningKm && remainingKm <= rule.warningKm) {
-              if (status !== "overdue") status = "warning";
+              status = "warning";
             }
           }
         }
@@ -1500,20 +1536,32 @@ export class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
+  // Normalize phone to canonical format: +digits only
+  // Returns null if phone is invalid (fewer than 7 digits)
+  private normalizePhoneOrNull(phone: string): string | null {
+    const digits = phone.replace(/[^0-9]/g, '');
+    if (digits.length < 7) return null; // Minimum valid phone length
+    return '+' + digits;
+  }
+
   async getStaffInvitationByPhone(phone: string): Promise<StaffInvitation | undefined> {
-    const normalizedPhone = phone.replace(/[^0-9+]/g, '');
+    const normalizedPhone = this.normalizePhoneOrNull(phone);
+    if (!normalizedPhone) return undefined;
     return Array.from(this.staffInvitations.values()).find(inv => {
-      const invPhone = inv.phone.replace(/[^0-9+]/g, '');
-      return invPhone === normalizedPhone && !inv.usedBy;
+      return inv.phone === normalizedPhone && !inv.usedBy;
     });
   }
 
   async createStaffInvitation(invitation: InsertStaffInvitation): Promise<StaffInvitation> {
+    const normalizedPhone = this.normalizePhoneOrNull(invitation.phone);
+    if (!normalizedPhone) {
+      throw new Error("Invalid phone number: must contain at least 7 digits");
+    }
     const id = randomUUID();
     const staffInvitation: StaffInvitation = {
       id,
       ...invitation,
-      phone: invitation.phone.replace(/[^0-9+]/g, ''),
+      phone: normalizedPhone,
       createdAt: new Date().toISOString(),
     };
     this.staffInvitations.set(id, staffInvitation);

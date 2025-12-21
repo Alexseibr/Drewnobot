@@ -78,7 +78,7 @@ export async function registerRoutes(
         const fullName = [telegramUser.first_name, telegramUser.last_name]
           .filter(Boolean).join(" ");
         
-        // Check for staff invitation by phone number
+        // Check for staff invitation by phone number (storage normalizes internally)
         let assignedRole: UserRole = "GUEST";
         let invitation = null;
         if (phone) {

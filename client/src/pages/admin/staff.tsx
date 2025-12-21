@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
@@ -6,12 +7,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Users, Shield, UserCog, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Users, Shield, UserCog, User, UserPlus, Phone, Trash2, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import type { UserRole } from "@shared/schema";
+
+interface StaffInvitation {
+  id: string;
+  phone: string;
+  role: UserRole;
+  note?: string;
+  createdBy: string;
+  usedBy?: string;
+  usedAt?: string;
+  createdAt: string;
+}
 
 interface StaffMember {
   id: string;
@@ -40,13 +53,24 @@ const ROLE_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destr
 
 const ASSIGNABLE_ROLES = ["OWNER", "ADMIN", "INSTRUCTOR", "GUEST"] as const;
 
+const INVITATION_ROLES = ["OWNER", "ADMIN", "INSTRUCTOR"] as const;
+
 export default function StaffManagementPage() {
   const { user, isSuperAdmin } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  const [newPhone, setNewPhone] = useState("");
+  const [newRole, setNewRole] = useState<string>("ADMIN");
+  const [newNote, setNewNote] = useState("");
 
   const { data: staffList, isLoading, error } = useQuery<StaffMember[]>({
     queryKey: ["/api/admin/staff"],
+    enabled: isSuperAdmin,
+  });
+  
+  const { data: invitations, isLoading: isLoadingInvitations } = useQuery<StaffInvitation[]>({
+    queryKey: ["/api/admin/invitations"],
     enabled: isSuperAdmin,
   });
 
@@ -93,6 +117,65 @@ export default function StaffManagementPage() {
       });
     },
   });
+  
+  const createInvitationMutation = useMutation({
+    mutationFn: async (data: { phone: string; role: string; note?: string }) => {
+      const response = await apiRequest("POST", "/api/admin/invitations", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invitations"] });
+      setNewPhone("");
+      setNewNote("");
+      toast({
+        title: "Приглашение создано",
+        description: "Пользователь получит права при входе через Telegram",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось создать приглашение",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const deleteInvitationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/invitations/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invitations"] });
+      toast({
+        title: "Приглашение удалено",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить приглашение",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleCreateInvitation = () => {
+    if (!newPhone.trim()) {
+      toast({
+        title: "Ошибка",
+        description: "Укажите номер телефона",
+        variant: "destructive",
+      });
+      return;
+    }
+    createInvitationMutation.mutate({
+      phone: newPhone.trim(),
+      role: newRole,
+      note: newNote.trim() || undefined,
+    });
+  };
 
   if (!isSuperAdmin) {
     return (
@@ -217,6 +300,109 @@ export default function StaffManagementPage() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Приглашения по номеру телефона
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1">
+                <Input
+                  placeholder="+7 926 890 4468"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  data-testid="input-invitation-phone"
+                />
+              </div>
+              <Select value={newRole} onValueChange={setNewRole}>
+                <SelectTrigger className="w-full sm:w-[160px]" data-testid="select-invitation-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVITATION_ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {ROLE_LABELS[role]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleCreateInvitation}
+                disabled={createInvitationMutation.isPending || !newPhone.trim()}
+                data-testid="button-create-invitation"
+              >
+                {createInvitationMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            
+            <Input
+              placeholder="Заметка (опционально)"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              data-testid="input-invitation-note"
+            />
+            
+            <p className="text-sm text-muted-foreground">
+              Добавьте номер телефона сотрудника. Когда он войдет в бот через Telegram, 
+              ему автоматически будет назначена выбранная роль.
+            </p>
+            
+            {isLoadingInvitations ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : invitations && invitations.length > 0 ? (
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-sm font-medium">Ожидающие приглашения:</p>
+                {invitations.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${inv.usedBy ? "bg-muted/30 opacity-60" : ""}`}
+                    data-testid={`invitation-item-${inv.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{inv.phone}</p>
+                        {inv.note && (
+                          <p className="text-sm text-muted-foreground">{inv.note}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={ROLE_VARIANTS[inv.role]}>
+                        {ROLE_LABELS[inv.role]}
+                      </Badge>
+                      {inv.usedBy ? (
+                        <Badge variant="outline" className="gap-1">
+                          <Check className="h-3 w-3" /> Использовано
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => deleteInvitationMutation.mutate(inv.id)}
+                          disabled={deleteInvitationMutation.isPending}
+                          data-testid={`button-delete-invitation-${inv.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
