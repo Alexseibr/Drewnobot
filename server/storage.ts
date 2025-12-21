@@ -12,6 +12,7 @@ import type {
   WorkLog, InsertWorkLog,
   QuadSlot,
   QuadBooking, InsertQuadBooking,
+  QuadPricing, InsertQuadPricing,
   InstructorBlockedTime, InsertInstructorBlockedTime,
   InstructorExpense, InsertInstructorExpense,
   SiteSettings,
@@ -23,6 +24,7 @@ import type {
   BlockedDate, InsertBlockedDate,
   AuthSession, InsertAuthSession,
   UserRole,
+  QuadRouteType,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -89,6 +91,12 @@ export interface IStorage {
   createInstructorBlockedTime(blocked: InsertInstructorBlockedTime): Promise<InstructorBlockedTime>;
   deleteInstructorBlockedTime(id: string): Promise<boolean>;
   
+  // Quad Pricing (default and date-specific overrides)
+  getQuadPricing(): Promise<QuadPricing[]>;
+  getQuadPriceForDate(routeType: QuadRouteType, date?: string): Promise<number>;
+  setQuadPrice(pricing: InsertQuadPricing, createdBy?: string): Promise<QuadPricing>;
+  deleteQuadPriceOverride(id: string): Promise<boolean>;
+  
   getSiteSettings(): Promise<SiteSettings>;
   updateSiteSettings(updates: Partial<SiteSettings>): Promise<SiteSettings>;
   
@@ -146,7 +154,7 @@ const PRICES: Record<string, number> = {
   tub_large: 180,
   grill: 10,
   charcoal: 15,
-  quad_30m: 40,
+  quad_30m: 50,
   quad_60m: 80,
   // SPA prices
   spa_bath_only_base3h: 150,
@@ -177,6 +185,7 @@ export class MemStorage implements IStorage {
   private reviews: Map<string, Review> = new Map();
   private blockedDates: Map<string, BlockedDate> = new Map();
   private authSessions: Map<string, AuthSession> = new Map();
+  private quadPricing: Map<string, QuadPricing> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -255,6 +264,23 @@ export class MemStorage implements IStorage {
       isActive: true,
     };
     this.users.set(leadInstructor.id, leadInstructor);
+
+    // Initialize default quad pricing
+    const defaultShortPrice: QuadPricing = {
+      id: randomUUID(),
+      routeType: "short",
+      price: PRICES.quad_30m,
+      createdAt: new Date().toISOString(),
+    };
+    this.quadPricing.set(defaultShortPrice.id, defaultShortPrice);
+
+    const defaultLongPrice: QuadPricing = {
+      id: randomUUID(),
+      routeType: "long",
+      price: PRICES.quad_60m,
+      createdAt: new Date().toISOString(),
+    };
+    this.quadPricing.set(defaultLongPrice.id, defaultLongPrice);
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -648,6 +674,81 @@ export class MemStorage implements IStorage {
 
   async deleteInstructorBlockedTime(id: string): Promise<boolean> {
     return this.instructorBlockedTimes.delete(id);
+  }
+
+  // ============ QUAD PRICING ============
+  async getQuadPricing(): Promise<QuadPricing[]> {
+    return Array.from(this.quadPricing.values()).sort((a, b) => {
+      // Sort by date (nulls first = defaults), then by route type
+      if (!a.date && b.date) return -1;
+      if (a.date && !b.date) return 1;
+      if (a.date && b.date) return a.date.localeCompare(b.date);
+      return a.routeType.localeCompare(b.routeType);
+    });
+  }
+
+  async getQuadPriceForDate(routeType: QuadRouteType, date?: string): Promise<number> {
+    const allPricing = Array.from(this.quadPricing.values());
+    
+    // First try to find a date-specific override
+    if (date) {
+      const override = allPricing.find(p => p.routeType === routeType && p.date === date);
+      if (override) {
+        return override.price;
+      }
+    }
+    
+    // Fall back to default (no date set)
+    const defaultPrice = allPricing.find(p => p.routeType === routeType && !p.date);
+    if (defaultPrice) {
+      return defaultPrice.price;
+    }
+    
+    // Ultimate fallback to PRICES constant
+    return routeType === "short" ? PRICES.quad_30m : PRICES.quad_60m;
+  }
+
+  async setQuadPrice(pricing: InsertQuadPricing, createdBy?: string): Promise<QuadPricing> {
+    const allPricing = Array.from(this.quadPricing.values());
+    
+    // Check if we're updating an existing entry
+    const existing = allPricing.find(p => 
+      p.routeType === pricing.routeType && 
+      (pricing.date ? p.date === pricing.date : !p.date)
+    );
+    
+    if (existing) {
+      // Update existing entry
+      const updated: QuadPricing = {
+        ...existing,
+        price: pricing.price,
+        createdBy,
+        createdAt: new Date().toISOString(),
+      };
+      this.quadPricing.set(existing.id, updated);
+      return updated;
+    }
+    
+    // Create new entry
+    const newPricing: QuadPricing = {
+      id: randomUUID(),
+      routeType: pricing.routeType,
+      price: pricing.price,
+      date: pricing.date,
+      createdBy,
+      createdAt: new Date().toISOString(),
+    };
+    this.quadPricing.set(newPricing.id, newPricing);
+    return newPricing;
+  }
+
+  async deleteQuadPriceOverride(id: string): Promise<boolean> {
+    const pricing = this.quadPricing.get(id);
+    // Only allow deleting date-specific overrides, not defaults
+    if (pricing && pricing.date) {
+      return this.quadPricing.delete(id);
+    }
+    return false;
   }
 
   // Instructor Expenses

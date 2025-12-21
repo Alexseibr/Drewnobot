@@ -17,6 +17,7 @@ import TasksPage from "@/pages/ops/tasks";
 import InstructorSchedulePage from "@/pages/instructor/schedule";
 import InstructorManagePage from "@/pages/instructor/manage";
 import InstructorFinancesPage from "@/pages/instructor/finances";
+import InstructorPricingPage from "@/pages/instructor/pricing";
 import OwnerAnalyticsPage from "@/pages/owner/analytics";
 import StaffManagementPage from "@/pages/admin/staff";
 import ClaimRolePage from "@/pages/claim-role";
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/instructor/sessions" component={InstructorSchedulePage} />
       <Route path="/instructor/manage" component={InstructorManagePage} />
       <Route path="/instructor/finances" component={InstructorFinancesPage} />
+      <Route path="/instructor/pricing" component={InstructorPricingPage} />
       
       <Route path="/owner/analytics" component={OwnerAnalyticsPage} />
       

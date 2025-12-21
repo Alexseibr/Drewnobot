@@ -7,7 +7,8 @@ import {
   BarChart3,
   Bike,
   Bath,
-  Settings
+  Settings,
+  DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -33,8 +34,8 @@ const adminNavItems: NavItem[] = [
 
 const instructorNavItems: NavItem[] = [
   { path: "/instructor", label: "Расписание", icon: CalendarDays },
-  { path: "/instructor/manage", label: "Сессии", icon: Bike },
   { path: "/instructor/finances", label: "Финансы", icon: Wallet },
+  { path: "/instructor/pricing", label: "Цены", icon: DollarSign },
 ];
 
 const ownerNavItems: NavItem[] = [

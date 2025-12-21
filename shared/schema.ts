@@ -277,6 +277,25 @@ export type InsertWorkLog = z.infer<typeof insertWorkLogSchema>;
 export const QuadRouteType = z.enum(["short", "long"]); // short = 30min/50 BYN, long = 60min/80 BYN
 export type QuadRouteType = z.infer<typeof QuadRouteType>;
 
+// ============ QUAD PRICING ============
+// Allows instructors to set default prices and date-specific overrides
+export const quadPricingSchema = z.object({
+  id: z.string(),
+  routeType: QuadRouteType,
+  price: z.number().min(0),
+  date: z.string().optional(), // If set, this is a date-specific override (YYYY-MM-DD). If null, it's the default price.
+  createdBy: z.string().optional(), // User ID who created/updated this
+  createdAt: z.string(),
+});
+export type QuadPricing = z.infer<typeof quadPricingSchema>;
+
+export const insertQuadPricingSchema = z.object({
+  routeType: QuadRouteType,
+  price: z.number().min(0),
+  date: z.string().optional(),
+});
+export type InsertQuadPricing = z.infer<typeof insertQuadPricingSchema>;
+
 // ============ INSTRUCTOR BLOCKED TIME ============
 export const instructorBlockedTimeSchema = z.object({
   id: z.string(),

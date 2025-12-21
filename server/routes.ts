@@ -1470,6 +1470,73 @@ export async function registerRoutes(
     }
   });
 
+  // ============ QUAD PRICING - INSTRUCTOR ============
+  // Get all quad pricing (defaults + date overrides) - instructor only
+  app.get("/api/instructor/quads/pricing", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const pricing = await storage.getQuadPricing();
+      res.json(pricing);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить цены" });
+    }
+  });
+
+  // Get price for specific route type and date - public endpoint for guests
+  app.get("/api/quads/price", async (req, res) => {
+    try {
+      const { routeType, date } = req.query;
+      if (!routeType || (routeType !== "short" && routeType !== "long")) {
+        return res.status(400).json({ error: "Некорректный тип маршрута" });
+      }
+      const price = await storage.getQuadPriceForDate(routeType as "short" | "long", date as string | undefined);
+      res.json({ routeType, date, price });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить цену" });
+    }
+  });
+
+  // Set quad pricing (default or date-specific) - instructor only
+  app.post("/api/instructor/quads/pricing", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { routeType, price, date } = req.body;
+      
+      if (!routeType || (routeType !== "short" && routeType !== "long")) {
+        return res.status(400).json({ error: "Некорректный тип маршрута" });
+      }
+      
+      if (typeof price !== "number" || price < 0) {
+        return res.status(400).json({ error: "Некорректная цена" });
+      }
+      
+      // Validate date format if provided
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ error: "Некорректный формат даты (YYYY-MM-DD)" });
+      }
+      
+      const pricing = await storage.setQuadPrice(
+        { routeType, price, date: date || undefined },
+        (req as any).userId
+      );
+      
+      res.json(pricing);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось сохранить цену" });
+    }
+  });
+
+  // Delete date-specific price override - instructor only
+  app.delete("/api/instructor/quads/pricing/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteQuadPriceOverride(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Цена не найдена или это базовая цена (удалить нельзя)" });
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось удалить цену" });
+    }
+  });
+
   // ============ INSTRUCTOR MANAGEMENT ============
   app.get("/api/instructors", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {

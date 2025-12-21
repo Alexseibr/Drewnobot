@@ -61,22 +61,31 @@ const bookingFormSchema = z.object({
 
 type BookingFormData = z.infer<typeof bookingFormSchema>;
 
-const ROUTE_INFO = {
+const DEFAULT_PRICES = {
+  short: 50,
+  long: 80,
+};
+
+const ROUTE_INFO_BASE = {
   short: {
     name: "Малый маршрут",
     description: "30 минут, простая трасса",
     duration: 30,
-    price: 50,
     icon: "30 мин",
   },
   long: {
     name: "Большой маршрут", 
     description: "60 минут, полный маршрут",
     duration: 60,
-    price: 80,
     icon: "60 мин",
   },
 };
+
+interface PriceResponse {
+  routeType: string;
+  date?: string;
+  price: number;
+}
 
 export default function QuadBookingPage() {
   const [, setLocation] = useLocation();
@@ -101,10 +110,41 @@ export default function QuadBookingPage() {
   const watchedValues = bookingForm.watch();
   const routeType = watchedValues.routeType;
 
+  const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
+
   const { data: availabilityData, isLoading: loadingSlots } = useQuery<AvailabilityResponse>({
-    queryKey: ["/api/guest/quads/availability", selectedDate ? format(selectedDate, "yyyy-MM-dd") : null],
+    queryKey: ["/api/guest/quads/availability", dateStr],
     enabled: !!selectedDate,
   });
+
+  const { data: shortPriceData } = useQuery<PriceResponse>({
+    queryKey: ["/api/quads/price", "short", dateStr],
+    queryFn: async () => {
+      const params = new URLSearchParams({ routeType: "short" });
+      if (dateStr) params.set("date", dateStr);
+      const res = await fetch(`/api/quads/price?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch price");
+      return res.json();
+    },
+    enabled: !!selectedDate,
+  });
+
+  const { data: longPriceData } = useQuery<PriceResponse>({
+    queryKey: ["/api/quads/price", "long", dateStr],
+    queryFn: async () => {
+      const params = new URLSearchParams({ routeType: "long" });
+      if (dateStr) params.set("date", dateStr);
+      const res = await fetch(`/api/quads/price?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch price");
+      return res.json();
+    },
+    enabled: !!selectedDate,
+  });
+
+  const prices = useMemo(() => ({
+    short: shortPriceData?.price ?? DEFAULT_PRICES.short,
+    long: longPriceData?.price ?? DEFAULT_PRICES.long,
+  }), [shortPriceData, longPriceData]);
 
   const dateBlocked = availabilityData?.blocked;
   const blockMessage = availabilityData?.message;
@@ -123,7 +163,7 @@ export default function QuadBookingPage() {
   const hasDiscount = selectedSlotInfo?.hasDiscount || false;
 
   const calculatePrice = () => {
-    const basePrice = routeType === "short" ? 50 : 80;
+    const basePrice = prices[routeType];
     const count = watchedValues.quadsCount;
     const total = basePrice * count;
     
@@ -186,7 +226,7 @@ export default function QuadBookingPage() {
   const priceInfo = calculatePrice();
 
   if (step === "success") {
-    const routeInfo = ROUTE_INFO[watchedValues.routeType];
+    const routeInfo = ROUTE_INFO_BASE[watchedValues.routeType];
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <Header title="Заявка отправлена" showBack />
@@ -352,7 +392,7 @@ export default function QuadBookingPage() {
                           className="space-y-3"
                         >
                           {(["short", "long"] as const).map((type) => {
-                            const info = ROUTE_INFO[type];
+                            const info = ROUTE_INFO_BASE[type];
                             return (
                               <Card
                                 key={type}
@@ -378,7 +418,7 @@ export default function QuadBookingPage() {
                                         </Badge>
                                       </div>
                                       <p className="text-sm text-muted-foreground">{info.description}</p>
-                                      <p className="text-lg font-bold text-primary mt-2">{info.price} BYN</p>
+                                      <p className="text-lg font-bold text-primary mt-2">{prices[type]} BYN</p>
                                     </div>
                                     <Bike className="h-8 w-8 text-muted-foreground" />
                                   </div>
@@ -617,7 +657,7 @@ export default function QuadBookingPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Маршрут</span>
-                      <span>{ROUTE_INFO[routeType].name}</span>
+                      <span>{ROUTE_INFO_BASE[routeType].name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Время</span>
