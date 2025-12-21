@@ -321,6 +321,22 @@ export async function registerRoutes(
       const existingBookings = await storage.getBathBookingsForDate(date);
       const slots: Array<{ bathCode: string; date: string; startTime: string; endTime: string; available: boolean }> = [];
       
+      // Check if this is today - apply preparation time filter
+      const today = new Date();
+      const nowMinsk = new Date(today.getTime() + 3 * 60 * 60 * 1000); // UTC+3 Minsk timezone
+      const todayStr = nowMinsk.toISOString().split("T")[0];
+      const isToday = date === todayStr;
+      
+      // Calculate minimum start time for same-day booking (now + PREPARATION_TIMES.bath hours)
+      let minStartHour = 0;
+      if (isToday) {
+        const prepHours = 2; // PREPARATION_TIMES.bath
+        const minTime = new Date(nowMinsk.getTime() + prepHours * 60 * 60 * 1000);
+        minStartHour = minTime.getHours();
+        // Round up to next full hour
+        if (minTime.getMinutes() > 0) minStartHour++;
+      }
+      
       for (const bathCode of ["B1", "B2"]) {
         const bathBookings = existingBookings.filter(b => 
           b.bathCode === bathCode && 
@@ -330,6 +346,9 @@ export async function registerRoutes(
         for (let hour = 10; hour <= 19; hour++) {
           const startTime = `${hour.toString().padStart(2, "0")}:00`;
           const endTime = `${(hour + 3).toString().padStart(2, "0")}:00`;
+          
+          // Skip slots that don't meet preparation time requirement for same-day booking
+          const tooEarlyForToday = isToday && hour < minStartHour;
           
           const isBlocked = bathBookings.some(b => {
             const bStart = parseInt(b.startTime.split(":")[0]);
@@ -342,7 +361,7 @@ export async function registerRoutes(
             date,
             startTime,
             endTime,
-            available: !isBlocked && (hour + 3) <= 22,
+            available: !isBlocked && !tooEarlyForToday && (hour + 3) <= 22,
           });
         }
       }
@@ -487,6 +506,20 @@ export async function registerRoutes(
       const slots = await storage.getQuadSlotsForDate(date);
       const blockedTimes = await storage.getInstructorBlockedTimesForDate(date);
       
+      // Check if this is today - apply preparation time filter
+      const today = new Date();
+      const nowMinsk = new Date(today.getTime() + 3 * 60 * 60 * 1000); // UTC+3 Minsk timezone
+      const todayStr = nowMinsk.toISOString().split("T")[0];
+      const isToday = date === todayStr;
+      
+      // Calculate minimum start time for same-day booking (now + PREPARATION_TIMES.quad hours)
+      let minStartTime = "00:00";
+      if (isToday) {
+        const prepHours = 2; // PREPARATION_TIMES.quad
+        const minTime = new Date(nowMinsk.getTime() + prepHours * 60 * 60 * 1000);
+        minStartTime = minTime.toTimeString().slice(0, 5);
+      }
+      
       // Generate available time slots (09:00 - 19:00)
       const availableSlots: Array<{
         startTime: string;
@@ -500,6 +533,9 @@ export async function registerRoutes(
       for (let hour = 9; hour < 19; hour++) {
         for (let min = 0; min < 60; min += 30) {
           const startTime = `${hour.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
+          
+          // Skip slots that don't meet preparation time requirement for same-day booking
+          if (isToday && startTime < minStartTime) continue;
           
           // Check if time is blocked
           const isBlocked = blockedTimes.some(bt => {
@@ -712,6 +748,103 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete blocked time" });
+    }
+  });
+
+  // ============ INSTRUCTOR EXPENSES ============
+  app.get("/api/instructor/expenses", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      let expenses;
+      if (startDate && endDate) {
+        expenses = await storage.getInstructorExpensesForPeriod(
+          startDate as string, 
+          endDate as string
+        );
+      } else {
+        expenses = await storage.getInstructorExpenses();
+      }
+      res.json(expenses);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch expenses" });
+    }
+  });
+
+  app.post("/api/instructor/expenses", async (req, res) => {
+    try {
+      const { date, category, amount, description, createdBy } = req.body;
+      if (!date || !category || !amount || !description || !createdBy) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      const expense = await storage.createInstructorExpense({
+        date,
+        category,
+        amount: parseFloat(amount),
+        description,
+        createdBy,
+      });
+      res.json(expense);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create expense" });
+    }
+  });
+
+  app.delete("/api/instructor/expenses/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteInstructorExpense(req.params.id);
+      if (!deleted) return res.status(404).json({ error: "Expense not found" });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete expense" });
+    }
+  });
+
+  // Get instructor financial summary (revenue + expenses)
+  app.get("/api/instructor/finances", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "Start and end dates are required" });
+      }
+      
+      // Get completed quad bookings for period
+      const allBookings = await storage.getQuadBookingsUpcoming();
+      const periodBookings = allBookings.filter(b => 
+        b.date >= (startDate as string) && 
+        b.date <= (endDate as string) &&
+        b.status === "completed"
+      );
+      
+      // Calculate revenue
+      const revenue = periodBookings.reduce((sum, b) => sum + b.pricing.total, 0);
+      const bookingsCount = periodBookings.length;
+      const quadsCount = periodBookings.reduce((sum, b) => sum + b.quadsCount, 0);
+      
+      // Get expenses for period
+      const expenses = await storage.getInstructorExpensesForPeriod(
+        startDate as string,
+        endDate as string
+      );
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+      
+      // Group expenses by category
+      const expensesByCategory = expenses.reduce((acc, e) => {
+        acc[e.category] = (acc[e.category] || 0) + e.amount;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      res.json({
+        period: { startDate, endDate },
+        revenue,
+        bookingsCount,
+        quadsCount,
+        totalExpenses,
+        expensesByCategory,
+        expenses,
+        netProfit: revenue - totalExpenses,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch financial data" });
     }
   });
 
