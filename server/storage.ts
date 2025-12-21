@@ -31,6 +31,7 @@ import type {
   QuadMaintenanceRule, InsertQuadMaintenanceRule,
   QuadMaintenanceEvent, InsertQuadMaintenanceEvent,
   QuadMaintenanceStatus,
+  StaffInvitation, InsertStaffInvitation,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -194,6 +195,13 @@ export interface IStorage {
   // Quad Maintenance Status (computed from rules, events, and current mileage)
   getQuadMaintenanceStatuses(): Promise<QuadMaintenanceStatus[]>;
   getQuadMaintenanceStatusesForQuad(quadId: string): Promise<QuadMaintenanceStatus[]>;
+  
+  // Staff Invitations (phone-based role pre-assignment)
+  getStaffInvitations(): Promise<StaffInvitation[]>;
+  getStaffInvitationByPhone(phone: string): Promise<StaffInvitation | undefined>;
+  createStaffInvitation(invitation: InsertStaffInvitation): Promise<StaffInvitation>;
+  useStaffInvitation(id: string, userId: string): Promise<StaffInvitation | undefined>;
+  deleteStaffInvitation(id: string): Promise<boolean>;
 }
 
 const PRICES: Record<string, number> = {
@@ -240,6 +248,7 @@ export class MemStorage implements IStorage {
   private quadMileageLogs: Map<string, QuadMileageLog> = new Map();
   private quadMaintenanceRules: Map<string, QuadMaintenanceRule> = new Map();
   private quadMaintenanceEvents: Map<string, QuadMaintenanceEvent> = new Map();
+  private staffInvitations: Map<string, StaffInvitation> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -1483,6 +1492,48 @@ export class MemStorage implements IStorage {
   async getQuadMaintenanceStatusesForQuad(quadId: string): Promise<QuadMaintenanceStatus[]> {
     const allStatuses = await this.getQuadMaintenanceStatuses();
     return allStatuses.filter(s => s.quadId === quadId);
+  }
+
+  // Staff Invitations
+  async getStaffInvitations(): Promise<StaffInvitation[]> {
+    return Array.from(this.staffInvitations.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getStaffInvitationByPhone(phone: string): Promise<StaffInvitation | undefined> {
+    const normalizedPhone = phone.replace(/[^0-9+]/g, '');
+    return Array.from(this.staffInvitations.values()).find(inv => {
+      const invPhone = inv.phone.replace(/[^0-9+]/g, '');
+      return invPhone === normalizedPhone && !inv.usedBy;
+    });
+  }
+
+  async createStaffInvitation(invitation: InsertStaffInvitation): Promise<StaffInvitation> {
+    const id = randomUUID();
+    const staffInvitation: StaffInvitation = {
+      id,
+      ...invitation,
+      phone: invitation.phone.replace(/[^0-9+]/g, ''),
+      createdAt: new Date().toISOString(),
+    };
+    this.staffInvitations.set(id, staffInvitation);
+    return staffInvitation;
+  }
+
+  async useStaffInvitation(id: string, userId: string): Promise<StaffInvitation | undefined> {
+    const invitation = this.staffInvitations.get(id);
+    if (!invitation) return undefined;
+    const updated = {
+      ...invitation,
+      usedBy: userId,
+      usedAt: new Date().toISOString(),
+    };
+    this.staffInvitations.set(id, updated);
+    return updated;
+  }
+
+  async deleteStaffInvitation(id: string): Promise<boolean> {
+    return this.staffInvitations.delete(id);
   }
 }
 

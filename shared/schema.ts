@@ -740,3 +740,19 @@ export type QuadMaintenanceStatus = z.infer<typeof quadMaintenanceStatusSchema>;
 
 export const insertQuadMaintenanceStatusSchema = quadMaintenanceStatusSchema.omit({ id: true });
 export type InsertQuadMaintenanceStatus = z.infer<typeof insertQuadMaintenanceStatusSchema>;
+
+// ============ STAFF INVITATION (Phone-based role pre-assignment) ============
+export const staffInvitationSchema = z.object({
+  id: z.string(),
+  phone: z.string(), // Normalized phone number
+  role: UserRole, // Role to assign when user joins
+  note: z.string().optional(), // Admin note about who this is
+  createdBy: z.string(), // Admin who created invitation
+  usedBy: z.string().optional(), // User ID if invitation was used
+  usedAt: z.string().optional(), // When invitation was used
+  createdAt: z.string(),
+});
+export type StaffInvitation = z.infer<typeof staffInvitationSchema>;
+
+export const insertStaffInvitationSchema = staffInvitationSchema.omit({ id: true, usedBy: true, usedAt: true, createdAt: true });
+export type InsertStaffInvitation = z.infer<typeof insertStaffInvitationSchema>;
