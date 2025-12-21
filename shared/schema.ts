@@ -105,7 +105,7 @@ export type ServicePrice = z.infer<typeof servicePriceSchema>;
 // ============ CUSTOMER ============
 export const customerSchema = z.object({
   fullName: z.string().optional(),
-  phone: z.string(),
+  phone: z.string().optional(),
   telegramId: z.string().optional(),
 });
 export type Customer = z.infer<typeof customerSchema>;

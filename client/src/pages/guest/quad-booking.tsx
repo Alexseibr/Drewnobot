@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Bike, Clock, Phone, User, Check, Minus, Plus, Loader2 } from "lucide-react";
+import { CalendarIcon, Bike, Clock, User, Check, Minus, Plus, Loader2 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -20,18 +20,10 @@ import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BookingCardSkeleton } from "@/components/ui/loading-skeleton";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { useAuth } from "@/lib/auth-context";
 import type { QuadSession, InsertQuadBooking } from "@shared/schema";
 
-type Step = "phone" | "verify" | "date" | "session" | "details" | "success";
-
-const phoneSchema = z.object({
-  phone: z.string().min(9, "Введите корректный номер телефона"),
-});
-
-const verifySchema = z.object({
-  code: z.string().length(4, "Код должен содержать 4 цифры"),
-});
+type Step = "date" | "session" | "details" | "success";
 
 const bookingFormSchema = z.object({
   sessionId: z.string().min(1, "Выберите сеанс"),
@@ -40,8 +32,6 @@ const bookingFormSchema = z.object({
   fullName: z.string().min(2, "Укажите имя"),
 });
 
-type PhoneFormData = z.infer<typeof phoneSchema>;
-type VerifyFormData = z.infer<typeof verifySchema>;
 type BookingFormData = z.infer<typeof bookingFormSchema>;
 
 const PRICES = {
@@ -56,22 +46,10 @@ interface AvailabilityResponse {
 }
 
 export default function QuadBookingPage() {
-  const [step, setStep] = useState<Step>("phone");
+  const [step, setStep] = useState<Step>("date");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [phone, setPhone] = useState("");
-  const [verificationToken, setVerificationToken] = useState("");
-  const [cooldown, setCooldown] = useState(0);
   const { toast } = useToast();
-
-  const phoneForm = useForm<PhoneFormData>({
-    resolver: zodResolver(phoneSchema),
-    defaultValues: { phone: "" },
-  });
-
-  const verifyForm = useForm<VerifyFormData>({
-    resolver: zodResolver(verifySchema),
-    defaultValues: { code: "" },
-  });
+  const { user } = useAuth();
 
   const bookingForm = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -79,66 +57,11 @@ export default function QuadBookingPage() {
       sessionId: "",
       duration: 30,
       quadsCount: 1,
-      fullName: "",
+      fullName: user?.name || "",
     },
   });
 
   const watchedValues = bookingForm.watch();
-
-  useEffect(() => {
-    if (cooldown > 0) {
-      const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [cooldown]);
-
-  const sendSmsMutation = useMutation({
-    mutationFn: async (data: PhoneFormData) => {
-      const response = await apiRequest("POST", "/api/guest/sms/send", data);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setPhone(phoneForm.getValues("phone"));
-      setCooldown(data.cooldownSeconds || 60);
-      setStep("verify");
-      toast({
-        title: "Код отправлен",
-        description: "Проверьте SMS на вашем телефоне",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Ошибка отправки",
-        description: error.message || "Попробуйте позже",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const verifySmsMutation = useMutation({
-    mutationFn: async (data: VerifyFormData) => {
-      const response = await apiRequest("POST", "/api/guest/sms/verify", {
-        phone,
-        code: data.code,
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setVerificationToken(data.verificationToken);
-      setStep("date");
-      toast({
-        title: "Телефон подтверждён",
-        description: "Теперь выберите дату поездки",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Неверный код",
-        description: error.message || "Попробуйте ещё раз",
-        variant: "destructive",
-      });
-    },
-  });
 
   const { data: availabilityData, isLoading: loadingSessions } = useQuery<AvailabilityResponse>({
     queryKey: ["/api/guest/quads/availability", selectedDate ? format(selectedDate, "yyyy-MM-dd") : null],
@@ -160,13 +83,10 @@ export default function QuadBookingPage() {
         quadsCount: data.quadsCount,
         customer: {
           fullName: data.fullName,
-          phone,
+          telegramId: user?.telegramId,
         },
       };
-      const response = await apiRequest("POST", "/api/guest/quad-bookings", {
-        ...bookingData,
-        verificationToken,
-      });
+      const response = await apiRequest("POST", "/api/guest/quad-bookings", bookingData);
       return response.json();
     },
     onSuccess: () => {
@@ -186,14 +106,6 @@ export default function QuadBookingPage() {
     const { duration, quadsCount } = watchedValues;
     const basePrice = duration === 30 ? PRICES.quad_30m : PRICES.quad_60m;
     return basePrice * quadsCount;
-  };
-
-  const handlePhoneSubmit = (data: PhoneFormData) => {
-    sendSmsMutation.mutate(data);
-  };
-
-  const handleVerifySubmit = (data: VerifyFormData) => {
-    verifySmsMutation.mutate(data);
   };
 
   const handleBookingSubmit = (data: BookingFormData) => {
@@ -244,13 +156,9 @@ export default function QuadBookingPage() {
             <Button
               className="mt-8 w-full max-w-xs"
               onClick={() => {
-                bookingForm.reset();
-                verifyForm.reset();
-                phoneForm.reset();
+                bookingForm.reset({ sessionId: "", duration: 30, quadsCount: 1, fullName: user?.name || "" });
                 setSelectedDate(undefined);
-                setStep("phone");
-                setPhone("");
-                setVerificationToken("");
+                setStep("date");
               }}
               data-testid="button-new-booking"
             >
@@ -264,124 +172,8 @@ export default function QuadBookingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Забронировать квадроциклы" showBack={step !== "phone"} />
+      <Header title="Забронировать квадроциклы" showBack={step !== "date"} />
       <PageContainer>
-        {step === "phone" && (
-          <Form {...phoneForm}>
-            <form onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                  Подтверждение телефона
-                </h2>
-                <p className="text-muted-foreground">
-                  Введите номер телефона для получения SMS-кода
-                </p>
-
-                <FormField
-                  control={phoneForm.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Номер телефона</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="+375 (29) 123-45-67"
-                            className="pl-10"
-                            {...field}
-                            data-testid="input-phone"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={sendSmsMutation.isPending}
-                data-testid="button-send-sms"
-              >
-                {sendSmsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Получить код
-              </Button>
-            </form>
-          </Form>
-        )}
-
-        {step === "verify" && (
-          <Form {...verifyForm}>
-            <form onSubmit={verifyForm.handleSubmit(handleVerifySubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                  Введите код из SMS
-                </h2>
-                <p className="text-muted-foreground">
-                  Код отправлен на номер {phone}
-                </p>
-
-                <FormField
-                  control={verifyForm.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col items-center">
-                      <FormControl>
-                        <InputOTP
-                          maxLength={4}
-                          value={field.value}
-                          onChange={field.onChange}
-                          data-testid="input-sms-code"
-                        >
-                          <InputOTPGroup>
-                            <InputOTPSlot index={0} />
-                            <InputOTPSlot index={1} />
-                            <InputOTPSlot index={2} />
-                            <InputOTPSlot index={3} />
-                          </InputOTPGroup>
-                        </InputOTP>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {cooldown > 0 && (
-                  <p className="text-center text-sm text-muted-foreground">
-                    Повторная отправка через {cooldown} сек.
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={verifySmsMutation.isPending}
-                  data-testid="button-verify"
-                >
-                  {verifySmsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Подтвердить
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  disabled={cooldown > 0}
-                  onClick={() => sendSmsMutation.mutate({ phone })}
-                  data-testid="button-resend"
-                >
-                  Отправить код повторно
-                </Button>
-              </div>
-            </form>
-          </Form>
-        )}
-
         {step === "date" && (
           <div className="space-y-6">
             <div className="space-y-4">
@@ -589,9 +381,6 @@ export default function QuadBookingPage() {
                     <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base">Количество квадроциклов</CardTitle>
-                        <CardDescription>
-                          Доступно в этом сеансе: {availableQuads}
-                        </CardDescription>
                       </CardHeader>
                       <CardContent>
                         <FormField
@@ -599,27 +388,24 @@ export default function QuadBookingPage() {
                           name="quadsCount"
                           render={({ field }) => (
                             <FormItem>
-                              <div className="flex items-center justify-center gap-6">
+                              <div className="flex items-center justify-center gap-4">
                                 <Button
                                   type="button"
-                                  variant="outline"
                                   size="icon"
+                                  variant="outline"
                                   onClick={() => field.onChange(Math.max(1, field.value - 1))}
                                   disabled={field.value <= 1}
                                   data-testid="button-quads-minus"
                                 >
                                   <Minus className="h-4 w-4" />
                                 </Button>
-                                <div className="text-center min-w-[80px]">
-                                  <p className="text-4xl font-bold">{field.value}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    квадр.
-                                  </p>
-                                </div>
+                                <span className="text-3xl font-bold w-12 text-center">
+                                  {field.value}
+                                </span>
                                 <Button
                                   type="button"
-                                  variant="outline"
                                   size="icon"
+                                  variant="outline"
                                   onClick={() => field.onChange(Math.min(availableQuads, field.value + 1))}
                                   disabled={field.value >= availableQuads}
                                   data-testid="button-quads-plus"
@@ -627,6 +413,9 @@ export default function QuadBookingPage() {
                                   <Plus className="h-4 w-4" />
                                 </Button>
                               </div>
+                              <p className="text-sm text-muted-foreground text-center mt-2">
+                                Доступно: {availableQuads}
+                              </p>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -637,9 +426,8 @@ export default function QuadBookingPage() {
                     <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-base">Контактные данные</CardTitle>
-                        <CardDescription>Телефон: {phone}</CardDescription>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="space-y-4">
                         <FormField
                           control={bookingForm.control}
                           name="fullName"
@@ -664,30 +452,13 @@ export default function QuadBookingPage() {
                       </CardContent>
                     </Card>
 
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Итого</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Дата</span>
-                          <span>{selectedDate && format(selectedDate, "d MMMM", { locale: ru })}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Время</span>
-                          <span>{selectedSession?.startTime} - {selectedSession?.endTime}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Длительность</span>
-                          <span>{watchedValues.duration} мин.</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Квадроциклов</span>
-                          <span>{watchedValues.quadsCount}</span>
-                        </div>
-                        <div className="flex justify-between font-semibold pt-2 border-t">
-                          <span>Стоимость</span>
-                          <span className="text-primary">{calculatePrice()} BYN</span>
+                    <Card className="bg-primary/5 border-primary/20">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">Итого:</span>
+                          <span className="text-2xl font-bold text-primary">
+                            {calculatePrice()} BYN
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
@@ -695,28 +466,17 @@ export default function QuadBookingPage() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                {watchedValues.sessionId && watchedValues.fullName && (
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={bookingMutation.isPending}
-                    data-testid="button-submit"
-                  >
-                    {bookingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Отправить заявку
-                  </Button>
-                )}
+              {watchedValues.sessionId && (
                 <Button
-                  type="button"
-                  variant="ghost"
+                  type="submit"
                   className="w-full"
-                  onClick={() => setStep("date")}
-                  data-testid="button-back"
+                  disabled={bookingMutation.isPending}
+                  data-testid="button-submit"
                 >
-                  Назад
+                  {bookingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Забронировать
                 </Button>
-              </div>
+              )}
             </form>
           </Form>
         )}

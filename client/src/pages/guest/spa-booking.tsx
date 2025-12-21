@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Phone, User, Check, Loader2, Users, Droplets, Sun, Bath } from "lucide-react";
+import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -20,18 +20,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { useAuth } from "@/lib/auth-context";
 
 type BookingType = "bath_only" | "terrace_only" | "tub_only" | "bath_with_tub";
-type Step = "phone" | "verify" | "select" | "details" | "confirm" | "success";
-
-const phoneSchema = z.object({
-  phone: z.string().min(9, "Введите корректный номер телефона"),
-});
-
-const verifySchema = z.object({
-  code: z.string().length(4, "Код должен содержать 4 цифры"),
-});
+type Step = "select" | "details" | "success";
 
 const bookingFormSchema = z.object({
   bookingType: z.enum(["bath_only", "terrace_only", "tub_only", "bath_with_tub"]),
@@ -42,8 +34,6 @@ const bookingFormSchema = z.object({
   fullName: z.string().min(2, "Укажите имя"),
 });
 
-type PhoneFormData = z.infer<typeof phoneSchema>;
-type VerifyFormData = z.infer<typeof verifySchema>;
 type BookingFormData = z.infer<typeof bookingFormSchema>;
 
 const timeSlots = [
@@ -65,21 +55,9 @@ const PRICES: Record<BookingType, { base: number; guestThreshold?: number; highe
 };
 
 export default function SpaBookingPage() {
-  const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
-  const [verificationToken, setVerificationToken] = useState("");
-  const [cooldown, setCooldown] = useState(0);
+  const [step, setStep] = useState<Step>("select");
   const { toast } = useToast();
-
-  const phoneForm = useForm<PhoneFormData>({
-    resolver: zodResolver(phoneSchema),
-    defaultValues: { phone: "" },
-  });
-
-  const verifyForm = useForm<VerifyFormData>({
-    resolver: zodResolver(verifySchema),
-    defaultValues: { code: "" },
-  });
+  const { user } = useAuth();
 
   const bookingForm = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -88,7 +66,7 @@ export default function SpaBookingPage() {
       spaResource: "",
       startTime: "",
       guestsCount: 2,
-      fullName: "",
+      fullName: user?.name || "",
     },
   });
 
@@ -96,61 +74,6 @@ export default function SpaBookingPage() {
   const selectedType = bookingForm.watch("bookingType");
   const selectedResource = bookingForm.watch("spaResource");
   const watchedValues = bookingForm.watch();
-
-  useEffect(() => {
-    if (cooldown > 0) {
-      const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [cooldown]);
-
-  const sendSmsMutation = useMutation({
-    mutationFn: async (data: PhoneFormData) => {
-      const response = await apiRequest("POST", "/api/guest/sms/send", data);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setPhone(phoneForm.getValues("phone"));
-      setCooldown(data.cooldownSeconds || 60);
-      setStep("verify");
-      toast({
-        title: "Код отправлен",
-        description: "Проверьте SMS на вашем телефоне",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Ошибка отправки",
-        description: error.message || "Попробуйте позже",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const verifySmsMutation = useMutation({
-    mutationFn: async (data: VerifyFormData) => {
-      const response = await apiRequest("POST", "/api/guest/sms/verify", {
-        phone,
-        code: data.code,
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setVerificationToken(data.verificationToken);
-      setStep("select");
-      toast({
-        title: "Телефон подтверждён",
-        description: "Теперь выберите дату и время",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Неверный код",
-        description: error.message || "Попробуйте ещё раз",
-        variant: "destructive",
-      });
-    },
-  });
 
   const { data: availability, isLoading: loadingAvailability } = useQuery<Array<{
     spaResource: string;
@@ -177,9 +100,8 @@ export default function SpaBookingPage() {
         guestsCount: data.guestsCount,
         customer: {
           fullName: data.fullName,
-          phone,
+          telegramId: user?.telegramId,
         },
-        verificationToken,
       });
       return response.json();
     },
@@ -212,14 +134,6 @@ export default function SpaBookingPage() {
     const [hours, minutes] = startTime.split(":").map(Number);
     const endHour = hours + 3;
     return `${endHour.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
-  };
-
-  const handlePhoneSubmit = (data: PhoneFormData) => {
-    sendSmsMutation.mutate(data);
-  };
-
-  const handleVerifySubmit = (data: VerifyFormData) => {
-    verifySmsMutation.mutate(data);
   };
 
   const handleBookingSubmit = (data: BookingFormData) => {
@@ -270,12 +184,8 @@ export default function SpaBookingPage() {
             <Button
               className="mt-8 w-full max-w-xs"
               onClick={() => {
-                bookingForm.reset();
-                verifyForm.reset();
-                phoneForm.reset();
-                setStep("phone");
-                setPhone("");
-                setVerificationToken("");
+                bookingForm.reset({ bookingType: "bath_only", spaResource: "", startTime: "", guestsCount: 2, fullName: user?.name || "" });
+                setStep("select");
               }}
               data-testid="button-new-booking"
             >
@@ -291,125 +201,9 @@ export default function SpaBookingPage() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header
         title="Забронировать СПА"
-        showBack={step !== "phone"}
+        showBack={step !== "select"}
       />
       <PageContainer>
-        {step === "phone" && (
-          <Form {...phoneForm}>
-            <form onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                  Подтверждение телефона
-                </h2>
-                <p className="text-muted-foreground">
-                  Введите номер телефона для получения SMS-кода
-                </p>
-
-                <FormField
-                  control={phoneForm.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Номер телефона</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="+375 (29) 123-45-67"
-                            className="pl-10"
-                            {...field}
-                            data-testid="input-phone"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={sendSmsMutation.isPending}
-                data-testid="button-send-sms"
-              >
-                {sendSmsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Получить код
-              </Button>
-            </form>
-          </Form>
-        )}
-
-        {step === "verify" && (
-          <Form {...verifyForm}>
-            <form onSubmit={verifyForm.handleSubmit(handleVerifySubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                  Введите код из SMS
-                </h2>
-                <p className="text-muted-foreground">
-                  Код отправлен на номер {phone}
-                </p>
-
-                <FormField
-                  control={verifyForm.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col items-center">
-                      <FormControl>
-                        <InputOTP
-                          maxLength={4}
-                          value={field.value}
-                          onChange={field.onChange}
-                          data-testid="input-sms-code"
-                        >
-                          <InputOTPGroup>
-                            <InputOTPSlot index={0} />
-                            <InputOTPSlot index={1} />
-                            <InputOTPSlot index={2} />
-                            <InputOTPSlot index={3} />
-                          </InputOTPGroup>
-                        </InputOTP>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {cooldown > 0 && (
-                  <p className="text-center text-sm text-muted-foreground">
-                    Повторная отправка через {cooldown} сек.
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={verifySmsMutation.isPending}
-                  data-testid="button-verify"
-                >
-                  {verifySmsMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Подтвердить
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  disabled={cooldown > 0}
-                  onClick={() => sendSmsMutation.mutate({ phone })}
-                  data-testid="button-resend"
-                >
-                  Отправить код повторно
-                </Button>
-              </div>
-            </form>
-          </Form>
-        )}
-
         {step === "select" && (
           <Form {...bookingForm}>
             <form className="space-y-6">
@@ -609,21 +403,34 @@ export default function SpaBookingPage() {
                       name="guestsCount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormControl>
-                            <div className="flex items-center gap-4">
+                          <div className="flex items-center justify-center gap-4">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              onClick={() => field.onChange(Math.max(1, field.value - 1))}
+                              disabled={field.value <= 1}
+                              data-testid="button-guests-minus"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <div className="flex items-center gap-2">
                               <Users className="h-5 w-5 text-muted-foreground" />
-                              <Input
-                                type="number"
-                                min={1}
-                                max={10}
-                                className="w-24"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                                data-testid="input-guests"
-                              />
-                              <span className="text-sm text-muted-foreground">человек</span>
+                              <span className="text-3xl font-bold w-12 text-center">
+                                {field.value}
+                              </span>
                             </div>
-                          </FormControl>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              onClick={() => field.onChange(Math.min(10, field.value + 1))}
+                              disabled={field.value >= 10}
+                              data-testid="button-guests-plus"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -634,7 +441,6 @@ export default function SpaBookingPage() {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Контактные данные</CardTitle>
-                    <CardDescription>Телефон: {phone}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <FormField
@@ -661,11 +467,8 @@ export default function SpaBookingPage() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Итого</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="p-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Тип</span>
                       <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
@@ -678,13 +481,11 @@ export default function SpaBookingPage() {
                       <span className="text-muted-foreground">Время</span>
                       <span>{watchedValues.startTime} - {calculateEndTime()}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Гости</span>
-                      <span>{watchedValues.guestsCount} чел.</span>
-                    </div>
-                    <div className="flex justify-between font-semibold pt-2 border-t">
-                      <span>Стоимость</span>
-                      <span className="text-primary">{calculatePrice()} BYN</span>
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span className="font-medium">Итого:</span>
+                      <span className="text-2xl font-bold text-primary">
+                        {calculatePrice()} BYN
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -698,14 +499,13 @@ export default function SpaBookingPage() {
                   data-testid="button-submit"
                 >
                   {bookingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Отправить заявку
+                  Забронировать
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   className="w-full"
                   onClick={() => setStep("select")}
-                  data-testid="button-back"
                 >
                   Назад
                 </Button>
