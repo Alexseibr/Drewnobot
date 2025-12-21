@@ -74,7 +74,7 @@ export default function InstructorSchedulePage() {
   const dateStr = format(selectedDate, "yyyy-MM-dd");
   
   const { data: scheduleData, isLoading } = useQuery<InstructorScheduleData>({
-    queryKey: ["/api/instructor/schedule", dateStr],
+    queryKey: [`/api/instructor/schedule?date=${dateStr}`],
   });
 
   const bookings = scheduleData?.bookings || [];
@@ -97,7 +97,9 @@ export default function InstructorSchedulePage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/schedule"] });
+      queryClient.invalidateQueries({ predicate: (query) => 
+        (query.queryKey[0] as string)?.startsWith("/api/instructor/schedule") 
+      });
       setShowBlockDialog(false);
       form.reset();
       toast({ title: "Время заблокировано" });
@@ -113,7 +115,9 @@ export default function InstructorSchedulePage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/schedule"] });
+      queryClient.invalidateQueries({ predicate: (query) => 
+        (query.queryKey[0] as string)?.startsWith("/api/instructor/schedule") 
+      });
       toast({ title: "Блокировка снята" });
     },
     onError: () => {
@@ -127,7 +131,9 @@ export default function InstructorSchedulePage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/schedule"] });
+      queryClient.invalidateQueries({ predicate: (query) => 
+        (query.queryKey[0] as string)?.startsWith("/api/instructor/schedule") 
+      });
       toast({ title: "Бронь подтверждена" });
     },
     onError: () => {
@@ -141,7 +147,9 @@ export default function InstructorSchedulePage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/instructor/schedule"] });
+      queryClient.invalidateQueries({ predicate: (query) => 
+        (query.queryKey[0] as string)?.startsWith("/api/instructor/schedule") 
+      });
       toast({ title: "Бронь отменена" });
     },
     onError: () => {
