@@ -105,9 +105,12 @@ export async function registerRoutes(
       } else {
         const fullName = [telegramUser.first_name, telegramUser.last_name]
           .filter(Boolean).join(" ");
+        // Only update phone if a new valid phone is provided
+        // Pass undefined to preserve existing phone (not null which clears it)
+        const phoneToUpdate = phone && phone.trim() ? phone : undefined;
         user = await storage.updateUser(user.id, {
           name: fullName || user.name,
-          phone: phone || user.phone,
+          ...(phoneToUpdate ? { phone: phoneToUpdate } : {}),
         }) || user;
       }
       
@@ -257,6 +260,12 @@ export async function registerRoutes(
       const validRoles = ["OWNER", "ADMIN", "INSTRUCTOR"];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ error: "Недопустимая роль" });
+      }
+      
+      // Validate phone format (at least 7 digits)
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length < 7) {
+        return res.status(400).json({ error: "Номер телефона должен содержать минимум 7 цифр" });
       }
       
       // Check if invitation for this phone already exists

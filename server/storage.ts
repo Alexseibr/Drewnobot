@@ -393,15 +393,22 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Normalize phone if provided, keep original if normalization fails (short numbers)
-    let normalizedPhone: string | undefined = undefined;
-    if (insertUser.phone) {
-      normalizedPhone = this.normalizePhoneOrNull(insertUser.phone) ?? undefined;
+    // Normalize phone if provided - gracefully handle invalid phones by storing undefined
+    // This is important for auth flows where phone might be in unexpected format
+    let phone: string | undefined = undefined;
+    if (typeof insertUser.phone === "string" && insertUser.phone.trim()) {
+      const normalized = this.normalizePhoneOrNull(insertUser.phone);
+      if (normalized) {
+        phone = normalized;
+      } else {
+        // Log when phone normalization fails for troubleshooting
+        console.warn(`[Storage] Phone normalization failed for input: ${insertUser.phone}`);
+      }
     }
     const user: User = { 
       id: randomUUID(), 
       ...insertUser,
-      phone: normalizedPhone,
+      phone,
     };
     this.users.set(user.id, user);
     return user;
@@ -411,24 +418,23 @@ export class MemStorage implements IStorage {
     const user = this.users.get(id);
     if (!user) return undefined;
     
-    // Build updates carefully to preserve existing phone if not explicitly being changed
-    const { phone: updatePhone, ...otherUpdates } = updates;
-    const updated = { ...user, ...otherUpdates };
+    const next: User = { ...user, ...updates };
     
-    // Only update phone if explicitly provided in updates
-    if ('phone' in updates) {
-      if (updatePhone) {
-        // Normalize the new phone, or keep existing if normalization fails
-        updated.phone = this.normalizePhoneOrNull(updatePhone) ?? user.phone;
-      } else {
-        // Explicitly setting phone to null/undefined clears it
-        updated.phone = undefined;
+    if (Object.prototype.hasOwnProperty.call(updates, "phone")) {
+      if (updates.phone === null) {
+        // Explicit clear
+        next.phone = undefined;
+      } else if (typeof updates.phone === "string" && updates.phone.trim()) {
+        // Normalize phone - if invalid, preserve existing
+        next.phone = this.normalizePhoneOrNull(updates.phone) ?? user.phone;
+      } else if (updates.phone === undefined) {
+        // Preserve existing
+        next.phone = user.phone;
       }
     }
-    // If 'phone' not in updates, user.phone is preserved via spread
     
-    this.users.set(id, updated);
-    return updated;
+    this.users.set(id, next);
+    return next;
   }
 
   async getUnits(): Promise<Unit[]> {
