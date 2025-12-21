@@ -521,6 +521,37 @@ export async function registerRoutes(
         minStartTime = minTime.toTimeString().slice(0, 5);
       }
       
+      // Get all bookings for the date to check for overlaps
+      const allBookings = await storage.getQuadBookingsForDate(date);
+      const activeBookings = allBookings.filter(b => b.status !== "cancelled");
+      
+      // Helper to convert time string to minutes
+      const timeToMinutes = (time: string) => {
+        const [h, m] = time.split(":").map(Number);
+        return h * 60 + m;
+      };
+      
+      // Helper to check if a proposed booking overlaps with any existing booking
+      // Returns the overlapping booking if found, null otherwise
+      const findOverlappingBooking = (startTime: string, duration: number) => {
+        const newStart = timeToMinutes(startTime);
+        const newEnd = newStart + duration + 15; // 15 min buffer after new booking
+        
+        return activeBookings.find(booking => {
+          const bookingStart = timeToMinutes(booking.startTime);
+          const bookingDuration = booking.routeType === "long" ? 60 : 30;
+          const bookingEnd = bookingStart + bookingDuration + 15; // 15 min buffer after existing booking
+          
+          // Check overlap: newStart < bookingEnd AND newEnd > bookingStart
+          return newStart < bookingEnd && newEnd > bookingStart;
+        });
+      };
+      
+      // Helper to check if there's a booking at EXACTLY this start time
+      const findExactTimeBooking = (startTime: string) => {
+        return activeBookings.find(b => b.startTime === startTime);
+      };
+      
       // Generate available time slots (09:00 - 19:00)
       const availableSlots: Array<{
         startTime: string;
@@ -529,6 +560,8 @@ export async function registerRoutes(
         availableQuads: number;
         hasDiscount: boolean;
         discountPrice?: number;
+        joinExisting?: boolean;
+        existingRouteType?: "short" | "long";
       }> = [];
       
       for (let hour = 9; hour < 19; hour++) {
@@ -538,7 +571,7 @@ export async function registerRoutes(
           // Skip slots that don't meet preparation time requirement for same-day booking
           if (isToday && startTime < minStartTime) continue;
           
-          // Check if time is blocked
+          // Check if time is blocked by instructor
           const isBlocked = blockedTimes.some(bt => {
             if (!bt.startTime) return true; // Whole day blocked
             return startTime >= bt.startTime && startTime < (bt.endTime || "23:59");
@@ -546,37 +579,145 @@ export async function registerRoutes(
           
           if (isBlocked) continue;
           
-          // For short route (30 min)
-          const shortSlot = slots.find(s => s.startTime === startTime && s.routeType === "short");
-          const shortAvailable = shortSlot ? 4 - shortSlot.bookedQuads : 4;
-          if (shortAvailable > 0) {
-            availableSlots.push({
-              startTime,
-              routeType: "short",
-              price: 50,
-              availableQuads: shortAvailable,
-              hasDiscount: !!shortSlot,
-              discountPrice: shortSlot ? Math.round(50 * 0.95) : undefined,
-            });
-          }
+          // Check if this exact start time has an existing booking
+          const exactSlotBooking = findExactTimeBooking(startTime);
           
-          // For long route (60 min) - check if doesn't overlap with next hour
-          if (hour < 18 || (hour === 18 && min === 0)) {
-            const longSlot = slots.find(s => s.startTime === startTime && s.routeType === "long");
-            const longAvailable = longSlot ? 4 - longSlot.bookedQuads : 4;
-            if (longAvailable > 0) {
+          if (exactSlotBooking) {
+            // There's an existing booking at this exact time - only offer join option
+            const existingSlot = slots.find(s => s.startTime === startTime && s.routeType === exactSlotBooking.routeType);
+            const availableQuads = existingSlot ? 4 - existingSlot.bookedQuads : 4;
+            
+            if (availableQuads > 0) {
+              const price = exactSlotBooking.routeType === "long" ? 80 : 50;
               availableSlots.push({
                 startTime,
-                routeType: "long",
-                price: 80,
-                availableQuads: longAvailable,
-                hasDiscount: !!longSlot,
-                discountPrice: longSlot ? Math.round(80 * 0.95) : undefined,
+                routeType: exactSlotBooking.routeType,
+                price,
+                availableQuads,
+                hasDiscount: true, // Always discount for joining
+                discountPrice: Math.round(price * 0.95),
+                joinExisting: true,
+                existingRouteType: exactSlotBooking.routeType,
+              });
+            }
+          } else {
+            // No booking at this exact time - check for overlap with ANY existing bookings
+            // This handles off-grid bookings (e.g., admin created 10:15 booking)
+            
+            // Check short route (30 min)
+            const shortOverlap = findOverlappingBooking(startTime, 30);
+            if (shortOverlap) {
+              // Overlapping booking found - check if we can offer join option
+              if (shortOverlap.startTime === startTime && shortOverlap.routeType === "short") {
+                // Exact match - offer join (shouldn't happen since we checked exactSlotBooking)
+                const existingSlot = slots.find(s => s.startTime === startTime && s.routeType === "short");
+                const availableQuads = existingSlot ? 4 - existingSlot.bookedQuads : 4;
+                if (availableQuads > 0) {
+                  availableSlots.push({
+                    startTime,
+                    routeType: "short",
+                    price: 50,
+                    availableQuads,
+                    hasDiscount: true,
+                    discountPrice: Math.round(50 * 0.95),
+                    joinExisting: true,
+                    existingRouteType: "short",
+                  });
+                }
+              }
+              // else: slot is blocked due to overlap with different time/route - don't add
+            } else {
+              // No overlap - short route is available
+              availableSlots.push({
+                startTime,
+                routeType: "short",
+                price: 50,
+                availableQuads: 4,
+                hasDiscount: false,
+              });
+            }
+            
+            // Check long route (60 min) - only if within operating hours
+            if (hour < 18 || (hour === 18 && min === 0)) {
+              const longOverlap = findOverlappingBooking(startTime, 60);
+              if (longOverlap) {
+                // Overlapping booking found - check if we can offer join option
+                if (longOverlap.startTime === startTime && longOverlap.routeType === "long") {
+                  // Exact match - offer join
+                  const existingSlot = slots.find(s => s.startTime === startTime && s.routeType === "long");
+                  const availableQuads = existingSlot ? 4 - existingSlot.bookedQuads : 4;
+                  if (availableQuads > 0) {
+                    availableSlots.push({
+                      startTime,
+                      routeType: "long",
+                      price: 80,
+                      availableQuads,
+                      hasDiscount: true,
+                      discountPrice: Math.round(80 * 0.95),
+                      joinExisting: true,
+                      existingRouteType: "long",
+                    });
+                  }
+                }
+                // else: slot is blocked due to overlap - don't add
+              } else {
+                // No overlap - long route is available
+                availableSlots.push({
+                  startTime,
+                  routeType: "long",
+                  price: 80,
+                  availableQuads: 4,
+                  hasDiscount: false,
+                });
+              }
+            }
+          }
+        }
+      }
+      
+      // Also add joinable slots for off-grid bookings (e.g., admin-created at 10:15)
+      // These aren't on the standard 30-minute grid but guests should be able to join
+      for (const booking of activeBookings) {
+        // Check if this booking's start time is already in availableSlots
+        const alreadyAdded = availableSlots.some(s => 
+          s.startTime === booking.startTime && s.routeType === booking.routeType
+        );
+        
+        if (!alreadyAdded) {
+          // Check if time is blocked by instructor
+          const isBlocked = blockedTimes.some(bt => {
+            if (!bt.startTime) return true;
+            return booking.startTime >= bt.startTime && booking.startTime < (bt.endTime || "23:59");
+          });
+          
+          if (!isBlocked) {
+            // Skip if past prep time for today
+            if (isToday && booking.startTime < minStartTime) continue;
+            
+            const existingSlot = slots.find(s => 
+              s.startTime === booking.startTime && s.routeType === booking.routeType
+            );
+            const availableQuads = existingSlot ? 4 - existingSlot.bookedQuads : 4;
+            
+            if (availableQuads > 0) {
+              const price = booking.routeType === "long" ? 80 : 50;
+              availableSlots.push({
+                startTime: booking.startTime,
+                routeType: booking.routeType,
+                price,
+                availableQuads,
+                hasDiscount: true,
+                discountPrice: Math.round(price * 0.95),
+                joinExisting: true,
+                existingRouteType: booking.routeType,
               });
             }
           }
         }
       }
+      
+      // Sort slots by time
+      availableSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
       
       res.json({ 
         slots: availableSlots, 
@@ -597,20 +738,60 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Missing required fields" });
       }
       
-      // Check availability
+      // Check availability - instructor is the limiting resource
       const existingBookings = await storage.getQuadBookingsForDate(date);
-      const sameSlotBookings = existingBookings.filter(b => 
-        b.startTime === startTime && 
-        b.routeType === routeType && 
-        b.status !== "cancelled"
-      );
+      const activeBookings = existingBookings.filter(b => b.status !== "cancelled");
       
-      const bookedQuads = sameSlotBookings.reduce((sum, b) => sum + b.quadsCount, 0);
-      if (bookedQuads + quadsCount > 4) {
-        return res.status(400).json({ 
-          error: `Доступно только ${4 - bookedQuads} квадроцикл(ов) на это время` 
+      // Helper to convert time string to minutes
+      const timeToMinutes = (time: string) => {
+        const [h, m] = time.split(":").map(Number);
+        return h * 60 + m;
+      };
+      
+      const newDuration = routeType === "long" ? 60 : 30;
+      const newStart = timeToMinutes(startTime);
+      const newEnd = newStart + newDuration + 15; // 15 min buffer
+      
+      // Check if there's an existing booking at the exact same time
+      const sameTimeBookings = activeBookings.filter(b => b.startTime === startTime);
+      
+      if (sameTimeBookings.length > 0) {
+        // There are bookings at this time - must join the existing group
+        const existingBooking = sameTimeBookings[0];
+        
+        // Can only join same route type
+        if (existingBooking.routeType !== routeType) {
+          return res.status(400).json({ 
+            error: `На это время уже есть бронь на ${existingBooking.routeType === "long" ? "большой" : "малый"} маршрут. Вы можете присоединиться к группе.` 
+          });
+        }
+        
+        // Check if there are enough quads left
+        const bookedQuads = sameTimeBookings.reduce((sum, b) => sum + b.quadsCount, 0);
+        if (bookedQuads + quadsCount > 4) {
+          return res.status(400).json({ 
+            error: `Доступно только ${4 - bookedQuads} квадроцикл(ов) на это время` 
+          });
+        }
+      } else {
+        // No booking at this exact time - check for overlaps with other bookings
+        const overlappingBooking = activeBookings.find(booking => {
+          const bookingStart = timeToMinutes(booking.startTime);
+          const bookingDuration = booking.routeType === "long" ? 60 : 30;
+          const bookingEnd = bookingStart + bookingDuration + 15; // 15 min buffer
+          
+          return newStart < bookingEnd && newEnd > bookingStart;
         });
+        
+        if (overlappingBooking) {
+          return res.status(400).json({ 
+            error: `Время пересекается с другим бронированием (${overlappingBooking.startTime}, ${overlappingBooking.routeType === "long" ? "большой" : "малый"} маршрут). Инструктор будет занят.` 
+          });
+        }
       }
+      
+      // Determine if this is joining an existing group (for discount)
+      const isJoiningGroup = sameTimeBookings.length > 0;
       
       // Check rate limit for unauthenticated users - check across all dates
       const allUpcomingBookings = await storage.getQuadBookingsUpcoming();
@@ -631,7 +812,7 @@ export async function registerRoutes(
         quadsCount,
         customer,
         comment,
-        slotId: sameSlotBookings.length > 0 ? `${startTime}-${routeType}` : undefined,
+        slotId: isJoiningGroup ? `${startTime}-${routeType}` : undefined,
       });
       
       // Notify instructors about new booking (async, don't wait)

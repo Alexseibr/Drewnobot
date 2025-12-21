@@ -35,6 +35,8 @@ interface SlotInfo {
   availableQuads: number;
   hasDiscount: boolean;
   discountPrice?: number;
+  joinExisting?: boolean;
+  existingRouteType?: QuadRouteType;
 }
 
 interface AvailabilityResponse {
@@ -197,9 +199,15 @@ export default function QuadBookingPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/guest/quads/availability"] });
     },
     onError: (error: Error) => {
+      // Refetch availability in case slots changed
+      queryClient.invalidateQueries({ queryKey: ["/api/guest/quads/availability", dateStr] });
+      // Reset time selection so user sees updated slots
+      bookingForm.setValue("startTime", "");
+      setSelectedSlot(undefined);
+      setStep("time");
       toast({
-        title: "Ошибка бронирования",
-        description: error.message || "Попробуйте позже",
+        title: "Время уже занято",
+        description: error.message || "Выберите другое время",
         variant: "destructive",
       });
     },
@@ -474,7 +482,8 @@ export default function QuadBookingPage() {
                                 variant={field.value === slot.startTime ? "default" : "outline"}
                                 className={cn(
                                   "h-auto py-3 flex-col items-start relative",
-                                  field.value === slot.startTime && "ring-2 ring-primary"
+                                  field.value === slot.startTime && "ring-2 ring-primary",
+                                  slot.joinExisting && "border-status-confirmed/50"
                                 )}
                                 onClick={() => {
                                   field.onChange(slot.startTime);
@@ -494,7 +503,11 @@ export default function QuadBookingPage() {
                                 </div>
                                 <div className="flex items-center gap-2 w-full text-xs mt-1 text-muted-foreground">
                                   <Bike className="h-3 w-3" />
-                                  <span>Свободно: {slot.availableQuads}/4</span>
+                                  {slot.joinExisting ? (
+                                    <span>Группа, свободно: {slot.availableQuads}</span>
+                                  ) : (
+                                    <span>Свободно: {slot.availableQuads}/4</span>
+                                  )}
                                 </div>
                               </Button>
                             ))}
