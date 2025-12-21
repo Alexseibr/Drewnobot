@@ -47,7 +47,7 @@ export async function registerRoutes(
   // ============ AUTH ENDPOINTS ============
   app.post("/api/auth/telegram", async (req, res) => {
     try {
-      const { initData } = req.body;
+      const { initData, phone } = req.body;
       if (!initData) {
         return res.status(400).json({ error: "Отсутствуют данные инициализации" });
       }
@@ -62,6 +62,18 @@ export async function registerRoutes(
       
       let user = await storage.getUserByTelegramId(telegramIdStr);
       
+      // If user not found by telegramId but phone provided, check for pending user by phone
+      if (!user && phone) {
+        const userByPhone = await storage.getUserByPhone(phone);
+        if (userByPhone && !userByPhone.telegramId) {
+          // Link telegram ID to existing phone-based user
+          user = await storage.updateUser(userByPhone.id, {
+            telegramId: telegramIdStr,
+          }) || userByPhone;
+          console.log(`[Auth] Linked Telegram ${telegramIdStr} to existing user by phone ${phone}, role: ${user.role}`);
+        }
+      }
+      
       if (!user) {
         const fullName = [telegramUser.first_name, telegramUser.last_name]
           .filter(Boolean).join(" ");
@@ -69,6 +81,7 @@ export async function registerRoutes(
         user = await storage.createUser({
           telegramId: telegramIdStr,
           name: fullName || telegramUser.username || "Пользователь",
+          phone: phone || undefined,
           role: "GUEST",
           isActive: true,
         });
@@ -77,6 +90,7 @@ export async function registerRoutes(
           .filter(Boolean).join(" ");
         user = await storage.updateUser(user.id, {
           name: fullName || user.name,
+          phone: phone || user.phone,
         }) || user;
       }
       

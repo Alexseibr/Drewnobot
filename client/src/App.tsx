@@ -17,6 +17,7 @@ import TasksPage from "@/pages/ops/tasks";
 import InstructorSchedulePage from "@/pages/instructor/schedule";
 import OwnerAnalyticsPage from "@/pages/owner/analytics";
 import StaffManagementPage from "@/pages/admin/staff";
+import ClaimRolePage from "@/pages/claim-role";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -39,6 +40,8 @@ function Router() {
       <Route path="/owner/analytics" component={OwnerAnalyticsPage} />
       
       <Route path="/admin/staff" component={StaffManagementPage} />
+      
+      <Route path="/staff-login" component={ClaimRolePage} />
       
       <Route component={NotFound} />
     </Switch>

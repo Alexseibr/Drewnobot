@@ -111,6 +111,12 @@ function getGuestKeyboard() {
           text: "Наш сайт",
           web_app: { url: webAppUrl }
         }
+      ],
+      [
+        {
+          text: "Я сотрудник",
+          web_app: { url: `${webAppUrl}/staff-login` }
+        }
       ]
     ]
   };

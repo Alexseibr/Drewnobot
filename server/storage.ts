@@ -26,6 +26,7 @@ import type {
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByTelegramId(telegramId: string): Promise<User | undefined>;
+  getUserByPhone(phone: string): Promise<User | undefined>;
   getUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
@@ -219,6 +220,17 @@ export class MemStorage implements IStorage {
       isActive: true,
     };
     this.users.set(realOwner.id, realOwner);
+
+    // Pending admin by phone - will be matched during Telegram auth
+    const pendingAdmin: User = {
+      id: randomUUID(),
+      telegramId: "", // Will be filled when they auth via Telegram
+      phone: "+375336172984",
+      name: "Администратор",
+      role: "ADMIN",
+      isActive: true,
+    };
+    this.users.set(pendingAdmin.id, pendingAdmin);
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -227,6 +239,16 @@ export class MemStorage implements IStorage {
 
   async getUserByTelegramId(telegramId: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(u => u.telegramId === telegramId);
+  }
+
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    // Normalize phone for comparison
+    const normalizedPhone = phone.replace(/[\s\-\(\)]/g, "");
+    return Array.from(this.users.values()).find(u => {
+      if (!u.phone) return false;
+      const userPhone = u.phone.replace(/[\s\-\(\)]/g, "");
+      return userPhone === normalizedPhone;
+    });
   }
 
   async getUsers(): Promise<User[]> {
