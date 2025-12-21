@@ -388,8 +388,10 @@ export const spaBookingSchema = z.object({
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
-  guestsCount: z.number().min(1).max(10),
+  durationHours: z.number().min(3).max(5).default(3),
+  guestsCount: z.number().min(1).max(12),
   customer: customerSchema,
+  comment: z.string().optional(),
   pricing: z.object({
     base: z.number(),
     total: z.number(),
@@ -413,8 +415,14 @@ export const insertSpaBookingSchema = z.object({
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
-  guestsCount: z.number().min(1).max(10),
-  customer: customerSchema,
+  durationHours: z.number().min(3).max(5).default(3),
+  guestsCount: z.number().min(1).max(12),
+  customer: z.object({
+    fullName: z.string().min(2),
+    phone: z.string().min(10),
+    telegramId: z.string().optional(),
+  }),
+  comment: z.string().optional(),
 });
 export type InsertSpaBooking = z.infer<typeof insertSpaBookingSchema>;
 
