@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,9 @@ import { useLocation } from "wouter";
 import { 
   Bath,
   Sparkles,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Percent,
+  Info
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
@@ -39,9 +41,34 @@ const spaBookingFormSchema = z.object({
     phone: z.string().min(10, "Введите корректный номер"),
   }),
   comment: z.string().optional(),
+  discountPercent: z.number().min(0).max(100).default(0),
 });
 
 type SpaBookingFormData = z.infer<typeof spaBookingFormSchema>;
+
+const SPA_PRICES = {
+  bath_only: 150,
+  terrace_only: 90,
+  tub_only_up_to_4: 150,
+  tub_only_5_plus: 180,
+  bath_with_tub_up_to_4: 330,
+  bath_with_tub_5_plus: 300,
+};
+
+const calculateBasePrice = (bookingType: string, guestsCount: number): number => {
+  switch (bookingType) {
+    case "bath_only":
+      return SPA_PRICES.bath_only;
+    case "terrace_only":
+      return SPA_PRICES.terrace_only;
+    case "tub_only":
+      return guestsCount <= 4 ? SPA_PRICES.tub_only_up_to_4 : SPA_PRICES.tub_only_5_plus;
+    case "bath_with_tub":
+      return guestsCount <= 4 ? SPA_PRICES.bath_with_tub_up_to_4 : SPA_PRICES.bath_with_tub_5_plus;
+    default:
+      return 0;
+  }
+};
 
 const TIME_SLOTS = [
   "09:00", "10:00", "11:00", "12:00", "13:00", "14:00",
@@ -49,10 +76,10 @@ const TIME_SLOTS = [
 ];
 
 const BOOKING_TYPES: { value: SpaBookingType; label: string; description: string }[] = [
-  { value: "bath_only", label: "Только баня", description: "3-5 часов" },
-  { value: "tub_only", label: "Только купель", description: "2-4 чел / 6-8 чел" },
-  { value: "bath_with_tub", label: "Баня + купель", description: "До 9 гостей" },
-  { value: "terrace_only", label: "Терраса", description: "3-5 часов" },
+  { value: "bath_only", label: "Только баня", description: "150 BYN" },
+  { value: "tub_only", label: "Только купель", description: "150/180 BYN" },
+  { value: "bath_with_tub", label: "Баня + купель", description: "330/300 BYN" },
+  { value: "terrace_only", label: "Терраса", description: "90 BYN" },
 ];
 
 export default function NewBookingPage() {
@@ -74,8 +101,23 @@ export default function NewBookingPage() {
         phone: "",
       },
       comment: "",
+      discountPercent: 0,
     },
   });
+
+  const watchedValues = form.watch();
+  
+  const priceInfo = useMemo(() => {
+    const basePrice = calculateBasePrice(watchedValues.bookingType, watchedValues.guestsCount);
+    const discountAmount = Math.round(basePrice * (watchedValues.discountPercent || 0) / 100);
+    const finalPrice = basePrice - discountAmount;
+    return { basePrice, discountAmount, finalPrice, discountPercent: watchedValues.discountPercent || 0 };
+  }, [watchedValues.bookingType, watchedValues.guestsCount, watchedValues.discountPercent]);
+
+  const getTubInfo = (spaResource: string) => {
+    if (spaResource === "SPA1") return "большая купель";
+    return "малая купель";
+  };
 
   const createSpaBookingMutation = useMutation({
     mutationFn: async (data: SpaBookingFormData) => {
@@ -84,7 +126,7 @@ export default function NewBookingPage() {
         "HH:mm"
       );
       
-      const bookingData: InsertSpaBooking = {
+      const bookingData = {
         spaResource: data.spaResource as SpaResource,
         bookingType: data.bookingType as SpaBookingType,
         date: format(data.date, "yyyy-MM-dd"),
@@ -97,9 +139,10 @@ export default function NewBookingPage() {
           phone: data.customer.phone,
         },
         comment: data.comment,
+        discountPercent: data.discountPercent || 0,
       };
 
-      const response = await apiRequest("POST", "/api/spa/bookings", bookingData);
+      const response = await apiRequest("POST", "/api/ops/spa-bookings", bookingData);
       return response.json();
     },
     onSuccess: () => {
@@ -156,10 +199,16 @@ export default function NewBookingPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="SPA1">СПА 1</SelectItem>
-                                <SelectItem value="SPA2">СПА 2</SelectItem>
+                                <SelectItem value="SPA1">СПА 1 (большая купель)</SelectItem>
+                                <SelectItem value="SPA2">СПА 2 (малая купель)</SelectItem>
                               </SelectContent>
                             </Select>
+                            {(watchedValues.bookingType === "tub_only" || watchedValues.bookingType === "bath_with_tub") && (
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Info className="w-3 h-3" />
+                                Доступна: {getTubInfo(field.value)}
+                              </p>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -380,6 +429,56 @@ export default function NewBookingPage() {
                           </FormItem>
                         )}
                       />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Percent className="h-4 w-4" />
+                        Стоимость
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="discountPercent"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Скидка (%)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={field.value}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                data-testid="input-discount"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Базовая цена:</span>
+                          <span className={priceInfo.discountPercent > 0 ? "line-through text-muted-foreground" : "font-medium"}>
+                            {priceInfo.basePrice} BYN
+                          </span>
+                        </div>
+                        {priceInfo.discountPercent > 0 && (
+                          <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                            <span>Скидка ({priceInfo.discountPercent}%):</span>
+                            <span>-{priceInfo.discountAmount} BYN</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-medium text-lg pt-1">
+                          <span>Итого:</span>
+                          <span data-testid="text-final-price">{priceInfo.finalPrice} BYN</span>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
 

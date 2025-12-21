@@ -70,14 +70,24 @@ const eventSchema = z.object({
   totalCost: z.number().nullable(),
 });
 
+const machineSchema = z.object({
+  code: z.string().min(1, "Укажите код"),
+  name: z.string().min(1, "Укажите название"),
+  ownerType: z.enum(["rental", "instructor"]),
+  notes: z.string().optional(),
+});
+
 type MileageFormData = z.infer<typeof mileageSchema>;
 type RuleFormData = z.infer<typeof ruleSchema>;
 type EventFormData = z.infer<typeof eventSchema>;
+type MachineFormData = z.infer<typeof machineSchema>;
 
 export default function InstructorMaintenancePage() {
   const [showMileageDialog, setShowMileageDialog] = useState(false);
   const [showRuleDialog, setShowRuleDialog] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
+  const [showMachineDialog, setShowMachineDialog] = useState(false);
+  const [editingMachine, setEditingMachine] = useState<QuadMachine | null>(null);
   const [selectedQuad, setSelectedQuad] = useState<string | null>(null);
   const [expandedQuad, setExpandedQuad] = useState<string | null>(null);
   const { toast } = useToast();
@@ -135,6 +145,16 @@ export default function InstructorMaintenancePage() {
       mileageKm: 0,
       partsUsed: "",
       totalCost: null,
+    },
+  });
+
+  const machineForm = useForm<MachineFormData>({
+    resolver: zodResolver(machineSchema),
+    defaultValues: {
+      code: "",
+      name: "",
+      ownerType: "rental",
+      notes: "",
     },
   });
 
@@ -211,6 +231,62 @@ export default function InstructorMaintenancePage() {
     },
   });
 
+  const createMachineMutation = useMutation({
+    mutationFn: async (data: MachineFormData) => {
+      const response = await apiRequest("POST", "/api/quads/machines", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quads/machines"] });
+      setShowMachineDialog(false);
+      setEditingMachine(null);
+      machineForm.reset();
+      toast({ title: "Квадроцикл добавлен" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateMachineMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<MachineFormData> }) => {
+      const response = await apiRequest("PATCH", `/api/quads/machines/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quads/machines"] });
+      setShowMachineDialog(false);
+      setEditingMachine(null);
+      machineForm.reset();
+      toast({ title: "Квадроцикл обновлен" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleOpenMachineDialog = (machine?: QuadMachine) => {
+    if (machine) {
+      setEditingMachine(machine);
+      machineForm.setValue("code", machine.code);
+      machineForm.setValue("name", machine.name);
+      machineForm.setValue("ownerType", machine.ownerType);
+      machineForm.setValue("notes", machine.notes || "");
+    } else {
+      setEditingMachine(null);
+      machineForm.reset();
+    }
+    setShowMachineDialog(true);
+  };
+
+  const handleMachineSubmit = (data: MachineFormData) => {
+    if (editingMachine) {
+      updateMachineMutation.mutate({ id: editingMachine.id, data });
+    } else {
+      createMachineMutation.mutate(data);
+    }
+  };
+
   const getQuadStatuses = (quadId: string) => {
     return statuses.filter(s => s.quadId === quadId);
   };
@@ -265,10 +341,14 @@ export default function InstructorMaintenancePage() {
       <Header title="Сервисная книжка" />
       <PageContainer>
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="overview" data-testid="tab-overview">
               <Bike className="w-4 h-4 mr-2" />
               Обзор
+            </TabsTrigger>
+            <TabsTrigger value="machines" data-testid="tab-machines">
+              <Plus className="w-4 h-4 mr-2" />
+              Машины
             </TabsTrigger>
             <TabsTrigger value="rules" data-testid="tab-rules">
               <Settings className="w-4 h-4 mr-2" />
@@ -460,6 +540,65 @@ export default function InstructorMaintenancePage() {
                     </Card>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="machines" className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={() => handleOpenMachineDialog()} data-testid="button-add-machine">
+                <Plus className="w-4 h-4 mr-2" />
+                Добавить квадроцикл
+              </Button>
+            </div>
+
+            {machines.length === 0 ? (
+              <EmptyState icon={Bike} title="Нет квадроциклов" description="Добавьте квадроциклы для сервисной книжки" />
+            ) : (
+              <div className="space-y-3">
+                {machines.map(machine => (
+                  <Card key={machine.id} data-testid={`card-machine-${machine.code}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-md bg-muted">
+                            <Bike className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">{machine.code}</CardTitle>
+                            <CardDescription>{machine.name}</CardDescription>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenMachineDialog(machine)}
+                          data-testid={`button-edit-machine-${machine.code}`}
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Изменить
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Gauge className="w-3 h-3" />
+                          {machine.currentMileageKm} км
+                        </span>
+                        <Badge variant={machine.ownerType === "rental" ? "default" : "secondary"}>
+                          {machine.ownerType === "rental" ? "Прокат" : "Инструктор"}
+                        </Badge>
+                        {!machine.isActive && (
+                          <Badge variant="destructive">Неактивен</Badge>
+                        )}
+                      </div>
+                      {machine.notes && (
+                        <p className="text-sm mt-2">{machine.notes}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </TabsContent>
@@ -964,6 +1103,93 @@ export default function InstructorMaintenancePage() {
                 <DialogFooter>
                   <Button type="submit" disabled={recordEventMutation.isPending} data-testid="button-submit-event">
                     {recordEventMutation.isPending ? "Сохранение..." : "Сохранить"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showMachineDialog} onOpenChange={setShowMachineDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingMachine ? "Редактировать квадроцикл" : "Добавить квадроцикл"}</DialogTitle>
+              <DialogDescription>Укажите код и название квадроцикла</DialogDescription>
+            </DialogHeader>
+            <Form {...machineForm}>
+              <form onSubmit={machineForm.handleSubmit(handleMachineSubmit)} className="space-y-4">
+                <FormField
+                  control={machineForm.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Код (номер)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="Q1, Q2, ..." 
+                          disabled={!!editingMachine}
+                          data-testid="input-machine-code" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={machineForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Название</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Красный CF Moto" data-testid="input-machine-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={machineForm.control}
+                  name="ownerType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Тип</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-machine-owner">
+                            <SelectValue placeholder="Выберите тип" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="rental">Прокат</SelectItem>
+                          <SelectItem value="instructor">Инструктор</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={machineForm.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Заметки (опционально)</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} data-testid="input-machine-notes" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button 
+                    type="submit" 
+                    disabled={createMachineMutation.isPending || updateMachineMutation.isPending} 
+                    data-testid="button-submit-machine"
+                  >
+                    {(createMachineMutation.isPending || updateMachineMutation.isPending) ? "Сохранение..." : "Сохранить"}
                   </Button>
                 </DialogFooter>
               </form>

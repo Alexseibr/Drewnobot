@@ -1512,6 +1512,44 @@ export async function registerRoutes(
     }
   });
 
+  // ============ SPA BOOKINGS - OPS (with discount support) ============
+  app.post("/api/ops/spa-bookings", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { spaResource, bookingType, date, startTime, endTime, durationHours, guestsCount, customer, comment, discountPercent } = req.body;
+      
+      if (!spaResource || !bookingType || !date || !startTime || !endTime) {
+        return res.status(400).json({ error: "Неверные данные бронирования" });
+      }
+
+      const insertData = {
+        spaResource,
+        bookingType,
+        date,
+        startTime,
+        endTime,
+        durationHours: durationHours || 3,
+        guestsCount: guestsCount || 4,
+        customer: customer || { fullName: "", phone: "" },
+        comment,
+      };
+      
+      const parsed = insertSpaBookingSchema.safeParse(insertData);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Неверные данные бронирования" });
+      }
+      
+      // Create booking with discount applied
+      const booking = await storage.createSpaBookingWithDiscount(parsed.data, discountPercent || 0);
+      
+      console.log(`[NOTIFY] Новая SPA бронь (ops): ${spaResource} на ${date} ${startTime}`);
+      
+      res.json(booking);
+    } catch (error) {
+      console.error("[Ops SPA Booking] Error:", error);
+      res.status(500).json({ error: "Не удалось создать бронирование" });
+    }
+  });
+
   // ============ SPA BOOKINGS - ADMIN ============
   app.get("/api/admin/spa-bookings/upcoming", async (req, res) => {
     try {
@@ -1876,6 +1914,37 @@ export async function registerRoutes(
       res.json(machines);
     } catch (error) {
       res.status(500).json({ error: "Не удалось получить список квадроциклов" });
+    }
+  });
+
+  // Create new quad machine
+  app.post("/api/quads/machines", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { code, name, ownerType, notes, commissioningDate } = req.body;
+      
+      if (!code || !name) {
+        return res.status(400).json({ error: "Код и название обязательны" });
+      }
+      
+      // Check for duplicate code
+      const existing = await storage.getQuadMachines();
+      if (existing.some(m => m.code === code)) {
+        return res.status(400).json({ error: "Квадроцикл с таким кодом уже существует" });
+      }
+      
+      const machine = await storage.createQuadMachine({
+        code,
+        name,
+        ownerType: ownerType || "rental",
+        isActive: true,
+        currentMileageKm: 0,
+        notes,
+        commissioningDate,
+      });
+      
+      res.json(machine);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось создать квадроцикл" });
     }
   });
 

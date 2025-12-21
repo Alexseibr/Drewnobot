@@ -131,6 +131,7 @@ export interface IStorage {
   getSpaBooking(id: string): Promise<SpaBooking | undefined>;
   getSpaBookingsForDate(date: string): Promise<SpaBooking[]>;
   createSpaBooking(booking: InsertSpaBooking): Promise<SpaBooking>;
+  createSpaBookingWithDiscount(booking: InsertSpaBooking, discountPercent: number): Promise<SpaBooking>;
   updateSpaBooking(id: string, updates: Partial<SpaBooking>): Promise<SpaBooking | undefined>;
   
   // Instructor Expenses
@@ -208,9 +209,9 @@ const PRICES: Record<string, number> = {
   spa_bath_only_base3h: 150,
   spa_terrace_only_base3h: 90,
   spa_tub_only_up_to_4: 150,
-  spa_tub_only_6_to_8: 180,
-  spa_bath_with_tub_up_to_9: 330,
-  spa_bath_with_tub_alt: 300,
+  spa_tub_only_5_plus: 180,
+  spa_bath_with_tub_up_to_4: 330,
+  spa_bath_with_tub_5_plus: 300,
 };
 
 export class MemStorage implements IStorage {
@@ -1024,9 +1025,9 @@ export class MemStorage implements IStorage {
       case "terrace_only":
         return PRICES.spa_terrace_only_base3h;
       case "tub_only":
-        return guestsCount <= 4 ? PRICES.spa_tub_only_up_to_4 : PRICES.spa_tub_only_6_to_8;
+        return guestsCount <= 4 ? PRICES.spa_tub_only_up_to_4 : PRICES.spa_tub_only_5_plus;
       case "bath_with_tub":
-        return guestsCount <= 9 ? PRICES.spa_bath_with_tub_up_to_9 : PRICES.spa_bath_with_tub_alt;
+        return guestsCount <= 4 ? PRICES.spa_bath_with_tub_up_to_4 : PRICES.spa_bath_with_tub_5_plus;
       default:
         return 0;
     }
@@ -1049,6 +1050,36 @@ export class MemStorage implements IStorage {
       pricing: { base: basePrice, total: basePrice },
       payments: { eripPaid: 0, cashPaid: 0 },
       status: "pending_call",
+      createdAt: new Date().toISOString(),
+    };
+    this.spaBookings.set(booking.id, booking);
+    return booking;
+  }
+
+  async createSpaBookingWithDiscount(insertBooking: InsertSpaBooking, discountPercent: number): Promise<SpaBooking> {
+    const basePrice = this.calculateSpaPrice(insertBooking.bookingType, insertBooking.guestsCount);
+    const discountAmount = Math.round(basePrice * discountPercent / 100);
+    const totalPrice = basePrice - discountAmount;
+    
+    const booking: SpaBooking = {
+      id: randomUUID(),
+      spaResource: insertBooking.spaResource,
+      bookingType: insertBooking.bookingType,
+      date: insertBooking.date,
+      startTime: insertBooking.startTime,
+      endTime: insertBooking.endTime,
+      durationHours: insertBooking.durationHours || 3,
+      guestsCount: insertBooking.guestsCount,
+      customer: insertBooking.customer,
+      comment: insertBooking.comment,
+      pricing: { 
+        base: basePrice, 
+        total: totalPrice,
+        discountPercent: discountPercent > 0 ? discountPercent : undefined,
+        discountAmount: discountAmount > 0 ? discountAmount : undefined,
+      },
+      payments: { eripPaid: 0, cashPaid: 0 },
+      status: "confirmed",
       createdAt: new Date().toISOString(),
     };
     this.spaBookings.set(booking.id, booking);
