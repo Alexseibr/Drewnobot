@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // ============ ENUMS ============
-export const UserRole = z.enum(["OWNER", "ADMIN", "INSTRUCTOR", "GUEST"]);
+export const UserRole = z.enum(["SUPER_ADMIN", "OWNER", "ADMIN", "INSTRUCTOR", "GUEST"]);
 export type UserRole = z.infer<typeof UserRole>;
 
 export const UnitType = z.enum(["cottage", "bath"]);
@@ -513,3 +513,32 @@ export const SPA_PRICE_KEYS = {
   bath_with_tub_up_to_9: "spa_bath_with_tub_up_to_9",
   bath_with_tub_alt: "spa_bath_with_tub_alt",
 } as const;
+
+// ============ AUTH SESSION ============
+export const authSessionSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  token: z.string(),
+  expiresAt: z.string(),
+  createdAt: z.string(),
+});
+export type AuthSession = z.infer<typeof authSessionSchema>;
+
+export const insertAuthSessionSchema = authSessionSchema.omit({ id: true, createdAt: true });
+export type InsertAuthSession = z.infer<typeof insertAuthSessionSchema>;
+
+// ============ TELEGRAM INIT DATA ============
+export const telegramUserSchema = z.object({
+  id: z.number(),
+  first_name: z.string(),
+  last_name: z.string().optional(),
+  username: z.string().optional(),
+  language_code: z.string().optional(),
+  is_premium: z.boolean().optional(),
+  photo_url: z.string().optional(),
+});
+export type TelegramUser = z.infer<typeof telegramUserSchema>;
+
+// ============ STAFF ROLES (for management) ============
+export const StaffRole = z.enum(["OWNER", "ADMIN", "INSTRUCTOR"]);
+export type StaffRole = z.infer<typeof StaffRole>;

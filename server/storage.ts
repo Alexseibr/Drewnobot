@@ -19,6 +19,8 @@ import type {
   VerificationToken,
   Review, InsertReview,
   BlockedDate, InsertBlockedDate,
+  AuthSession, InsertAuthSession,
+  UserRole,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -111,6 +113,16 @@ export interface IStorage {
   getBlockedDate(date: string): Promise<BlockedDate | undefined>;
   createBlockedDate(blockedDate: InsertBlockedDate): Promise<BlockedDate>;
   deleteBlockedDate(date: string): Promise<boolean>;
+  
+  // Auth Sessions
+  createAuthSession(session: InsertAuthSession): Promise<AuthSession>;
+  getAuthSession(token: string): Promise<AuthSession | undefined>;
+  deleteAuthSession(token: string): Promise<boolean>;
+  deleteUserSessions(userId: string): Promise<void>;
+  
+  // Staff management (for super admin)
+  getStaffUsers(): Promise<User[]>;
+  updateUserRole(userId: string, role: UserRole): Promise<User | undefined>;
 }
 
 const PRICES: Record<string, number> = {
@@ -149,6 +161,7 @@ export class MemStorage implements IStorage {
   private verificationTokens: Map<string, VerificationToken> = new Map();
   private reviews: Map<string, Review> = new Map();
   private blockedDates: Map<string, BlockedDate> = new Map();
+  private authSessions: Map<string, AuthSession> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -765,6 +778,55 @@ export class MemStorage implements IStorage {
     if (!blockedDate) return false;
     this.blockedDates.delete(blockedDate.id);
     return true;
+  }
+
+  // ============ AUTH SESSIONS ============
+  async createAuthSession(insertSession: InsertAuthSession): Promise<AuthSession> {
+    const session: AuthSession = {
+      id: randomUUID(),
+      userId: insertSession.userId,
+      token: insertSession.token,
+      expiresAt: insertSession.expiresAt,
+      createdAt: new Date().toISOString(),
+    };
+    this.authSessions.set(session.token, session);
+    return session;
+  }
+
+  async getAuthSession(token: string): Promise<AuthSession | undefined> {
+    const session = this.authSessions.get(token);
+    if (!session) return undefined;
+    if (new Date(session.expiresAt) < new Date()) {
+      this.authSessions.delete(token);
+      return undefined;
+    }
+    return session;
+  }
+
+  async deleteAuthSession(token: string): Promise<boolean> {
+    return this.authSessions.delete(token);
+  }
+
+  async deleteUserSessions(userId: string): Promise<void> {
+    const sessions = Array.from(this.authSessions.values()).filter(s => s.userId === userId);
+    for (const session of sessions) {
+      this.authSessions.delete(session.token);
+    }
+  }
+
+  // ============ STAFF MANAGEMENT ============
+  async getStaffUsers(): Promise<User[]> {
+    return Array.from(this.users.values()).filter(u => 
+      u.role === "SUPER_ADMIN" || u.role === "OWNER" || u.role === "ADMIN" || u.role === "INSTRUCTOR"
+    );
+  }
+
+  async updateUserRole(userId: string, role: UserRole): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    const updated = { ...user, role };
+    this.users.set(userId, updated);
+    return updated;
   }
 }
 
