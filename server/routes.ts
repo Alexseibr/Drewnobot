@@ -273,6 +273,30 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/tasks", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { title, type, date, unitCode } = req.body;
+      
+      if (!title || !type || !date) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const task = await storage.createTask({
+        title,
+        type,
+        date,
+        unitCode: unitCode && unitCode !== "none" ? unitCode : undefined,
+        status: "open",
+        createdBySystem: false,
+      });
+      
+      res.json(task);
+    } catch (error) {
+      console.error("[Tasks] Create error:", error);
+      res.status(500).json({ error: "Failed to create task" });
+    }
+  });
+
   app.post("/api/tasks/:id/complete", async (req, res) => {
     try {
       const task = await storage.updateTask(req.params.id, { status: "done" });
@@ -2054,6 +2078,7 @@ export async function registerRoutes(
         warningKm: warningKm || null,
         warningDays: warningDays || null,
         createdBy: user.id,
+        isActive: true,
       });
       
       res.json(rule);

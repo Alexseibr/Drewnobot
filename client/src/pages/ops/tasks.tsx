@@ -1,5 +1,10 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { 
   ClipboardList, 
   CheckCircle2, 
@@ -10,15 +15,24 @@ import {
   Gauge,
   Sparkles,
   Phone,
-  HelpCircle
+  HelpCircle,
+  Plus,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -37,20 +51,83 @@ const taskIcons: Record<TaskType, React.ElementType> = {
 };
 
 const taskTypeLabels: Record<TaskType, string> = {
-  climate_off: "выкл. климат",
-  climate_on: "вкл. климат",
-  trash_prep: "мусор",
-  meters: "счетчики",
-  cleaning: "уборка",
-  call_guest: "звонок гостю",
-  other: "другое",
+  climate_off: "Выкл. климат",
+  climate_on: "Вкл. климат",
+  trash_prep: "Мусор",
+  meters: "Счетчики",
+  cleaning: "Уборка",
+  call_guest: "Звонок гостю",
+  other: "Другое",
 };
+
+const TASK_TYPES: { value: TaskType; label: string }[] = [
+  { value: "cleaning", label: "Уборка" },
+  { value: "climate_on", label: "Вкл. климат" },
+  { value: "climate_off", label: "Выкл. климат" },
+  { value: "trash_prep", label: "Мусор" },
+  { value: "meters", label: "Счетчики" },
+  { value: "call_guest", label: "Звонок гостю" },
+  { value: "other", label: "Другое" },
+];
+
+const UNITS = [
+  { value: "", label: "Без привязки" },
+  { value: "Д1", label: "Домик 1" },
+  { value: "Д2", label: "Домик 2" },
+  { value: "Д3", label: "Домик 3" },
+  { value: "Д4", label: "Домик 4" },
+  { value: "Б1", label: "Баня 1" },
+  { value: "Б2", label: "Баня 2" },
+  { value: "СПА1", label: "СПА 1" },
+  { value: "СПА2", label: "СПА 2" },
+];
+
+const taskFormSchema = z.object({
+  title: z.string().min(3, "Минимум 3 символа"),
+  type: z.enum(["climate_off", "climate_on", "trash_prep", "meters", "cleaning", "call_guest", "other"]),
+  date: z.date(),
+  unitCode: z.string().optional(),
+});
+
+type TaskFormData = z.infer<typeof taskFormSchema>;
 
 export default function TasksPage() {
   const { toast } = useToast();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+  });
+
+  const form = useForm<TaskFormData>({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues: {
+      title: "",
+      type: "other",
+      date: new Date(),
+      unitCode: "",
+    },
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: async (data: TaskFormData) => {
+      const response = await apiRequest("POST", "/api/tasks", {
+        ...data,
+        date: format(data.date, "yyyy-MM-dd"),
+        unitCode: data.unitCode || undefined,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
+      toast({ title: "Задача создана" });
+      setIsCreateOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Ошибка создания задачи", variant: "destructive" });
+    },
   });
 
   const completeTaskMutation = useMutation({
@@ -68,8 +145,10 @@ export default function TasksPage() {
     },
   });
 
-  const openTasks = tasks?.filter(t => t.status === "open") || [];
-  const completedTasks = tasks?.filter(t => t.status === "done") || [];
+  const today = format(new Date(), "yyyy-MM-dd");
+  const todayTasks = tasks?.filter(t => t.date === today) || [];
+  const openTasks = todayTasks.filter(t => t.status === "open");
+  const completedTasks = todayTasks.filter(t => t.status === "done");
 
   const TaskCard = ({ task }: { task: Task }) => {
     const Icon = taskIcons[task.type] || HelpCircle;
@@ -141,6 +220,137 @@ export default function TasksPage() {
       <Header title="Задачи" />
       
       <PageContainer>
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <h2 className="text-lg font-semibold">
+            Сегодня, {format(new Date(), "d MMMM", { locale: ru })}
+          </h2>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" data-testid="button-create-task">
+                <Plus className="h-4 w-4 mr-1" />
+                Добавить
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Новая задача</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit((data) => createTaskMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Название</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Что нужно сделать..." {...field} data-testid="input-task-title" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Тип</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-task-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {TASK_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="unitCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Объект</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-task-unit">
+                              <SelectValue placeholder="Выберите объект" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {UNITS.map((unit) => (
+                              <SelectItem key={unit.value || "none"} value={unit.value || "none"}>
+                                {unit.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Дата</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                data-testid="button-task-date"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? format(field.value, "d MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              locale={ru}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={createTaskMutation.isPending}
+                    data-testid="button-submit-task"
+                  >
+                    {createTaskMutation.isPending ? "Создание..." : "Создать задачу"}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
         <Tabs defaultValue="open" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="open" className="gap-2" data-testid="tab-open">
@@ -175,7 +385,7 @@ export default function TasksPage() {
                   <EmptyState
                     icon={CheckCircle2}
                     title="Все задачи выполнены!"
-                    description="Отличная работа! Все задачи завершены."
+                    description="Отличная работа! Все задачи на сегодня завершены."
                   />
                 </CardContent>
               </Card>
