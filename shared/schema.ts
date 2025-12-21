@@ -638,3 +638,101 @@ export type TelegramUser = z.infer<typeof telegramUserSchema>;
 // ============ STAFF ROLES (for management) ============
 export const StaffRole = z.enum(["OWNER", "ADMIN", "INSTRUCTOR"]);
 export type StaffRole = z.infer<typeof StaffRole>;
+
+// ============ QUAD MACHINE (Service Book) ============
+export const QuadOwnerType = z.enum(["rental", "instructor"]);
+export type QuadOwnerType = z.infer<typeof QuadOwnerType>;
+
+export const quadMachineSchema = z.object({
+  id: z.string(),
+  code: z.string(), // Q1, Q2, Q3, Q4, Q5
+  name: z.string(), // Display name like "Красный CF Moto"
+  ownerType: QuadOwnerType, // rental or instructor's personal
+  isActive: z.boolean().default(true),
+  currentMileageKm: z.number().default(0),
+  commissioningDate: z.string().optional(), // Date when put into service
+  notes: z.string().optional(),
+  createdAt: z.string(),
+});
+export type QuadMachine = z.infer<typeof quadMachineSchema>;
+
+export const insertQuadMachineSchema = quadMachineSchema.omit({ id: true, createdAt: true });
+export type InsertQuadMachine = z.infer<typeof insertQuadMachineSchema>;
+
+// ============ QUAD MILEAGE LOG ============
+export const quadMileageLogSchema = z.object({
+  id: z.string(),
+  quadId: z.string(),
+  mileageKm: z.number(), // Current odometer reading
+  previousMileageKm: z.number().optional(), // Previous reading for delta calculation
+  notes: z.string().optional(),
+  loggedBy: z.string(), // userId
+  loggedAt: z.string(),
+});
+export type QuadMileageLog = z.infer<typeof quadMileageLogSchema>;
+
+export const insertQuadMileageLogSchema = quadMileageLogSchema.omit({ id: true, loggedAt: true });
+export type InsertQuadMileageLog = z.infer<typeof insertQuadMileageLogSchema>;
+
+// ============ QUAD MAINTENANCE RULE (Service Intervals) ============
+export const MaintenanceTriggerType = z.enum(["mileage", "time", "both"]);
+export type MaintenanceTriggerType = z.infer<typeof MaintenanceTriggerType>;
+
+export const quadMaintenanceRuleSchema = z.object({
+  id: z.string(),
+  quadId: z.string().optional(), // If null, applies to all quads
+  title: z.string(), // "Замена масла", "Осмотр", "Шприцовка"
+  description: z.string().optional(),
+  triggerType: MaintenanceTriggerType,
+  intervalKm: z.number().optional(), // e.g., 500 km
+  intervalDays: z.number().optional(), // e.g., 7 days for weekly inspection
+  warningKm: z.number().optional(), // Warn X km before due
+  warningDays: z.number().optional(), // Warn X days before due
+  isActive: z.boolean().default(true),
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type QuadMaintenanceRule = z.infer<typeof quadMaintenanceRuleSchema>;
+
+export const insertQuadMaintenanceRuleSchema = quadMaintenanceRuleSchema.omit({ id: true, createdAt: true });
+export type InsertQuadMaintenanceRule = z.infer<typeof insertQuadMaintenanceRuleSchema>;
+
+// ============ QUAD MAINTENANCE EVENT (Service History) ============
+export const quadMaintenanceEventSchema = z.object({
+  id: z.string(),
+  quadId: z.string(),
+  ruleId: z.string().optional(), // Which rule triggered this, if any
+  title: z.string(), // "Замена масла двигателя"
+  description: z.string().optional(),
+  mileageKm: z.number(), // Mileage at time of service
+  partsUsed: z.array(z.object({
+    name: z.string(),
+    quantity: z.number().optional(),
+    cost: z.number().optional(),
+  })).optional(),
+  totalCost: z.number().optional(),
+  performedBy: z.string(), // userId
+  performedAt: z.string(),
+  createdAt: z.string(),
+});
+export type QuadMaintenanceEvent = z.infer<typeof quadMaintenanceEventSchema>;
+
+export const insertQuadMaintenanceEventSchema = quadMaintenanceEventSchema.omit({ id: true, createdAt: true });
+export type InsertQuadMaintenanceEvent = z.infer<typeof insertQuadMaintenanceEventSchema>;
+
+// ============ QUAD MAINTENANCE STATUS (Tracking next service) ============
+export const quadMaintenanceStatusSchema = z.object({
+  id: z.string(),
+  quadId: z.string(),
+  ruleId: z.string(),
+  lastServiceMileage: z.number().optional(),
+  lastServiceDate: z.string().optional(),
+  nextDueMileage: z.number().optional(),
+  nextDueDate: z.string().optional(),
+  isDue: z.boolean().default(false),
+  isWarning: z.boolean().default(false),
+});
+export type QuadMaintenanceStatus = z.infer<typeof quadMaintenanceStatusSchema>;
+
+export const insertQuadMaintenanceStatusSchema = quadMaintenanceStatusSchema.omit({ id: true });
+export type InsertQuadMaintenanceStatus = z.infer<typeof insertQuadMaintenanceStatusSchema>;

@@ -26,6 +26,11 @@ import type {
   AuthSession, InsertAuthSession,
   UserRole,
   QuadRouteType,
+  QuadMachine, InsertQuadMachine,
+  QuadMileageLog, InsertQuadMileageLog,
+  QuadMaintenanceRule, InsertQuadMaintenanceRule,
+  QuadMaintenanceEvent, InsertQuadMaintenanceEvent,
+  QuadMaintenanceStatus,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -163,6 +168,31 @@ export interface IStorage {
   // Staff management (for super admin)
   getStaffUsers(): Promise<User[]>;
   updateUserRole(userId: string, role: UserRole): Promise<User | undefined>;
+  
+  // Quad Machines (Service Book)
+  getQuadMachines(): Promise<QuadMachine[]>;
+  getQuadMachine(id: string): Promise<QuadMachine | undefined>;
+  createQuadMachine(machine: InsertQuadMachine): Promise<QuadMachine>;
+  updateQuadMachine(id: string, updates: Partial<QuadMachine>): Promise<QuadMachine | undefined>;
+  
+  // Quad Mileage Logs
+  getQuadMileageLogs(quadId?: string): Promise<QuadMileageLog[]>;
+  createQuadMileageLog(log: InsertQuadMileageLog): Promise<QuadMileageLog>;
+  
+  // Quad Maintenance Rules
+  getQuadMaintenanceRules(quadId?: string): Promise<QuadMaintenanceRule[]>;
+  getQuadMaintenanceRule(id: string): Promise<QuadMaintenanceRule | undefined>;
+  createQuadMaintenanceRule(rule: InsertQuadMaintenanceRule): Promise<QuadMaintenanceRule>;
+  updateQuadMaintenanceRule(id: string, updates: Partial<QuadMaintenanceRule>): Promise<QuadMaintenanceRule | undefined>;
+  deleteQuadMaintenanceRule(id: string): Promise<boolean>;
+  
+  // Quad Maintenance Events (Service History)
+  getQuadMaintenanceEvents(quadId?: string): Promise<QuadMaintenanceEvent[]>;
+  createQuadMaintenanceEvent(event: InsertQuadMaintenanceEvent): Promise<QuadMaintenanceEvent>;
+  
+  // Quad Maintenance Status (computed from rules, events, and current mileage)
+  getQuadMaintenanceStatuses(): Promise<QuadMaintenanceStatus[]>;
+  getQuadMaintenanceStatusesForQuad(quadId: string): Promise<QuadMaintenanceStatus[]>;
 }
 
 const PRICES: Record<string, number> = {
@@ -205,6 +235,10 @@ export class MemStorage implements IStorage {
   private authSessions: Map<string, AuthSession> = new Map();
   private quadPricing: Map<string, QuadPricing> = new Map();
   private incasations: Map<string, Incasation> = new Map();
+  private quadMachines: Map<string, QuadMachine> = new Map();
+  private quadMileageLogs: Map<string, QuadMileageLog> = new Map();
+  private quadMaintenanceRules: Map<string, QuadMaintenanceRule> = new Map();
+  private quadMaintenanceEvents: Map<string, QuadMaintenanceEvent> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -300,6 +334,19 @@ export class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
     };
     this.quadPricing.set(defaultLongPrice.id, defaultLongPrice);
+
+    // Initialize quad machines (4 rental + 1 instructor)
+    const quadMachines: InsertQuadMachine[] = [
+      { code: "Q1", name: "Квадроцикл 1", ownerType: "rental", isActive: true, currentMileageKm: 0 },
+      { code: "Q2", name: "Квадроцикл 2", ownerType: "rental", isActive: true, currentMileageKm: 0 },
+      { code: "Q3", name: "Квадроцикл 3", ownerType: "rental", isActive: true, currentMileageKm: 0 },
+      { code: "Q4", name: "Квадроцикл 4", ownerType: "rental", isActive: true, currentMileageKm: 0 },
+      { code: "Q5", name: "Квадроцикл инструктора", ownerType: "instructor", isActive: true, currentMileageKm: 0 },
+    ];
+    quadMachines.forEach(qm => {
+      const machine: QuadMachine = { id: randomUUID(), ...qm, createdAt: new Date().toISOString() };
+      this.quadMachines.set(machine.id, machine);
+    });
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -1178,6 +1225,221 @@ export class MemStorage implements IStorage {
     const updated = { ...user, role };
     this.users.set(userId, updated);
     return updated;
+  }
+
+  // ============ QUAD MACHINES (SERVICE BOOK) ============
+  async getQuadMachines(): Promise<QuadMachine[]> {
+    return Array.from(this.quadMachines.values()).sort((a, b) => a.code.localeCompare(b.code));
+  }
+
+  async getQuadMachine(id: string): Promise<QuadMachine | undefined> {
+    return this.quadMachines.get(id);
+  }
+
+  async createQuadMachine(insertMachine: InsertQuadMachine): Promise<QuadMachine> {
+    const machine: QuadMachine = {
+      id: randomUUID(),
+      code: insertMachine.code,
+      name: insertMachine.name,
+      ownerType: insertMachine.ownerType,
+      isActive: insertMachine.isActive ?? true,
+      currentMileageKm: insertMachine.currentMileageKm ?? 0,
+      commissioningDate: insertMachine.commissioningDate,
+      notes: insertMachine.notes,
+      createdAt: new Date().toISOString(),
+    };
+    this.quadMachines.set(machine.id, machine);
+    return machine;
+  }
+
+  async updateQuadMachine(id: string, updates: Partial<QuadMachine>): Promise<QuadMachine | undefined> {
+    const machine = this.quadMachines.get(id);
+    if (!machine) return undefined;
+    const updated = { ...machine, ...updates };
+    this.quadMachines.set(id, updated);
+    return updated;
+  }
+
+  // ============ QUAD MILEAGE LOGS ============
+  async getQuadMileageLogs(quadId?: string): Promise<QuadMileageLog[]> {
+    let logs = Array.from(this.quadMileageLogs.values());
+    if (quadId) {
+      logs = logs.filter(l => l.quadId === quadId);
+    }
+    return logs.sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime());
+  }
+
+  async createQuadMileageLog(insertLog: InsertQuadMileageLog): Promise<QuadMileageLog> {
+    const machine = this.quadMachines.get(insertLog.quadId);
+    const previousMileage = machine?.currentMileageKm ?? 0;
+    
+    const log: QuadMileageLog = {
+      id: randomUUID(),
+      quadId: insertLog.quadId,
+      mileageKm: insertLog.mileageKm,
+      previousMileageKm: previousMileage,
+      notes: insertLog.notes,
+      loggedBy: insertLog.loggedBy,
+      loggedAt: new Date().toISOString(),
+    };
+    this.quadMileageLogs.set(log.id, log);
+    
+    // Update the quad machine's current mileage
+    if (machine) {
+      this.quadMachines.set(machine.id, { ...machine, currentMileageKm: insertLog.mileageKm });
+    }
+    
+    return log;
+  }
+
+  // ============ QUAD MAINTENANCE RULES ============
+  async getQuadMaintenanceRules(quadId?: string): Promise<QuadMaintenanceRule[]> {
+    let rules = Array.from(this.quadMaintenanceRules.values()).filter(r => r.isActive);
+    if (quadId) {
+      // Return rules specific to this quad OR global rules (quadId is null)
+      rules = rules.filter(r => r.quadId === quadId || r.quadId === null || r.quadId === undefined);
+    }
+    return rules.sort((a, b) => a.title.localeCompare(b.title));
+  }
+
+  async getQuadMaintenanceRule(id: string): Promise<QuadMaintenanceRule | undefined> {
+    return this.quadMaintenanceRules.get(id);
+  }
+
+  async createQuadMaintenanceRule(insertRule: InsertQuadMaintenanceRule): Promise<QuadMaintenanceRule> {
+    const rule: QuadMaintenanceRule = {
+      id: randomUUID(),
+      quadId: insertRule.quadId,
+      title: insertRule.title,
+      description: insertRule.description,
+      triggerType: insertRule.triggerType,
+      intervalKm: insertRule.intervalKm,
+      intervalDays: insertRule.intervalDays,
+      warningKm: insertRule.warningKm,
+      warningDays: insertRule.warningDays,
+      isActive: insertRule.isActive ?? true,
+      createdBy: insertRule.createdBy,
+      createdAt: new Date().toISOString(),
+    };
+    this.quadMaintenanceRules.set(rule.id, rule);
+    return rule;
+  }
+
+  async updateQuadMaintenanceRule(id: string, updates: Partial<QuadMaintenanceRule>): Promise<QuadMaintenanceRule | undefined> {
+    const rule = this.quadMaintenanceRules.get(id);
+    if (!rule) return undefined;
+    const updated = { ...rule, ...updates };
+    this.quadMaintenanceRules.set(id, updated);
+    return updated;
+  }
+
+  async deleteQuadMaintenanceRule(id: string): Promise<boolean> {
+    return this.quadMaintenanceRules.delete(id);
+  }
+
+  // ============ QUAD MAINTENANCE EVENTS (SERVICE HISTORY) ============
+  async getQuadMaintenanceEvents(quadId?: string): Promise<QuadMaintenanceEvent[]> {
+    let events = Array.from(this.quadMaintenanceEvents.values());
+    if (quadId) {
+      events = events.filter(e => e.quadId === quadId);
+    }
+    return events.sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
+  }
+
+  async createQuadMaintenanceEvent(insertEvent: InsertQuadMaintenanceEvent): Promise<QuadMaintenanceEvent> {
+    const event: QuadMaintenanceEvent = {
+      id: randomUUID(),
+      quadId: insertEvent.quadId,
+      ruleId: insertEvent.ruleId,
+      title: insertEvent.title,
+      description: insertEvent.description,
+      mileageKm: insertEvent.mileageKm,
+      partsUsed: insertEvent.partsUsed,
+      totalCost: insertEvent.totalCost,
+      performedBy: insertEvent.performedBy,
+      performedAt: insertEvent.performedAt,
+      createdAt: new Date().toISOString(),
+    };
+    this.quadMaintenanceEvents.set(event.id, event);
+    return event;
+  }
+
+  // ============ QUAD MAINTENANCE STATUS (COMPUTED) ============
+  async getQuadMaintenanceStatuses(): Promise<QuadMaintenanceStatus[]> {
+    const statuses: QuadMaintenanceStatus[] = [];
+    const machines = await this.getQuadMachines();
+    const rules = await this.getQuadMaintenanceRules();
+    const allEvents = Array.from(this.quadMaintenanceEvents.values());
+
+    for (const machine of machines) {
+      const applicableRules = rules.filter(r => 
+        r.quadId === machine.id || r.quadId === null || r.quadId === undefined
+      );
+
+      for (const rule of applicableRules) {
+        // Find the last maintenance event for this rule and quad
+        const lastEvent = allEvents
+          .filter(e => e.quadId === machine.id && e.ruleId === rule.id)
+          .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime())[0];
+
+        let nextDueMileage: number | undefined;
+        let nextDueDate: string | undefined;
+        let isDue = false;
+        let isWarning = false;
+        const now = new Date();
+
+        if (rule.triggerType === "mileage" || rule.triggerType === "both") {
+          if (rule.intervalKm) {
+            const lastMileage = lastEvent?.mileageKm ?? 0;
+            nextDueMileage = lastMileage + rule.intervalKm;
+            
+            if (machine.currentMileageKm >= nextDueMileage) {
+              isDue = true;
+            } else if (rule.warningKm && machine.currentMileageKm >= (nextDueMileage - rule.warningKm)) {
+              isWarning = true;
+            }
+          }
+        }
+
+        if (rule.triggerType === "time" || rule.triggerType === "both") {
+          if (rule.intervalDays) {
+            const lastDate = lastEvent?.performedAt ? new Date(lastEvent.performedAt) : new Date(machine.createdAt);
+            const dueDate = new Date(lastDate);
+            dueDate.setDate(dueDate.getDate() + rule.intervalDays);
+            nextDueDate = dueDate.toISOString().split('T')[0];
+
+            if (now >= dueDate) {
+              isDue = true;
+            } else if (rule.warningDays) {
+              const warningDate = new Date(dueDate);
+              warningDate.setDate(warningDate.getDate() - rule.warningDays);
+              if (now >= warningDate) {
+                isWarning = true;
+              }
+            }
+          }
+        }
+
+        statuses.push({
+          id: `${machine.id}-${rule.id}`,
+          quadId: machine.id,
+          ruleId: rule.id,
+          lastServiceMileage: lastEvent?.mileageKm,
+          lastServiceDate: lastEvent?.performedAt,
+          nextDueMileage,
+          nextDueDate,
+          isDue,
+          isWarning: isWarning && !isDue,
+        });
+      }
+    }
+
+    return statuses;
+  }
+
+  async getQuadMaintenanceStatusesForQuad(quadId: string): Promise<QuadMaintenanceStatus[]> {
+    const allStatuses = await this.getQuadMaintenanceStatuses();
+    return allStatuses.filter(s => s.quadId === quadId);
   }
 }
 
