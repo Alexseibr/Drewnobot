@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { createHash } from "crypto";
 import { storage } from "./storage";
+import { insertSpaBookingSchema, insertReviewSchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -492,6 +494,414 @@ export async function registerRoutes(
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch prices" });
     }
+  });
+
+  // ============ SMS VERIFICATION ============
+  app.post("/api/guest/sms/send", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ error: "Требуется номер телефона" });
+      
+      // Generate 4-digit code
+      const code = process.env.NODE_ENV === "development" 
+        ? "0000" 
+        : Math.floor(1000 + Math.random() * 9000).toString();
+      
+      await storage.createSmsCode(phone, code);
+      
+      // Log code in dev mode
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[SMS DEV] Код для ${phone}: ${code}`);
+      }
+      
+      // TODO: Integrate with smsline.by when SMSLINE_API_URL is configured
+      if (process.env.SMSLINE_API_URL) {
+        console.log(`[SMS] Отправка кода на ${phone}`);
+      }
+      
+      res.json({ ok: true, cooldownSeconds: 60 });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось отправить SMS" });
+    }
+  });
+
+  app.post("/api/guest/sms/verify", async (req, res) => {
+    try {
+      const { phone, code } = req.body;
+      if (!phone || !code) return res.status(400).json({ error: "Требуется телефон и код" });
+      
+      const smsCode = await storage.getSmsCode(phone);
+      if (!smsCode) {
+        return res.status(400).json({ error: "Код не найден или истёк" });
+      }
+      
+      if (smsCode.attempts >= 5) {
+        return res.status(400).json({ error: "Превышено количество попыток" });
+      }
+      
+      const codeHash = createHash("sha256").update(code).digest("hex");
+      if (smsCode.codeHash !== codeHash) {
+        await storage.updateSmsCode(smsCode.id, { attempts: smsCode.attempts + 1 });
+        return res.status(400).json({ error: "Неверный код" });
+      }
+      
+      await storage.updateSmsCode(smsCode.id, { verified: true });
+      const verificationToken = await storage.createVerificationToken(phone);
+      
+      res.json({ verificationToken: verificationToken.token });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка проверки кода" });
+    }
+  });
+
+  // ============ SPA BOOKINGS - GUEST ============
+  app.get("/api/guest/spa/availability", async (req, res) => {
+    try {
+      const date = req.query.date as string;
+      if (!date) return res.status(400).json({ error: "Требуется дата" });
+      
+      const settings = await storage.getSiteSettings();
+      const closeHour = parseInt(settings.closeTime.split(":")[0]) || 22;
+      const existingBookings = await storage.getSpaBookingsForDate(date);
+      
+      const slots: Array<{
+        spaResource: string;
+        date: string;
+        startTime: string;
+        endTime: string;
+        available: boolean;
+      }> = [];
+      
+      for (const spaResource of ["SPA1", "SPA2"]) {
+        const spaBookings = existingBookings.filter(b => 
+          b.spaResource === spaResource && 
+          !["cancelled", "expired", "completed"].includes(b.status)
+        );
+        
+        for (let hour = 10; hour <= closeHour - 3; hour++) {
+          const startTime = `${hour.toString().padStart(2, "0")}:00`;
+          const endTime = `${(hour + 3).toString().padStart(2, "0")}:00`;
+          
+          const isBlocked = spaBookings.some(b => {
+            const bStart = parseInt(b.startTime.split(":")[0]);
+            const bEnd = parseInt(b.endTime.split(":")[0]);
+            return hour < bEnd && (hour + 3) > bStart;
+          });
+          
+          slots.push({
+            spaResource,
+            date,
+            startTime,
+            endTime,
+            available: !isBlocked,
+          });
+        }
+      }
+      
+      res.json(slots);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить доступность" });
+    }
+  });
+
+  app.post("/api/guest/spa-bookings", async (req, res) => {
+    try {
+      // Verify token
+      const token = req.headers["x-verify-token"] as string || req.body.verificationToken;
+      if (!token) {
+        return res.status(401).json({ error: "Требуется верификация телефона" });
+      }
+      
+      const verification = await storage.getVerificationToken(token);
+      if (!verification) {
+        return res.status(401).json({ error: "Недействительный токен верификации" });
+      }
+      
+      const parsed = insertSpaBookingSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Неверные данные бронирования" });
+      }
+      
+      const { spaResource, date, startTime, endTime } = parsed.data;
+      
+      // Check for conflicts
+      const existingBookings = await storage.getSpaBookingsForDate(date);
+      const conflict = existingBookings.some(b => 
+        b.spaResource === spaResource && 
+        !["cancelled", "expired", "completed"].includes(b.status) &&
+        !(endTime <= b.startTime || startTime >= b.endTime)
+      );
+      
+      if (conflict) {
+        return res.status(400).json({ error: "Это время уже занято" });
+      }
+      
+      // Validate end time
+      const settings = await storage.getSiteSettings();
+      const closeHour = parseInt(settings.closeTime.split(":")[0]) || 22;
+      const endHour = parseInt(endTime.split(":")[0]);
+      if (endHour > closeHour) {
+        return res.status(400).json({ error: `Окончание должно быть не позже ${settings.closeTime}` });
+      }
+      
+      const booking = await storage.createSpaBooking(parsed.data);
+      
+      // Notification
+      console.log(`[NOTIFY] Новая SPA бронь: ${spaResource} на ${date} ${startTime}`);
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось создать бронирование" });
+    }
+  });
+
+  // ============ SPA BOOKINGS - ADMIN ============
+  app.get("/api/admin/spa-bookings/upcoming", async (req, res) => {
+    try {
+      const bookings = await storage.getSpaBookingsUpcoming();
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить бронирования" });
+    }
+  });
+
+  app.post("/api/admin/spa-bookings/:id/accept", async (req, res) => {
+    try {
+      const booking = await storage.updateSpaBooking(req.params.id, { 
+        status: "awaiting_prepayment" 
+      });
+      if (!booking) return res.status(404).json({ error: "Бронирование не найдено" });
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось принять бронирование" });
+    }
+  });
+
+  app.post("/api/admin/spa-bookings/:id/cancel", async (req, res) => {
+    try {
+      const booking = await storage.updateSpaBooking(req.params.id, { 
+        status: "cancelled" 
+      });
+      if (!booking) return res.status(404).json({ error: "Бронирование не найдено" });
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось отменить бронирование" });
+    }
+  });
+
+  app.post("/api/admin/spa-bookings/:id/prepayment", async (req, res) => {
+    try {
+      const { amount, method } = req.body;
+      const booking = await storage.updateSpaBooking(req.params.id, { 
+        status: "confirmed",
+        payments: { 
+          prepayment: { amount, method },
+          eripPaid: 0,
+          cashPaid: 0,
+        },
+      });
+      if (!booking) return res.status(404).json({ error: "Бронирование не найдено" });
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось внести предоплату" });
+    }
+  });
+
+  app.post("/api/admin/spa-bookings/:id/close-payment", async (req, res) => {
+    try {
+      const { method } = req.body;
+      const existing = await storage.getSpaBooking(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Бронирование не найдено" });
+
+      const remaining = existing.pricing.total - (existing.payments.prepayment?.amount || 0);
+      const updates = {
+        status: "completed" as const,
+        payments: {
+          ...existing.payments,
+          [method === "erip" ? "eripPaid" : "cashPaid"]: remaining,
+        },
+      };
+
+      const booking = await storage.updateSpaBooking(req.params.id, updates);
+      
+      if (method === "cash") {
+        const currentShift = await storage.getCurrentShift();
+        if (currentShift) {
+          await storage.createCashTransaction({
+            shiftId: currentShift.id,
+            type: "cash_in",
+            amount: remaining,
+            comment: `SPA ${existing.spaResource} оплата`,
+            createdBy: "admin",
+          });
+        }
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось закрыть оплату" });
+    }
+  });
+
+  // ============ REVIEWS - GUEST ============
+  app.post("/api/guest/reviews", async (req, res) => {
+    try {
+      const parsed = insertReviewSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Неверные данные отзыва" });
+      }
+      
+      const { bookingRef, customer } = parsed.data;
+      
+      // Verify booking exists and is completed
+      let bookingExists = false;
+      let phoneMatches = false;
+      
+      if (bookingRef.kind === "spa") {
+        const booking = await storage.getSpaBooking(bookingRef.id);
+        bookingExists = !!booking && booking.status === "completed";
+        phoneMatches = booking?.customer.phone === customer.phone;
+      } else if (bookingRef.kind === "bath") {
+        const booking = await storage.getBathBooking(bookingRef.id);
+        bookingExists = !!booking && booking.status === "completed";
+        phoneMatches = booking?.customer.phone === customer.phone;
+      } else if (bookingRef.kind === "quad") {
+        const booking = await storage.getQuadBooking(bookingRef.id);
+        bookingExists = !!booking && booking.status === "completed";
+        phoneMatches = booking?.customer.phone === customer.phone;
+      } else if (bookingRef.kind === "cottage") {
+        const booking = await storage.getCottageBooking(bookingRef.id);
+        bookingExists = !!booking && booking.status === "completed";
+        phoneMatches = booking?.customer.phone === customer.phone;
+      }
+      
+      if (!bookingExists) {
+        return res.status(400).json({ error: "Бронирование не найдено или не завершено" });
+      }
+      
+      if (!phoneMatches) {
+        return res.status(403).json({ error: "Телефон не совпадает с бронированием" });
+      }
+      
+      const review = await storage.createReview(parsed.data);
+      res.json(review);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось создать отзыв" });
+    }
+  });
+
+  // ============ REVIEWS - OWNER ============
+  app.get("/api/owner/reviews", async (req, res) => {
+    try {
+      const reviews = await storage.getReviews();
+      res.json(reviews);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить отзывы" });
+    }
+  });
+
+  app.post("/api/owner/reviews/:id/publish", async (req, res) => {
+    try {
+      const existing = await storage.getReview(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Отзыв не найден" });
+      
+      const review = await storage.updateReview(req.params.id, { 
+        isPublished: !existing.isPublished,
+        publishedAt: !existing.isPublished ? new Date().toISOString() : undefined,
+        publishedBy: !existing.isPublished ? "owner" : undefined,
+      });
+      res.json(review);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось обновить отзыв" });
+    }
+  });
+
+  // ============ BLOCKED DATES - INSTRUCTOR ============
+  app.get("/api/instructor/blocked-dates", async (req, res) => {
+    try {
+      const blockedDates = await storage.getBlockedDates();
+      res.json(blockedDates);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить заблокированные даты" });
+    }
+  });
+
+  app.post("/api/instructor/blocked-dates", async (req, res) => {
+    try {
+      const { date, reason } = req.body;
+      if (!date) return res.status(400).json({ error: "Требуется дата" });
+      
+      const existing = await storage.getBlockedDate(date);
+      if (existing) {
+        return res.status(400).json({ error: "Дата уже заблокирована" });
+      }
+      
+      const blockedDate = await storage.createBlockedDate({
+        date,
+        reason,
+        createdBy: "instructor",
+      });
+      res.json(blockedDate);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось заблокировать дату" });
+    }
+  });
+
+  app.delete("/api/instructor/blocked-dates/:date", async (req, res) => {
+    try {
+      const deleted = await storage.deleteBlockedDate(req.params.date);
+      if (!deleted) {
+        return res.status(404).json({ error: "Заблокированная дата не найдена" });
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось разблокировать дату" });
+    }
+  });
+
+  // Update quad availability to check blocked dates
+  app.get("/api/guest/quads/availability", async (req, res) => {
+    try {
+      const date = req.query.date as string;
+      if (!date) return res.status(400).json({ error: "Требуется дата" });
+      
+      // Check if date is blocked
+      const blockedDate = await storage.getBlockedDate(date);
+      if (blockedDate) {
+        return res.json({ 
+          blocked: true, 
+          reason: blockedDate.reason || "Квадроциклы недоступны на эту дату",
+          sessions: [] 
+        });
+      }
+      
+      const sessions = await storage.getQuadSessionsForDate(date);
+      res.json({ blocked: false, sessions: sessions.filter(s => s.status !== "blocked") });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить доступность" });
+    }
+  });
+
+  // ============ DEV AUTH ============
+  app.post("/api/auth/dev-login", async (req, res) => {
+    if (process.env.NODE_ENV !== "development") {
+      return res.status(403).json({ error: "Only available in development" });
+    }
+    
+    const { role } = req.body;
+    if (!["ADMIN", "OWNER", "INSTRUCTOR"].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+    
+    const user = {
+      id: `dev-${role.toLowerCase()}`,
+      telegramId: `dev-${role.toLowerCase()}`,
+      name: `Dev ${role}`,
+      role,
+      isActive: true,
+    };
+    
+    res.json({ token: `dev-token-${role.toLowerCase()}`, user });
   });
 
   return httpServer;
