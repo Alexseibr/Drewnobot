@@ -1,13 +1,207 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { createHash } from "crypto";
 import { storage } from "./storage";
-import { insertSpaBookingSchema, insertReviewSchema } from "@shared/schema";
+import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole } from "@shared/schema";
+import { validateInitData, generateSessionToken, getSessionExpiresAt } from "./telegram-auth";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // ============ AUTH MIDDLEWARE ============
+  async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Требуется авторизация" });
+    }
+    
+    const token = authHeader.substring(7);
+    const session = await storage.getAuthSession(token);
+    if (!session) {
+      return res.status(401).json({ error: "Сессия истекла" });
+    }
+    
+    const user = await storage.getUser(session.userId);
+    if (!user || !user.isActive) {
+      return res.status(401).json({ error: "Пользователь не найден или деактивирован" });
+    }
+    
+    (req as any).user = user;
+    (req as any).session = session;
+    next();
+  }
+  
+  function requireRole(...roles: string[]) {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const user = (req as any).user;
+      if (!user || !roles.includes(user.role)) {
+        return res.status(403).json({ error: "Недостаточно прав" });
+      }
+      next();
+    };
+  }
+  
+  // ============ AUTH ENDPOINTS ============
+  app.post("/api/auth/telegram", async (req, res) => {
+    try {
+      const { initData } = req.body;
+      if (!initData) {
+        return res.status(400).json({ error: "Отсутствуют данные инициализации" });
+      }
+      
+      const validated = validateInitData(initData);
+      if (!validated) {
+        return res.status(401).json({ error: "Неверные данные авторизации" });
+      }
+      
+      const { telegramUser } = validated;
+      const telegramIdStr = String(telegramUser.id);
+      
+      let user = await storage.getUserByTelegramId(telegramIdStr);
+      
+      if (!user) {
+        const fullName = [telegramUser.first_name, telegramUser.last_name]
+          .filter(Boolean).join(" ");
+        
+        user = await storage.createUser({
+          telegramId: telegramIdStr,
+          name: fullName || telegramUser.username || "Пользователь",
+          role: "GUEST",
+          isActive: true,
+        });
+      } else {
+        const fullName = [telegramUser.first_name, telegramUser.last_name]
+          .filter(Boolean).join(" ");
+        user = await storage.updateUser(user.id, {
+          name: fullName || user.name,
+        }) || user;
+      }
+      
+      const token = generateSessionToken();
+      const session = await storage.createAuthSession({
+        userId: user.id,
+        token,
+        expiresAt: getSessionExpiresAt(),
+      });
+      
+      res.json({
+        user: {
+          id: user.id,
+          telegramId: user.telegramId,
+          name: user.name,
+          role: user.role,
+        },
+        token: session.token,
+        expiresAt: session.expiresAt,
+      });
+    } catch (error) {
+      console.error("[Auth] Telegram auth error:", error);
+      res.status(500).json({ error: "Ошибка авторизации" });
+    }
+  });
+  
+  app.get("/api/auth/me", authMiddleware, async (req, res) => {
+    const user = (req as any).user;
+    res.json({
+      id: user.id,
+      telegramId: user.telegramId,
+      name: user.name,
+      role: user.role,
+    });
+  });
+  
+  app.post("/api/auth/logout", authMiddleware, async (req, res) => {
+    const session = (req as any).session;
+    await storage.deleteAuthSession(session.token);
+    res.json({ success: true });
+  });
+  
+  // ============ STAFF MANAGEMENT (SUPER_ADMIN only) ============
+  app.get("/api/admin/staff", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const staff = await storage.getStaffUsers();
+      res.json(staff.map(u => ({
+        id: u.id,
+        telegramId: u.telegramId,
+        name: u.name,
+        phone: u.phone,
+        role: u.role,
+        isActive: u.isActive,
+      })));
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка получения списка сотрудников" });
+    }
+  });
+  
+  app.patch("/api/admin/staff/:id/role", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { role } = req.body;
+      const validRoles = ["OWNER", "ADMIN", "INSTRUCTOR", "GUEST"];
+      
+      if (!role || !validRoles.includes(role)) {
+        return res.status(400).json({ error: "Неверная роль" });
+      }
+      
+      const currentUser = (req as any).user;
+      if (currentUser.id === req.params.id && role !== "SUPER_ADMIN") {
+        const allSuperAdmins = (await storage.getStaffUsers()).filter(u => u.role === "SUPER_ADMIN");
+        if (allSuperAdmins.length <= 1) {
+          return res.status(400).json({ error: "Нельзя понизить последнего супер-админа" });
+        }
+      }
+      
+      const updated = await storage.updateUserRole(req.params.id, role as UserRole);
+      if (!updated) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
+      
+      res.json({
+        id: updated.id,
+        telegramId: updated.telegramId,
+        name: updated.name,
+        role: updated.role,
+        isActive: updated.isActive,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка обновления роли" });
+    }
+  });
+  
+  app.patch("/api/admin/staff/:id/status", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== "boolean") {
+        return res.status(400).json({ error: "Неверный статус" });
+      }
+      
+      const currentUser = (req as any).user;
+      if (currentUser.id === req.params.id && !isActive) {
+        return res.status(400).json({ error: "Нельзя деактивировать себя" });
+      }
+      
+      const updated = await storage.updateUser(req.params.id, { isActive });
+      if (!updated) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
+      
+      if (!isActive) {
+        await storage.deleteUserSessions(updated.id);
+      }
+      
+      res.json({
+        id: updated.id,
+        telegramId: updated.telegramId,
+        name: updated.name,
+        role: updated.role,
+        isActive: updated.isActive,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка обновления статуса" });
+    }
+  });
   
   // ============ OPS TODAY ============
   app.get("/api/ops/today", async (req, res) => {

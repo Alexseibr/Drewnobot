@@ -16,6 +16,7 @@ import CashPage from "@/pages/ops/cash";
 import TasksPage from "@/pages/ops/tasks";
 import InstructorSchedulePage from "@/pages/instructor/schedule";
 import OwnerAnalyticsPage from "@/pages/owner/analytics";
+import StaffManagementPage from "@/pages/admin/staff";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -36,6 +37,8 @@ function Router() {
       <Route path="/instructor/sessions" component={InstructorSchedulePage} />
       
       <Route path="/owner/analytics" component={OwnerAnalyticsPage} />
+      
+      <Route path="/admin/staff" component={StaffManagementPage} />
       
       <Route component={NotFound} />
     </Switch>

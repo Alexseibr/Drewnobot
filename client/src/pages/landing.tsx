@@ -1,46 +1,26 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
-import { TreePine, Bath, Bike, Briefcase, Users, ChevronRight, Droplets } from "lucide-react";
+import { TreePine, Bath, Bike, Briefcase, ChevronRight, Droplets, Users, Shield, BarChart3 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth-context";
-import { cn } from "@/lib/utils";
-import type { UserRole } from "@shared/schema";
+
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Супер-админ",
+  OWNER: "Владелец",
+  ADMIN: "Администратор",
+  INSTRUCTOR: "Инструктор",
+  GUEST: "Гость",
+};
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
-  const { setUser } = useAuth();
-  const [showStaffLogin, setShowStaffLogin] = useState(false);
-  const [staffName, setStaffName] = useState("");
-  const [staffRole, setStaffRole] = useState<UserRole>("ADMIN");
+  const { user, isStaff, isSuperAdmin, isLoading, hasRole } = useAuth();
 
   const handleGuestAction = (type: "bath" | "quads" | "spa") => {
     setLocation(`/guest/${type}`);
-  };
-
-  const handleStaffLogin = () => {
-    if (staffName.trim()) {
-      setUser({
-        id: `demo-${Date.now()}`,
-        telegramId: `demo-${Date.now()}`,
-        name: staffName,
-        role: staffRole,
-        isActive: true,
-      });
-      setShowStaffLogin(false);
-      
-      if (staffRole === "INSTRUCTOR") {
-        setLocation("/instructor");
-      } else {
-        setLocation("/ops");
-      }
-    }
   };
 
   return (
@@ -59,6 +39,15 @@ export default function LandingPage() {
             <p className="text-muted-foreground max-w-sm mx-auto" data-testid="text-hero-description">
               Добро пожаловать в наш уютный лесной курорт. Забронируйте расслабляющую баню или захватывающую поездку на квадроциклах.
             </p>
+            
+            {user && (
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <span className="text-sm text-muted-foreground">Вы вошли как</span>
+                <Badge variant={user.role === "SUPER_ADMIN" ? "destructive" : "secondary"}>
+                  {user.name} ({ROLE_LABELS[user.role] || user.role})
+                </Badge>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -128,88 +117,105 @@ export default function LandingPage() {
             </Card>
           </div>
 
-          <div className="pt-8 border-t">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowStaffLogin(true)}
-              data-testid="button-staff-login"
-            >
-              <Briefcase className="mr-2 h-4 w-4" />
-              Вход для сотрудников
-            </Button>
-          </div>
+          {isStaff && (
+            <div className="pt-8 border-t space-y-4">
+              <h2 className="text-lg font-semibold">Панель управления</h2>
+              
+              {hasRole("ADMIN", "OWNER") && (
+                <Card 
+                  className="hover-elevate cursor-pointer"
+                  onClick={() => setLocation("/ops")}
+                  data-testid="card-ops"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="rounded-full bg-primary/10 p-3">
+                        <Briefcase className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">Операционная панель</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Управление бронями, кассой и задачами
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {hasRole("INSTRUCTOR") && (
+                <Card 
+                  className="hover-elevate cursor-pointer"
+                  onClick={() => setLocation("/instructor")}
+                  data-testid="card-instructor"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="rounded-full bg-status-confirmed/10 p-3">
+                        <Bike className="h-6 w-6 text-status-confirmed" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">Расписание инструктора</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Управление сеансами квадроциклов
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {hasRole("OWNER") && (
+                <Card 
+                  className="hover-elevate cursor-pointer"
+                  onClick={() => setLocation("/owner/analytics")}
+                  data-testid="card-analytics"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="rounded-full bg-status-awaiting/10 p-3">
+                        <BarChart3 className="h-6 w-6 text-status-awaiting" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">Аналитика</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Статистика и отчёты
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {isSuperAdmin && (
+                <Card 
+                  className="hover-elevate cursor-pointer"
+                  onClick={() => setLocation("/admin/staff")}
+                  data-testid="card-staff-management"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="rounded-full bg-destructive/10 p-3">
+                        <Shield className="h-6 w-6 text-destructive" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">Управление сотрудниками</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Назначение ролей и прав доступа
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </div>
       </PageContainer>
-
-      <Dialog open={showStaffLogin} onOpenChange={setShowStaffLogin}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Вход для сотрудников</DialogTitle>
-            <DialogDescription>
-              Введите ваше имя и роль для доступа к панели управления.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Имя</Label>
-              <Input
-                id="name"
-                placeholder="Ваше имя"
-                value={staffName}
-                onChange={(e) => setStaffName(e.target.value)}
-                data-testid="input-staff-name"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Роль</Label>
-              <Select value={staffRole} onValueChange={(v) => setStaffRole(v as UserRole)}>
-                <SelectTrigger data-testid="select-staff-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="OWNER">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Владелец
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="ADMIN">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4" />
-                      Администратор
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="INSTRUCTOR">
-                    <div className="flex items-center gap-2">
-                      <Bike className="h-4 w-4" />
-                      Инструктор
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowStaffLogin(false)}
-            >
-              Отмена
-            </Button>
-            <Button
-              onClick={handleStaffLogin}
-              disabled={!staffName.trim()}
-              data-testid="button-login-submit"
-            >
-              Войти
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
