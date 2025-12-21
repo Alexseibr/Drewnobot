@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays } from "date-fns";
+import { ru } from "date-fns/locale";
 import { 
   CalendarDays, 
   Bike, 
@@ -36,9 +37,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { QuadSession, QuadBooking } from "@shared/schema";
 
 const sessionFormSchema = z.object({
-  date: z.date({ required_error: "Please select a date" }),
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
+  date: z.date({ required_error: "Выберите дату" }),
+  startTime: z.string().min(1, "Укажите время начала"),
+  endTime: z.string().min(1, "Укажите время окончания"),
 });
 
 type SessionFormData = z.infer<typeof sessionFormSchema>;
@@ -82,10 +83,10 @@ export default function InstructorSchedulePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/quad-schedule"] });
       setShowCreateDialog(false);
       form.reset();
-      toast({ title: "Session created" });
+      toast({ title: "Сессия создана" });
     },
     onError: () => {
-      toast({ title: "Failed to create session", variant: "destructive" });
+      toast({ title: "Ошибка создания сессии", variant: "destructive" });
     },
   });
 
@@ -96,10 +97,10 @@ export default function InstructorSchedulePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/quad-schedule"] });
-      toast({ title: "Booking confirmed" });
+      toast({ title: "Бронь подтверждена" });
     },
     onError: () => {
-      toast({ title: "Failed to confirm booking", variant: "destructive" });
+      toast({ title: "Ошибка подтверждения", variant: "destructive" });
     },
   });
 
@@ -110,10 +111,10 @@ export default function InstructorSchedulePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/instructor/quad-schedule"] });
-      toast({ title: "Booking cancelled" });
+      toast({ title: "Бронь отменена" });
     },
     onError: () => {
-      toast({ title: "Failed to cancel booking", variant: "destructive" });
+      toast({ title: "Ошибка отмены", variant: "destructive" });
     },
   });
 
@@ -125,7 +126,7 @@ export default function InstructorSchedulePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Quad Schedule" />
+      <Header title="Расписание квадро" />
       
       <PageContainer>
         <div className="space-y-6">
@@ -134,7 +135,7 @@ export default function InstructorSchedulePage() {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="gap-2" data-testid="button-date-picker">
                   <CalendarDays className="h-4 w-4" />
-                  {format(selectedDate, "EEEE, MMM d")}
+                  {format(selectedDate, "EEEE, d MMM", { locale: ru })}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -143,6 +144,7 @@ export default function InstructorSchedulePage() {
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(date)}
                   disabled={(date) => date < addDays(new Date(), -1)}
+                  locale={ru}
                   initialFocus
                 />
               </PopoverContent>
@@ -156,7 +158,7 @@ export default function InstructorSchedulePage() {
               data-testid="button-create-session"
             >
               <Plus className="h-4 w-4 mr-1" />
-              New Session
+              Новая сессия
             </Button>
           </div>
 
@@ -182,7 +184,7 @@ export default function InstructorSchedulePage() {
                         <div className="flex items-center gap-2">
                           {pendingBookings.length > 0 && (
                             <Badge className="bg-status-pending text-black">
-                              {pendingBookings.length} pending
+                              {pendingBookings.length} ожидают
                             </Badge>
                           )}
                           <div className="flex gap-0.5">
@@ -223,7 +225,7 @@ export default function InstructorSchedulePage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs">
-                                {booking.duration}min
+                                {booking.duration} мин
                               </Badge>
                               {booking.status === "pending_call" ? (
                                 <div className="flex gap-1">
@@ -256,7 +258,7 @@ export default function InstructorSchedulePage() {
                         ))
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">
-                          No bookings yet
+                          Пока нет бронирований
                         </p>
                       )}
                     </CardContent>
@@ -269,8 +271,8 @@ export default function InstructorSchedulePage() {
               <CardContent className="p-6">
                 <EmptyState
                   icon={Bike}
-                  title="No sessions"
-                  description="Create a quad session to get started"
+                  title="Нет сессий"
+                  description="Создайте сессию для начала работы"
                   action={
                     <Button
                       onClick={() => {
@@ -279,7 +281,7 @@ export default function InstructorSchedulePage() {
                       }}
                     >
                       <Plus className="h-4 w-4 mr-1" />
-                      Create Session
+                      Создать сессию
                     </Button>
                   }
                 />
@@ -292,9 +294,9 @@ export default function InstructorSchedulePage() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Quad Session</DialogTitle>
+            <DialogTitle>Создать сессию квадро</DialogTitle>
             <DialogDescription>
-              Add a new quad session for guests to book
+              Добавьте новую сессию для бронирования гостями
             </DialogDescription>
           </DialogHeader>
           
@@ -305,7 +307,7 @@ export default function InstructorSchedulePage() {
                 name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Date</FormLabel>
+                    <FormLabel>Дата</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -317,7 +319,7 @@ export default function InstructorSchedulePage() {
                             )}
                           >
                             <CalendarDays className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP") : "Pick a date"}
+                            {field.value ? format(field.value, "PPP", { locale: ru }) : "Выберите дату"}
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
@@ -327,6 +329,7 @@ export default function InstructorSchedulePage() {
                           selected={field.value}
                           onSelect={field.onChange}
                           disabled={(date) => date < new Date()}
+                          locale={ru}
                           initialFocus
                         />
                       </PopoverContent>
@@ -342,11 +345,11 @@ export default function InstructorSchedulePage() {
                   name="startTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Time</FormLabel>
+                      <FormLabel>Начало</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Start" />
+                            <SelectValue placeholder="Начало" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -367,11 +370,11 @@ export default function InstructorSchedulePage() {
                   name="endTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>End Time</FormLabel>
+                      <FormLabel>Окончание</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="End" />
+                            <SelectValue placeholder="Конец" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -394,13 +397,13 @@ export default function InstructorSchedulePage() {
                   variant="outline"
                   onClick={() => setShowCreateDialog(false)}
                 >
-                  Cancel
+                  Отмена
                 </Button>
                 <Button
                   type="submit"
                   disabled={createSessionMutation.isPending}
                 >
-                  {createSessionMutation.isPending ? "Creating..." : "Create Session"}
+                  {createSessionMutation.isPending ? "Создание..." : "Создать сессию"}
                 </Button>
               </DialogFooter>
             </form>

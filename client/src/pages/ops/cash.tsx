@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { 
   Wallet, 
   Plus, 
@@ -36,7 +37,7 @@ import type { CashShift, CashTransaction, ExpenseCategory } from "@shared/schema
 
 const transactionFormSchema = z.object({
   type: z.enum(["cash_in", "expense"]),
-  amount: z.number().min(0.01, "Amount must be positive"),
+  amount: z.number().min(0.01, "Сумма должна быть больше нуля"),
   category: z.string().optional(),
   comment: z.string().optional(),
 });
@@ -44,11 +45,11 @@ const transactionFormSchema = z.object({
 type TransactionFormData = z.infer<typeof transactionFormSchema>;
 
 const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
-  { value: "food_staff", label: "Staff Food" },
-  { value: "supplies", label: "Supplies" },
-  { value: "salary", label: "Salary" },
-  { value: "contractor", label: "Contractor" },
-  { value: "other", label: "Other" },
+  { value: "food_staff", label: "Питание персонала" },
+  { value: "supplies", label: "Расходники" },
+  { value: "salary", label: "Зарплата" },
+  { value: "contractor", label: "Подрядчик" },
+  { value: "other", label: "Другое" },
 ];
 
 interface CashData {
@@ -83,10 +84,10 @@ export default function CashPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cash/shift/current"] });
-      toast({ title: "Shift opened" });
+      toast({ title: "Смена открыта" });
     },
     onError: () => {
-      toast({ title: "Failed to open shift", variant: "destructive" });
+      toast({ title: "Ошибка открытия смены", variant: "destructive" });
     },
   });
 
@@ -102,10 +103,10 @@ export default function CashPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/cash/shift/current"] });
       setShowTransactionDialog(false);
       form.reset();
-      toast({ title: "Transaction added" });
+      toast({ title: "Транзакция добавлена" });
     },
     onError: () => {
-      toast({ title: "Failed to add transaction", variant: "destructive" });
+      toast({ title: "Ошибка добавления транзакции", variant: "destructive" });
     },
   });
 
@@ -116,10 +117,10 @@ export default function CashPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cash/shift/current"] });
-      toast({ title: "Shift closed successfully" });
+      toast({ title: "Смена закрыта успешно" });
     },
     onError: () => {
-      toast({ title: "Failed to close shift", variant: "destructive" });
+      toast({ title: "Ошибка закрытия смены", variant: "destructive" });
     },
   });
 
@@ -139,7 +140,7 @@ export default function CashPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Cashbox" />
+      <Header title="Касса" />
       
       <PageContainer>
         <div className="space-y-6">
@@ -148,8 +149,8 @@ export default function CashPage() {
               <CardContent className="p-6">
                 <EmptyState
                   icon={Wallet}
-                  title="No active shift"
-                  description="Open a new shift to start recording transactions"
+                  title="Нет активной смены"
+                  description="Откройте смену для начала работы с кассой"
                   action={
                     <Button
                       onClick={() => openShiftMutation.mutate()}
@@ -157,7 +158,7 @@ export default function CashPage() {
                       data-testid="button-open-shift"
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      {openShiftMutation.isPending ? "Opening..." : "Open Shift"}
+                      {openShiftMutation.isPending ? "Открытие..." : "Открыть смену"}
                     </Button>
                   }
                 />
@@ -170,17 +171,17 @@ export default function CashPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <Wallet className="h-5 w-5" />
-                      <span className="text-sm opacity-90">Current Balance</span>
+                      <span className="text-sm opacity-90">Текущий баланс</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      Active Shift
+                      Смена активна
                     </Badge>
                   </div>
                   <p className="text-4xl font-bold font-mono" data-testid="text-balance">
                     {balance.toFixed(2)} <span className="text-lg opacity-80">BYN</span>
                   </p>
                   <p className="text-sm opacity-80 mt-2">
-                    Opened {currentShift.openedAt && format(new Date(currentShift.openedAt), "MMM d, HH:mm")}
+                    Открыта {currentShift.openedAt && format(new Date(currentShift.openedAt), "d MMM, HH:mm", { locale: ru })}
                   </p>
                 </CardContent>
               </Card>
@@ -193,7 +194,7 @@ export default function CashPage() {
                   data-testid="button-cash-in"
                 >
                   <ArrowDownLeft className="h-5 w-5 text-status-confirmed" />
-                  <span className="text-sm">Cash In</span>
+                  <span className="text-sm">Приход</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -202,15 +203,15 @@ export default function CashPage() {
                   data-testid="button-expense"
                 >
                   <ArrowUpRight className="h-5 w-5 text-destructive" />
-                  <span className="text-sm">Expense</span>
+                  <span className="text-sm">Расход</span>
                 </Button>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold">Transactions</h3>
+                  <h3 className="text-lg font-semibold">Транзакции</h3>
                   <span className="text-sm text-muted-foreground">
-                    {transactions.length} today
+                    {transactions.length} сегодня
                   </span>
                 </div>
 
@@ -244,9 +245,9 @@ export default function CashPage() {
                               </div>
                               <div>
                                 <p className="font-medium text-sm">
-                                  {tx.type === "cash_in" ? "Cash In" : 
-                                   tx.type === "expense" ? tx.category || "Expense" : 
-                                   "Incasation"}
+                                  {tx.type === "cash_in" ? "Приход" : 
+                                   tx.type === "expense" ? EXPENSE_CATEGORIES.find(c => c.value === tx.category)?.label || "Расход" : 
+                                   "Инкассация"}
                                 </p>
                                 {tx.comment && (
                                   <p className="text-xs text-muted-foreground truncate max-w-[180px]">
@@ -275,8 +276,8 @@ export default function CashPage() {
                     <CardContent className="p-6">
                       <EmptyState
                         icon={DollarSign}
-                        title="No transactions"
-                        description="Start by adding a cash in or expense"
+                        title="Нет транзакций"
+                        description="Начните с добавления прихода или расхода"
                         className="py-4"
                       />
                     </CardContent>
@@ -294,28 +295,28 @@ export default function CashPage() {
                     data-testid="button-incasation"
                   >
                     <LockKeyhole className="mr-2 h-4 w-4" />
-                    Close Shift (Incasation)
+                    Закрыть смену (Инкассация)
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5 text-destructive" />
-                      Close Shift?
+                      Закрыть смену?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will close the current shift with a balance of <strong>{balance.toFixed(2)} BYN</strong>.
-                      You won't be able to view this shift's transactions after closing.
+                      Текущий баланс смены составляет <strong>{balance.toFixed(2)} BYN</strong>.
+                      После закрытия вы не сможете просматривать транзакции этой смены.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>Отмена</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => incasationMutation.mutate()}
                       disabled={incasationMutation.isPending}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      {incasationMutation.isPending ? "Closing..." : "Close Shift"}
+                      {incasationMutation.isPending ? "Закрытие..." : "Закрыть смену"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -329,12 +330,12 @@ export default function CashPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {transactionType === "cash_in" ? "Add Cash In" : "Add Expense"}
+              {transactionType === "cash_in" ? "Добавить приход" : "Добавить расход"}
             </DialogTitle>
             <DialogDescription>
               {transactionType === "cash_in" 
-                ? "Record incoming cash payment"
-                : "Record an expense from the cashbox"}
+                ? "Запишите поступление наличных"
+                : "Запишите расход из кассы"}
             </DialogDescription>
           </DialogHeader>
           
@@ -345,7 +346,7 @@ export default function CashPage() {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount (BYN)</FormLabel>
+                    <FormLabel>Сумма (BYN)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -367,11 +368,11 @@ export default function CashPage() {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>Категория</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-category">
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder="Выберите категорию" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -393,10 +394,10 @@ export default function CashPage() {
                 name="comment"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Comment (optional)</FormLabel>
+                    <FormLabel>Комментарий (необязательно)</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Add a note..."
+                        placeholder="Добавьте заметку..."
                         className="resize-none"
                         {...field}
                         data-testid="input-comment"
@@ -413,14 +414,14 @@ export default function CashPage() {
                   variant="outline"
                   onClick={() => setShowTransactionDialog(false)}
                 >
-                  Cancel
+                  Отмена
                 </Button>
                 <Button
                   type="submit"
                   disabled={addTransactionMutation.isPending}
                   data-testid="button-submit-transaction"
                 >
-                  {addTransactionMutation.isPending ? "Saving..." : "Save"}
+                  {addTransactionMutation.isPending ? "Сохранение..." : "Сохранить"}
                 </Button>
               </DialogFooter>
             </form>

@@ -36,6 +36,16 @@ const taskIcons: Record<TaskType, React.ElementType> = {
   other: HelpCircle,
 };
 
+const taskTypeLabels: Record<TaskType, string> = {
+  climate_off: "выкл. климат",
+  climate_on: "вкл. климат",
+  trash_prep: "мусор",
+  meters: "счетчики",
+  cleaning: "уборка",
+  call_guest: "звонок гостю",
+  other: "другое",
+};
+
 export default function TasksPage() {
   const { toast } = useToast();
 
@@ -51,10 +61,10 @@ export default function TasksPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
-      toast({ title: "Task completed" });
+      toast({ title: "Задача выполнена" });
     },
     onError: () => {
-      toast({ title: "Failed to complete task", variant: "destructive" });
+      toast({ title: "Ошибка выполнения задачи", variant: "destructive" });
     },
   });
 
@@ -100,12 +110,12 @@ export default function TasksPage() {
                     {task.unitCode}
                   </Badge>
                 )}
-                <span className="text-xs text-muted-foreground capitalize">
-                  {task.type.replace(/_/g, " ")}
+                <span className="text-xs text-muted-foreground">
+                  {taskTypeLabels[task.type] || task.type}
                 </span>
                 {task.createdBySystem && (
                   <Badge variant="secondary" className="text-xs">
-                    Auto
+                    Авто
                   </Badge>
                 )}
               </div>
@@ -128,14 +138,14 @@ export default function TasksPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Tasks" />
+      <Header title="Задачи" />
       
       <PageContainer>
         <Tabs defaultValue="open" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="open" className="gap-2" data-testid="tab-open">
               <Clock className="h-4 w-4" />
-              Open
+              Активные
               {openTasks.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">
                   {openTasks.length}
@@ -144,7 +154,7 @@ export default function TasksPage() {
             </TabsTrigger>
             <TabsTrigger value="completed" className="gap-2" data-testid="tab-completed">
               <CheckCircle2 className="h-4 w-4" />
-              Done
+              Готово
             </TabsTrigger>
           </TabsList>
 
@@ -164,8 +174,8 @@ export default function TasksPage() {
                 <CardContent className="p-6">
                   <EmptyState
                     icon={CheckCircle2}
-                    title="All tasks completed!"
-                    description="Great job! You've finished all your tasks."
+                    title="Все задачи выполнены!"
+                    description="Отличная работа! Все задачи завершены."
                   />
                 </CardContent>
               </Card>
@@ -187,8 +197,8 @@ export default function TasksPage() {
                 <CardContent className="p-6">
                   <EmptyState
                     icon={ClipboardList}
-                    title="No completed tasks"
-                    description="Tasks you complete will appear here."
+                    title="Нет выполненных задач"
+                    description="Выполненные задачи появятся здесь."
                   />
                 </CardContent>
               </Card>

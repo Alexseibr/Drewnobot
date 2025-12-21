@@ -45,7 +45,7 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Drewno" />
+      <Header title="Дрэўна" />
       
       <PageContainer>
         <div className="space-y-8">
@@ -54,15 +54,15 @@ export default function LandingPage() {
               <TreePine className="h-12 w-12 text-primary" />
             </div>
             <h1 className="text-3xl font-bold mb-2" data-testid="text-hero-title">
-              Drewno Resort
+              Усадьба Дрэўна
             </h1>
             <p className="text-muted-foreground max-w-sm mx-auto" data-testid="text-hero-description">
-              Welcome to our cozy forest retreat. Book a relaxing bath session or an exciting quad adventure.
+              Добро пожаловать в наш уютный лесной курорт. Забронируйте расслабляющую баню или захватывающую поездку на квадроциклах.
             </p>
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Book an Experience</h2>
+            <h2 className="text-lg font-semibold">Забронировать</h2>
             
             <Card 
               className="hover-elevate cursor-pointer"
@@ -75,9 +75,9 @@ export default function LandingPage() {
                     <Bath className="h-6 w-6 text-status-awaiting" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold">Russian Bath</h3>
+                    <h3 className="font-semibold">Русская баня</h3>
                     <p className="text-sm text-muted-foreground">
-                      Traditional steam experience with optional hot tub
+                      Традиционная парная с возможностью заказа купели
                     </p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -96,9 +96,9 @@ export default function LandingPage() {
                     <Bike className="h-6 w-6 text-status-confirmed" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold">Quad Ride</h3>
+                    <h3 className="font-semibold">Квадроциклы</h3>
                     <p className="text-sm text-muted-foreground">
-                      Exciting off-road adventure with our instructor
+                      Захватывающее приключение с нашим инструктором
                     </p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -115,7 +115,7 @@ export default function LandingPage() {
               data-testid="button-staff-login"
             >
               <Briefcase className="mr-2 h-4 w-4" />
-              Staff Portal
+              Вход для сотрудников
             </Button>
           </div>
         </div>
@@ -124,18 +124,18 @@ export default function LandingPage() {
       <Dialog open={showStaffLogin} onOpenChange={setShowStaffLogin}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Staff Login</DialogTitle>
+            <DialogTitle>Вход для сотрудников</DialogTitle>
             <DialogDescription>
-              Enter your name and role to access the operations panel.
+              Введите ваше имя и роль для доступа к панели управления.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Имя</Label>
               <Input
                 id="name"
-                placeholder="Your name"
+                placeholder="Ваше имя"
                 value={staffName}
                 onChange={(e) => setStaffName(e.target.value)}
                 data-testid="input-staff-name"
@@ -143,7 +143,7 @@ export default function LandingPage() {
             </div>
             
             <div className="space-y-2">
-              <Label>Role</Label>
+              <Label>Роль</Label>
               <Select value={staffRole} onValueChange={(v) => setStaffRole(v as UserRole)}>
                 <SelectTrigger data-testid="select-staff-role">
                   <SelectValue />
@@ -152,19 +152,19 @@ export default function LandingPage() {
                   <SelectItem value="OWNER">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
-                      Owner
+                      Владелец
                     </div>
                   </SelectItem>
                   <SelectItem value="ADMIN">
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4" />
-                      Admin
+                      Администратор
                     </div>
                   </SelectItem>
                   <SelectItem value="INSTRUCTOR">
                     <div className="flex items-center gap-2">
                       <Bike className="h-4 w-4" />
-                      Instructor
+                      Инструктор
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -177,14 +177,14 @@ export default function LandingPage() {
               variant="outline"
               onClick={() => setShowStaffLogin(false)}
             >
-              Cancel
+              Отмена
             </Button>
             <Button
               onClick={handleStaffLogin}
               disabled={!staffName.trim()}
               data-testid="button-login-submit"
             >
-              Login
+              Войти
             </Button>
           </DialogFooter>
         </DialogContent>

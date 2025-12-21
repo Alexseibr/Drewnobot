@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { 
   CalendarCheck, 
   ClipboardList, 
@@ -44,7 +45,7 @@ interface OpsData {
 
 export default function OpsDashboard() {
   const { toast } = useToast();
-  const today = format(new Date(), "EEEE, MMMM d");
+  const today = format(new Date(), "EEEE, d MMMM", { locale: ru });
 
   const { data: opsData, isLoading } = useQuery<OpsData>({
     queryKey: ["/api/ops/today"],
@@ -57,10 +58,10 @@ export default function OpsDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
-      toast({ title: "Task completed" });
+      toast({ title: "Задача выполнена" });
     },
     onError: () => {
-      toast({ title: "Failed to complete task", variant: "destructive" });
+      toast({ title: "Ошибка выполнения задачи", variant: "destructive" });
     },
   });
 
@@ -71,15 +72,15 @@ export default function OpsDashboard() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Operations" />
+      <Header title="Операции" />
       
       <PageContainer>
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-semibold mb-1" data-testid="text-date">
+            <h2 className="text-2xl font-semibold mb-1 capitalize" data-testid="text-date">
               {today}
             </h2>
-            <p className="text-muted-foreground">Today's overview</p>
+            <p className="text-muted-foreground">Обзор на сегодня</p>
           </div>
 
           {isLoading ? (
@@ -101,7 +102,7 @@ export default function OpsDashboard() {
                       <p className="text-2xl font-bold font-mono" data-testid="stat-checkins">
                         {stats?.checkInsToday || 0}
                       </p>
-                      <p className="text-xs text-muted-foreground">Check-ins</p>
+                      <p className="text-xs text-muted-foreground">Заезды</p>
                     </div>
                   </div>
                 </CardContent>
@@ -117,7 +118,7 @@ export default function OpsDashboard() {
                       <p className="text-2xl font-bold font-mono" data-testid="stat-checkouts">
                         {stats?.checkOutsToday || 0}
                       </p>
-                      <p className="text-xs text-muted-foreground">Check-outs</p>
+                      <p className="text-xs text-muted-foreground">Выезды</p>
                     </div>
                   </div>
                 </CardContent>
@@ -133,7 +134,7 @@ export default function OpsDashboard() {
                       <p className="text-2xl font-bold font-mono" data-testid="stat-baths">
                         {stats?.bathsToday || 0}
                       </p>
-                      <p className="text-xs text-muted-foreground">Bath bookings</p>
+                      <p className="text-xs text-muted-foreground">Бани</p>
                     </div>
                   </div>
                 </CardContent>
@@ -149,7 +150,7 @@ export default function OpsDashboard() {
                       <p className="text-2xl font-bold font-mono" data-testid="stat-cash">
                         {stats?.cashBalance || 0}
                       </p>
-                      <p className="text-xs text-muted-foreground">Cash BYN</p>
+                      <p className="text-xs text-muted-foreground">Касса BYN</p>
                     </div>
                   </div>
                 </CardContent>
@@ -161,7 +162,7 @@ export default function OpsDashboard() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <ClipboardList className="h-5 w-5" />
-                Tasks
+                Задачи
                 {openTasks.length > 0 && (
                   <Badge variant="secondary" className="ml-1">
                     {openTasks.length}
@@ -170,7 +171,7 @@ export default function OpsDashboard() {
               </h3>
               <Link href="/ops/tasks">
                 <Button variant="ghost" size="sm" data-testid="link-all-tasks">
-                  View all
+                  Все
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
@@ -216,8 +217,8 @@ export default function OpsDashboard() {
                 <CardContent className="p-6">
                   <EmptyState
                     icon={CheckCircle2}
-                    title="All caught up!"
-                    description="No pending tasks for today"
+                    title="Все выполнено!"
+                    description="Нет задач на сегодня"
                     className="py-4"
                   />
                 </CardContent>
@@ -229,11 +230,11 @@ export default function OpsDashboard() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <HomeIcon className="h-5 w-5" />
-                Today's Cottages
+                Домики сегодня
               </h3>
               <Link href="/ops/bookings">
                 <Button variant="ghost" size="sm" data-testid="link-all-bookings">
-                  View all
+                  Все
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
@@ -260,7 +261,7 @@ export default function OpsDashboard() {
                       </div>
                       <p className="font-medium">{booking.customer.fullName || booking.customer.phone}</p>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(booking.dateCheckIn), "MMM d")} - {format(new Date(booking.dateCheckOut), "MMM d")}
+                        {format(new Date(booking.dateCheckIn), "d MMM", { locale: ru })} - {format(new Date(booking.dateCheckOut), "d MMM", { locale: ru })}
                       </p>
                     </CardContent>
                   </Card>
@@ -271,8 +272,8 @@ export default function OpsDashboard() {
                 <CardContent className="p-6">
                   <EmptyState
                     icon={HomeIcon}
-                    title="No cottage activity"
-                    description="No check-ins or check-outs today"
+                    title="Нет активности"
+                    description="Нет заездов или выездов сегодня"
                     className="py-4"
                   />
                 </CardContent>
@@ -284,7 +285,7 @@ export default function OpsDashboard() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Bath className="h-5 w-5" />
-                Bath Bookings
+                Брони бань
               </h3>
             </div>
 
@@ -310,11 +311,11 @@ export default function OpsDashboard() {
                       <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                         {booking.options.tub !== "none" && (
                           <Badge variant="secondary" className="text-xs">
-                            Tub: {booking.options.tub}
+                            Купель: {booking.options.tub === "small" ? "малая" : "большая"}
                           </Badge>
                         )}
                         {booking.options.grill && (
-                          <Badge variant="secondary" className="text-xs">Grill</Badge>
+                          <Badge variant="secondary" className="text-xs">Мангал</Badge>
                         )}
                       </div>
                     </CardContent>
@@ -326,8 +327,8 @@ export default function OpsDashboard() {
                 <CardContent className="p-6">
                   <EmptyState
                     icon={Bath}
-                    title="No bath bookings"
-                    description="No bath bookings for today"
+                    title="Нет бронирований"
+                    description="Нет бронирований бань на сегодня"
                     className="py-4"
                   />
                 </CardContent>

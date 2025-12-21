@@ -20,25 +20,25 @@ interface NavItem {
 }
 
 const guestNavItems: NavItem[] = [
-  { path: "/guest/bath", label: "Bath", icon: Bath },
-  { path: "/guest/quads", label: "Quads", icon: Bike },
+  { path: "/guest/bath", label: "Баня", icon: Bath },
+  { path: "/guest/quads", label: "Квадро", icon: Bike },
 ];
 
 const adminNavItems: NavItem[] = [
-  { path: "/ops", label: "Today", icon: Home },
-  { path: "/ops/bookings", label: "Bookings", icon: CalendarDays },
-  { path: "/ops/cash", label: "Cash", icon: Wallet },
-  { path: "/ops/tasks", label: "Tasks", icon: ClipboardList },
+  { path: "/ops", label: "Сегодня", icon: Home },
+  { path: "/ops/bookings", label: "Брони", icon: CalendarDays },
+  { path: "/ops/cash", label: "Касса", icon: Wallet },
+  { path: "/ops/tasks", label: "Задачи", icon: ClipboardList },
 ];
 
 const instructorNavItems: NavItem[] = [
-  { path: "/instructor", label: "Schedule", icon: CalendarDays },
-  { path: "/instructor/sessions", label: "Sessions", icon: Bike },
+  { path: "/instructor", label: "Расписание", icon: CalendarDays },
+  { path: "/instructor/sessions", label: "Сессии", icon: Bike },
 ];
 
 const ownerNavItems: NavItem[] = [
-  { path: "/owner/analytics", label: "Analytics", icon: BarChart3 },
-  { path: "/owner/settings", label: "Settings", icon: Settings },
+  { path: "/owner/analytics", label: "Аналитика", icon: BarChart3 },
+  { path: "/owner/settings", label: "Настройки", icon: Settings },
 ];
 
 export function BottomNav() {
