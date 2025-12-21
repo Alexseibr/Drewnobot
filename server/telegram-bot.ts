@@ -133,6 +133,12 @@ function getStaffKeyboard(role: string) {
         web_app: { url: `${webAppUrl}/instructor` }
       }
     ]);
+    keyboard.push([
+      {
+        text: "Управление инструкторами",
+        web_app: { url: `${webAppUrl}/instructor/manage` }
+      }
+    ]);
   }
   
   if (role === "ADMIN" || role === "OWNER" || role === "SUPER_ADMIN") {

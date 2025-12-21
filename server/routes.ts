@@ -1091,6 +1091,58 @@ export async function registerRoutes(
     }
   });
 
+  // ============ INSTRUCTOR MANAGEMENT ============
+  app.get("/api/instructors", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      const instructors = users.filter(u => u.role === "INSTRUCTOR" && u.isActive);
+      res.json(instructors);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить список инструкторов" });
+    }
+  });
+
+  app.post("/api/instructors", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { name, telegramId } = req.body;
+      if (!name || !telegramId) {
+        return res.status(400).json({ error: "Укажите имя и Telegram ID" });
+      }
+      
+      // Check if user already exists
+      const existing = await storage.getUserByTelegramId(telegramId);
+      if (existing) {
+        return res.status(400).json({ error: "Пользователь с таким Telegram ID уже существует" });
+      }
+      
+      const instructor = await storage.createUser({
+        telegramId,
+        name,
+        role: "INSTRUCTOR",
+        isActive: true,
+      });
+      
+      res.json(instructor);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось добавить инструктора" });
+    }
+  });
+
+  app.delete("/api/instructors/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user || user.role !== "INSTRUCTOR") {
+        return res.status(404).json({ error: "Инструктор не найден" });
+      }
+      
+      // Deactivate instead of delete
+      await storage.updateUser(req.params.id, { isActive: false });
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось удалить инструктора" });
+    }
+  });
+
   // ============ DEV AUTH ============
   app.post("/api/auth/dev-login", async (req, res) => {
     if (process.env.NODE_ENV !== "development") {

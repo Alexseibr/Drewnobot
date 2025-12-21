@@ -14,8 +14,10 @@ import {
   Plus,
   Check,
   X,
-  ChevronRight
+  ChevronRight,
+  UserPlus
 } from "lucide-react";
+import { Link } from "wouter";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
@@ -150,16 +152,23 @@ export default function InstructorSchedulePage() {
               </PopoverContent>
             </Popover>
 
-            <Button 
-              onClick={() => {
-                form.setValue("date", selectedDate);
-                setShowCreateDialog(true);
-              }}
-              data-testid="button-create-session"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Новая сессия
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link href="/instructor/manage">
+                <Button variant="outline" size="icon" data-testid="button-manage-instructors">
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Button 
+                onClick={() => {
+                  form.setValue("date", selectedDate);
+                  setShowCreateDialog(true);
+                }}
+                data-testid="button-create-session"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Новая сессия
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (

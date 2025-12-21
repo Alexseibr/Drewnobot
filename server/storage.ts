@@ -231,6 +231,16 @@ export class MemStorage implements IStorage {
       isActive: true,
     };
     this.users.set(pendingAdmin.id, pendingAdmin);
+
+    // Lead instructor - can manage other instructors
+    const leadInstructor: User = {
+      id: randomUUID(),
+      telegramId: "425182418",
+      name: "Старший инструктор",
+      role: "INSTRUCTOR",
+      isActive: true,
+    };
+    this.users.set(leadInstructor.id, leadInstructor);
   }
 
   async getUser(id: string): Promise<User | undefined> {
