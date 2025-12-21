@@ -350,6 +350,34 @@ export const insertQuadBookingSchema = z.object({
 });
 export type InsertQuadBooking = z.infer<typeof insertQuadBookingSchema>;
 
+// ============ INSTRUCTOR EXPENSE ============
+export const expenseCategoryEnum = z.enum(["fuel", "maintenance", "parts", "other"]);
+export type ExpenseCategory = z.infer<typeof expenseCategoryEnum>;
+
+export const instructorExpenseSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  category: expenseCategoryEnum,
+  amount: z.number().positive(),
+  description: z.string(),
+  createdBy: z.string(), // instructor telegramId
+  createdAt: z.string(),
+});
+export type InstructorExpense = z.infer<typeof instructorExpenseSchema>;
+
+export const insertInstructorExpenseSchema = instructorExpenseSchema.omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertInstructorExpense = z.infer<typeof insertInstructorExpenseSchema>;
+
+// ============ PREPARATION TIME CONSTANTS ============
+export const PREPARATION_TIMES = {
+  bath: 2, // hours for bath preparation
+  tub: 3, // hours for hot tub (kupel) preparation  
+  quad: 2, // hours for instructor quad preparation
+} as const;
+
 // ============ SITE SETTINGS ============
 export const siteSettingsSchema = z.object({
   id: z.string(),

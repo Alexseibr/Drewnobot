@@ -13,6 +13,7 @@ import type {
   QuadSlot,
   QuadBooking, InsertQuadBooking,
   InstructorBlockedTime, InsertInstructorBlockedTime,
+  InstructorExpense, InsertInstructorExpense,
   SiteSettings,
   AnalyticsSummary,
   SpaBooking, InsertSpaBooking,
@@ -101,6 +102,12 @@ export interface IStorage {
   createSpaBooking(booking: InsertSpaBooking): Promise<SpaBooking>;
   updateSpaBooking(id: string, updates: Partial<SpaBooking>): Promise<SpaBooking | undefined>;
   
+  // Instructor Expenses
+  getInstructorExpenses(): Promise<InstructorExpense[]>;
+  getInstructorExpensesForPeriod(startDate: string, endDate: string): Promise<InstructorExpense[]>;
+  createInstructorExpense(expense: InsertInstructorExpense): Promise<InstructorExpense>;
+  deleteInstructorExpense(id: string): Promise<boolean>;
+  
   // SMS & Verification
   createSmsCode(phone: string, code: string): Promise<SmsCode>;
   getSmsCode(phone: string): Promise<SmsCode | undefined>;
@@ -163,6 +170,7 @@ export class MemStorage implements IStorage {
   private workLogs: Map<string, WorkLog> = new Map();
   private quadBookings: Map<string, QuadBooking> = new Map();
   private instructorBlockedTimes: Map<string, InstructorBlockedTime> = new Map();
+  private instructorExpenses: Map<string, InstructorExpense> = new Map();
   private spaBookings: Map<string, SpaBooking> = new Map();
   private smsCodes: Map<string, SmsCode> = new Map();
   private verificationTokens: Map<string, VerificationToken> = new Map();
@@ -640,6 +648,33 @@ export class MemStorage implements IStorage {
 
   async deleteInstructorBlockedTime(id: string): Promise<boolean> {
     return this.instructorBlockedTimes.delete(id);
+  }
+
+  // Instructor Expenses
+  async getInstructorExpenses(): Promise<InstructorExpense[]> {
+    return Array.from(this.instructorExpenses.values())
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async getInstructorExpensesForPeriod(startDate: string, endDate: string): Promise<InstructorExpense[]> {
+    return Array.from(this.instructorExpenses.values())
+      .filter(e => e.date >= startDate && e.date <= endDate)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async createInstructorExpense(expense: InsertInstructorExpense): Promise<InstructorExpense> {
+    const id = randomUUID();
+    const newExpense: InstructorExpense = {
+      ...expense,
+      id,
+      createdAt: new Date().toISOString(),
+    };
+    this.instructorExpenses.set(id, newExpense);
+    return newExpense;
+  }
+
+  async deleteInstructorExpense(id: string): Promise<boolean> {
+    return this.instructorExpenses.delete(id);
   }
 
   async getSiteSettings(): Promise<SiteSettings> {
