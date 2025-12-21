@@ -30,7 +30,8 @@ Preferred communication style: Simple, everyday language.
 - **Type Safety**: Full TypeScript/Zod type safety for all entities
 
 ### Role-Based Access Control
-Four user roles with hierarchical permissions:
+Five user roles with hierarchical permissions:
+- **SUPER_ADMIN**: Full access + staff management (role assignment)
 - **OWNER**: Full access to all features, analytics, and historical data
 - **ADMIN**: Current shift operations, today's bookings, no historical access after shift closure
 - **INSTRUCTOR**: Quad sessions management only
@@ -64,8 +65,17 @@ Four user roles with hierarchical permissions:
 - connect-pg-simple for session storage
 
 ### Telegram Integration
-- Telegram WebApp SDK for mini-app functionality
-- Bot authentication via initData verification (planned)
+- **Bot**: @Drewnoo_bot with inline keyboard menu
+- **WebApp SDK**: Telegram WebApp SDK for mini-app functionality
+- **Authentication**: HMAC-SHA256 initData verification with 24h expiry
+- **Sessions**: 7-day session tokens stored in localStorage
+- **Webhook**: `/api/telegram/webhook` for bot updates
+- **Commands**: /start, /menu, /help
+
+### Telegram Bot Features
+- Guest menu: Book bath, book quads, SPA, website link
+- Staff menu: Role-based buttons (panel, bookings, cash, tasks, analytics)
+- Auto-detection of user role from database
 
 ### UI Framework Dependencies
 - Radix UI primitives for accessible components

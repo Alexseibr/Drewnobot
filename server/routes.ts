@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 import { storage } from "./storage";
 import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole } from "@shared/schema";
 import { validateInitData, generateSessionToken, getSessionExpiresAt } from "./telegram-auth";
+import { handleTelegramUpdate, setupTelegramWebhook } from "./telegram-bot";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -1097,6 +1098,42 @@ export async function registerRoutes(
     
     res.json({ token: `dev-token-${role.toLowerCase()}`, user });
   });
+
+  // ============ TELEGRAM BOT WEBHOOK ============
+  app.post("/api/telegram/webhook", async (req, res) => {
+    try {
+      await handleTelegramUpdate(req.body);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("[Telegram Webhook] Error:", error);
+      res.json({ ok: true }); // Always respond OK to Telegram
+    }
+  });
+
+  // Endpoint to manually setup webhook (for admins)
+  app.post("/api/telegram/setup-webhook", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { webhookUrl } = req.body;
+      if (!webhookUrl) {
+        return res.status(400).json({ error: "webhookUrl required" });
+      }
+      await setupTelegramWebhook(webhookUrl);
+      res.json({ ok: true, message: "Webhook установлен" });
+    } catch (error) {
+      console.error("[Telegram] Setup webhook error:", error);
+      res.status(500).json({ error: "Ошибка установки webhook" });
+    }
+  });
+
+  // Setup webhook on startup in production
+  if (process.env.NODE_ENV === "production") {
+    const replSlug = process.env.REPL_SLUG;
+    const replOwner = process.env.REPL_OWNER;
+    if (replSlug && replOwner) {
+      const webhookUrl = `https://${replSlug}.${replOwner}.repl.co`;
+      setupTelegramWebhook(webhookUrl).catch(console.error);
+    }
+  }
 
   return httpServer;
 }
