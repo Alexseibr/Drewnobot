@@ -617,6 +617,13 @@ export default function BathBookingPage() {
                         <span className="text-muted-foreground">Контакт</span>
                         <span className="font-medium">{watchedValues.fullName}</span>
                       </div>
+
+                      <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                          Для подтверждения бронирования требуется предоплата 50 BYN.
+                          Администратор свяжется с вами для уточнения деталей.
+                        </p>
+                      </div>
                       <div className="flex justify-between py-2 border-b">
                         <span className="text-muted-foreground">Телефон</span>
                         <span className="font-medium">{watchedValues.phone}</span>
