@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, addDays, parse, differenceInHours, setHours, setMinutes } from "date-fns";
+import { format, addDays } from "date-fns";
+import { ru } from "date-fns/locale";
 import { CalendarIcon, Clock, Bath, Flame, Package, Phone, User, Check } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
@@ -26,15 +27,15 @@ import { PageSkeleton } from "@/components/ui/loading-skeleton";
 import type { BathAvailabilitySlot, InsertBathBooking } from "@shared/schema";
 
 const bookingFormSchema = z.object({
-  bathCode: z.string().min(1, "Please select a bath"),
-  date: z.date({ required_error: "Please select a date" }),
-  startTime: z.string().min(1, "Please select a start time"),
-  duration: z.number().min(3, "Minimum duration is 3 hours"),
+  bathCode: z.string().min(1, "Выберите баню"),
+  date: z.date({ required_error: "Выберите дату" }),
+  startTime: z.string().min(1, "Выберите время начала"),
+  duration: z.number().min(3, "Минимальная продолжительность 3 часа"),
   tub: z.enum(["none", "small", "large"]),
   grill: z.boolean(),
   charcoal: z.boolean(),
-  fullName: z.string().min(2, "Name is required"),
-  phone: z.string().min(6, "Phone number is required"),
+  fullName: z.string().min(2, "Укажите имя"),
+  phone: z.string().min(6, "Укажите номер телефона"),
 });
 
 type BookingFormData = z.infer<typeof bookingFormSchema>;
@@ -92,8 +93,8 @@ export default function BathBookingPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Booking failed",
-        description: error.message || "Please try again later",
+        title: "Ошибка бронирования",
+        description: error.message || "Попробуйте позже",
         variant: "destructive",
       });
     },
@@ -156,33 +157,33 @@ export default function BathBookingPage() {
   if (step === "success") {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <Header title="Booking Submitted" showBack />
+        <Header title="Заявка отправлена" showBack />
         <PageContainer>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="rounded-full bg-status-confirmed/10 p-6 mb-6">
               <Check className="h-12 w-12 text-status-confirmed" />
             </div>
             <h2 className="text-2xl font-semibold mb-2" data-testid="text-success-title">
-              Request Submitted
+              Заявка отправлена
             </h2>
             <p className="text-muted-foreground max-w-xs mb-6" data-testid="text-success-description">
-              We will call you shortly to confirm your bath booking and arrange prepayment.
+              Мы скоро позвоним вам для подтверждения бронирования и оплаты.
             </p>
             <div className="space-y-2 text-sm text-left w-full max-w-xs">
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Bath</span>
-                <span className="font-medium">{watchedValues.bathCode}</span>
+                <span className="text-muted-foreground">Баня</span>
+                <span className="font-medium">{watchedValues.bathCode === "B1" ? "Баня 1" : "Баня 2"}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Date</span>
-                <span className="font-medium">{selectedDate && format(selectedDate, "MMM d, yyyy")}</span>
+                <span className="text-muted-foreground">Дата</span>
+                <span className="font-medium">{selectedDate && format(selectedDate, "d MMMM yyyy", { locale: ru })}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Time</span>
+                <span className="text-muted-foreground">Время</span>
                 <span className="font-medium">{watchedValues.startTime} - {calculateEndTime()}</span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-muted-foreground">Estimated Total</span>
+                <span className="text-muted-foreground">Примерная стоимость</span>
                 <span className="font-semibold text-primary">{calculatePrice()} BYN</span>
               </div>
             </div>
@@ -194,7 +195,7 @@ export default function BathBookingPage() {
               }}
               data-testid="button-new-booking"
             >
-              Make Another Booking
+              Новое бронирование
             </Button>
           </div>
         </PageContainer>
@@ -204,7 +205,7 @@ export default function BathBookingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Book a Bath" showBack={step !== "select"} />
+      <Header title="Забронировать баню" showBack={step !== "select"} />
       <PageContainer>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -212,7 +213,7 @@ export default function BathBookingPage() {
               <>
                 <div className="space-y-4">
                   <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                    Select Date & Bath
+                    Выберите дату и баню
                   </h2>
 
                   <FormField
@@ -220,7 +221,7 @@ export default function BathBookingPage() {
                     name="date"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Date</FormLabel>
+                        <FormLabel>Дата</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -233,7 +234,7 @@ export default function BathBookingPage() {
                                 data-testid="button-date-picker"
                               >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? format(field.value, "PPP") : "Pick a date"}
+                                {field.value ? format(field.value, "PPP", { locale: ru }) : "Выберите дату"}
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
@@ -243,6 +244,7 @@ export default function BathBookingPage() {
                               selected={field.value}
                               onSelect={field.onChange}
                               disabled={(date) => date < new Date() || date > addDays(new Date(), 60)}
+                              locale={ru}
                               initialFocus
                             />
                           </PopoverContent>
@@ -258,7 +260,7 @@ export default function BathBookingPage() {
                       name="bathCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Select Bath</FormLabel>
+                          <FormLabel>Выберите баню</FormLabel>
                           <div className="grid grid-cols-2 gap-4">
                             {["B1", "B2"].map((code) => (
                               <Card
@@ -282,9 +284,9 @@ export default function BathBookingPage() {
                                       )} />
                                     </div>
                                     <div>
-                                      <p className="font-medium">Bath {code.slice(1)}</p>
+                                      <p className="font-medium">Баня {code.slice(1)}</p>
                                       <p className="text-sm text-muted-foreground">
-                                        {code === "B1" ? "Cozy & Traditional" : "Spacious & Modern"}
+                                        {code === "B1" ? "Уютная, традиционная" : "Просторная, современная"}
                                       </p>
                                     </div>
                                   </div>
@@ -305,11 +307,11 @@ export default function BathBookingPage() {
                         name="startTime"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Start Time</FormLabel>
+                            <FormLabel>Время начала</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-start-time">
-                                  <SelectValue placeholder="Select time" />
+                                  <SelectValue placeholder="Выберите время" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -330,7 +332,7 @@ export default function BathBookingPage() {
                         name="duration"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Duration (hours)</FormLabel>
+                            <FormLabel>Продолжительность (часов)</FormLabel>
                             <div className="flex gap-2">
                               {durationOptions.map((hours) => {
                                 const isSelected = field.value === hours;
@@ -343,14 +345,14 @@ export default function BathBookingPage() {
                                     onClick={() => field.onChange(hours)}
                                     data-testid={`button-duration-${hours}`}
                                   >
-                                    {hours}h
+                                    {hours}ч
                                   </Button>
                                 );
                               })}
                             </div>
                             {!isEndTimeValid() && (
                               <p className="text-sm text-destructive mt-1">
-                                Session must end by 22:00
+                                Сеанс должен закончиться до 22:00
                               </p>
                             )}
                             <FormMessage />
@@ -368,7 +370,7 @@ export default function BathBookingPage() {
                     onClick={() => setStep("details")}
                     data-testid="button-next"
                   >
-                    Continue
+                    Продолжить
                   </Button>
                 )}
               </>
@@ -378,12 +380,12 @@ export default function BathBookingPage() {
               <>
                 <div className="space-y-4">
                   <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                    Options & Contact
+                    Опции и контакты
                   </h2>
 
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Extras</CardTitle>
+                      <CardTitle className="text-base">Дополнительно</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <FormField
@@ -391,7 +393,7 @@ export default function BathBookingPage() {
                         name="tub"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Hot Tub</FormLabel>
+                            <FormLabel>Купель</FormLabel>
                             <FormControl>
                               <RadioGroup
                                 onValueChange={field.onChange}
@@ -406,8 +408,8 @@ export default function BathBookingPage() {
                                   )}
                                 >
                                   <RadioGroupItem value="none" id="tub-none" className="sr-only" />
-                                  <span className="text-sm font-medium">None</span>
-                                  <span className="text-xs text-muted-foreground">Free</span>
+                                  <span className="text-sm font-medium">Нет</span>
+                                  <span className="text-xs text-muted-foreground">Бесплатно</span>
                                 </Label>
                                 <Label
                                   htmlFor="tub-small"
@@ -417,7 +419,7 @@ export default function BathBookingPage() {
                                   )}
                                 >
                                   <RadioGroupItem value="small" id="tub-small" className="sr-only" />
-                                  <span className="text-sm font-medium">Small</span>
+                                  <span className="text-sm font-medium">Малая</span>
                                   <span className="text-xs text-muted-foreground">+{PRICES.tub_small} BYN</span>
                                 </Label>
                                 <Label
@@ -428,7 +430,7 @@ export default function BathBookingPage() {
                                   )}
                                 >
                                   <RadioGroupItem value="large" id="tub-large" className="sr-only" />
-                                  <span className="text-sm font-medium">Large</span>
+                                  <span className="text-sm font-medium">Большая</span>
                                   <span className="text-xs text-muted-foreground">+{PRICES.tub_large} BYN</span>
                                 </Label>
                               </RadioGroup>
@@ -448,7 +450,7 @@ export default function BathBookingPage() {
                             <div className="flex items-center gap-3">
                               <Flame className="h-5 w-5 text-muted-foreground" />
                               <div>
-                                <FormLabel className="text-base font-normal">Grill</FormLabel>
+                                <FormLabel className="text-base font-normal">Мангал</FormLabel>
                                 <p className="text-sm text-muted-foreground">+{PRICES.grill} BYN</p>
                               </div>
                             </div>
@@ -471,7 +473,7 @@ export default function BathBookingPage() {
                             <div className="flex items-center gap-3">
                               <Package className="h-5 w-5 text-muted-foreground" />
                               <div>
-                                <FormLabel className="text-base font-normal">Charcoal</FormLabel>
+                                <FormLabel className="text-base font-normal">Уголь</FormLabel>
                                 <p className="text-sm text-muted-foreground">+{PRICES.charcoal} BYN</p>
                               </div>
                             </div>
@@ -490,8 +492,8 @@ export default function BathBookingPage() {
 
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Contact Information</CardTitle>
-                      <CardDescription>We'll call you to confirm the booking</CardDescription>
+                      <CardTitle className="text-base">Контактные данные</CardTitle>
+                      <CardDescription>Мы позвоним для подтверждения</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <FormField
@@ -499,12 +501,12 @@ export default function BathBookingPage() {
                         name="fullName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Full Name</FormLabel>
+                            <FormLabel>Имя</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  placeholder="Your name"
+                                  placeholder="Ваше имя"
                                   className="pl-10"
                                   {...field}
                                   data-testid="input-fullname"
@@ -521,7 +523,7 @@ export default function BathBookingPage() {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
+                            <FormLabel>Телефон</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -549,7 +551,7 @@ export default function BathBookingPage() {
                     onClick={() => setStep("select")}
                     data-testid="button-back"
                   >
-                    Back
+                    Назад
                   </Button>
                   <Button
                     type="button"
@@ -558,7 +560,7 @@ export default function BathBookingPage() {
                     disabled={!watchedValues.fullName || !watchedValues.phone}
                     data-testid="button-review"
                   >
-                    Review Booking
+                    Проверить
                   </Button>
                 </div>
               </>
@@ -568,68 +570,66 @@ export default function BathBookingPage() {
               <>
                 <div className="space-y-4">
                   <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                    Confirm Booking
+                    Подтверждение
                   </h2>
 
                   <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">
                         <Bath className="h-5 w-5 text-primary" />
-                        Bath {watchedValues.bathCode?.slice(1)}
+                        Баня {selectedBath?.slice(1)}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-muted-foreground">Date</span>
+                        <span className="text-muted-foreground">Дата</span>
                         <span className="font-medium">
-                          {selectedDate && format(selectedDate, "EEEE, MMMM d, yyyy")}
+                          {selectedDate && format(selectedDate, "EEEE, d MMMM yyyy", { locale: ru })}
                         </span>
                       </div>
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-muted-foreground">Time</span>
+                        <span className="text-muted-foreground">Время</span>
                         <span className="font-medium">
-                          {watchedValues.startTime} - {calculateEndTime()}
+                          {watchedValues.startTime} - {calculateEndTime()} ({watchedValues.duration}ч)
                         </span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b">
-                        <span className="text-muted-foreground">Duration</span>
-                        <span className="font-medium">{watchedValues.duration} hours</span>
                       </div>
                       {watchedValues.tub !== "none" && (
                         <div className="flex justify-between py-2 border-b">
-                          <span className="text-muted-foreground">Hot Tub</span>
-                          <span className="font-medium capitalize">{watchedValues.tub}</span>
+                          <span className="text-muted-foreground">Купель</span>
+                          <span className="font-medium">
+                            {watchedValues.tub === "small" ? "Малая" : "Большая"}
+                          </span>
                         </div>
                       )}
                       {watchedValues.grill && (
                         <div className="flex justify-between py-2 border-b">
-                          <span className="text-muted-foreground">Grill</span>
-                          <span className="font-medium">Yes</span>
+                          <span className="text-muted-foreground">Мангал</span>
+                          <span className="font-medium">Да</span>
                         </div>
                       )}
                       {watchedValues.charcoal && (
                         <div className="flex justify-between py-2 border-b">
-                          <span className="text-muted-foreground">Charcoal</span>
-                          <span className="font-medium">Yes</span>
+                          <span className="text-muted-foreground">Уголь</span>
+                          <span className="font-medium">Да</span>
                         </div>
                       )}
-                    </CardContent>
-                    <CardFooter className="flex-col items-stretch border-t pt-4">
-                      <div className="flex justify-between text-lg font-semibold">
-                        <span>Total</span>
-                        <span className="text-primary">{calculatePrice()} BYN</span>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-muted-foreground">Контакт</span>
+                        <span className="font-medium">{watchedValues.fullName}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Final price will be confirmed after our call
-                      </p>
-                    </CardFooter>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-4 space-y-2">
-                      <p className="font-medium">{watchedValues.fullName}</p>
-                      <p className="text-sm text-muted-foreground">{watchedValues.phone}</p>
+                      <div className="flex justify-between py-2 border-b">
+                        <span className="text-muted-foreground">Телефон</span>
+                        <span className="font-medium">{watchedValues.phone}</span>
+                      </div>
                     </CardContent>
+                    <CardFooter className="bg-muted/50 mt-3">
+                      <div className="flex justify-between w-full py-2">
+                        <span className="font-semibold">Итого (примерно)</span>
+                        <span className="font-bold text-lg text-primary" data-testid="text-total-price">
+                          {calculatePrice()} BYN
+                        </span>
+                      </div>
+                    </CardFooter>
                   </Card>
                 </div>
 
@@ -641,7 +641,7 @@ export default function BathBookingPage() {
                     onClick={() => setStep("details")}
                     data-testid="button-back"
                   >
-                    Back
+                    Назад
                   </Button>
                   <Button
                     type="submit"
@@ -649,7 +649,7 @@ export default function BathBookingPage() {
                     disabled={bookingMutation.isPending}
                     data-testid="button-submit"
                   >
-                    {bookingMutation.isPending ? "Submitting..." : "Submit Request"}
+                    {bookingMutation.isPending ? "Отправка..." : "Отправить заявку"}
                   </Button>
                 </div>
               </>
