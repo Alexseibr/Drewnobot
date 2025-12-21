@@ -1,9 +1,10 @@
-import { Moon, Sun, Menu, TreePine, ChevronLeft } from "lucide-react";
+import { Moon, Sun, Menu, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/lib/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
+import drewnoLogo from "@assets/drewno-logo.webp";
 
 interface HeaderProps {
   title?: string;
@@ -57,7 +58,12 @@ export function Header({ title = "Drewno Ops", showBack, onMenuClick }: HeaderPr
         ) : null}
         
         <div className="flex items-center gap-2">
-          <TreePine className="h-5 w-5 text-primary" />
+          <img 
+            src={drewnoLogo} 
+            alt="Drewno" 
+            className="h-8 w-8 rounded-md object-cover"
+            data-testid="img-logo"
+          />
           <h1 className="text-lg font-semibold tracking-tight" data-testid="text-header-title">
             {title}
           </h1>
