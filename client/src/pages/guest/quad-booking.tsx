@@ -26,6 +26,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/lib/auth-context";
 import type { QuadRouteType } from "@shared/schema";
 
+// v2.1 - calendar fix
 type Step = "route" | "time" | "details" | "success";
 
 interface SlotInfo {
