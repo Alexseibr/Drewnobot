@@ -201,16 +201,14 @@ function getStaffKeyboard(role: string) {
         web_app: { url: `${webAppUrl}/owner/analytics` }
       }
     ]);
-  }
-  
-  if (role === "SUPER_ADMIN") {
     keyboard.push([
       {
         text: "Управление сотрудниками",
-        web_app: { url: `${webAppUrl}/admin/staff` }
+        web_app: { url: `${webAppUrl}/owner/staff` }
       }
     ]);
   }
+  
   
   // Add guest options for staff too
   keyboard.push([
