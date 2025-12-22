@@ -26,7 +26,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/lib/auth-context";
 import type { QuadRouteType } from "@shared/schema";
 
-type Step = "date" | "route" | "time" | "details" | "success";
+type Step = "route" | "time" | "details" | "success";
 
 interface SlotInfo {
   startTime: string;
@@ -100,8 +100,8 @@ interface PriceResponse {
 
 export default function QuadBookingPage() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<Step>("date");
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [step, setStep] = useState<Step>("route");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(startOfDay(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | undefined>();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -241,9 +241,9 @@ export default function QuadBookingPage() {
       phone: "",
       comment: "",
     });
-    setSelectedDate(undefined);
+    setSelectedDate(startOfDay(new Date()));
     setSelectedSlot(undefined);
-    setStep("date");
+    setStep("route");
   };
 
   const priceInfo = calculatePrice();
@@ -311,17 +311,16 @@ export default function QuadBookingPage() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header 
         title="Забронировать квадроциклы" 
-        showBack={step === "date"}
+        showBack={step === "route"}
       />
       
-      {step !== "date" && (
+      {step !== "route" && (
         <div className="px-4 pt-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (step === "route") setStep("date");
-              else if (step === "time") setStep("route");
+              if (step === "time") setStep("route");
               else if (step === "details") setStep("time");
             }}
             data-testid="button-back-step"
@@ -334,71 +333,54 @@ export default function QuadBookingPage() {
         <Form {...bookingForm}>
           <form onSubmit={bookingForm.handleSubmit(handleBookingSubmit)} className="space-y-6">
             
-            {step === "date" && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                  Выберите дату
-                </h2>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground"
-                          )}
-                          data-testid="button-date-picker"
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedDate ? format(selectedDate, "PPP", { locale: ru }) : "Выберите дату"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => {
-                            setSelectedDate(date);
-                            bookingForm.setValue("startTime", "");
-                          }}
-                          disabled={(date) => {
-                            const today = startOfDay(new Date());
-                            const dateStart = startOfDay(date);
-                            return dateStart.getTime() < today.getTime() || date > addDays(new Date(), 30);
-                          }}
-                          locale={ru}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </CardContent>
-                </Card>
-
-                {dateBlocked && (
-                  <Card className="border-destructive">
-                    <CardContent className="p-4 text-center text-destructive">
-                      {blockMessage || "Квадроциклы недоступны на эту дату"}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {selectedDate && !dateBlocked && (
-                  <Button
-                    type="button"
-                    className="w-full"
-                    onClick={() => setStep("route")}
-                    data-testid="button-next-step"
-                  >
-                    Далее
-                  </Button>
+            {/* Compact date selector - always visible on route/time steps */}
+            {(step === "route" || step === "time") && (
+              <div className="flex items-center justify-between gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="justify-start text-left font-normal"
+                      data-testid="button-date-picker"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "d MMMM", { locale: ru }) : "Выберите дату"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        setSelectedDate(date);
+                        bookingForm.setValue("startTime", "");
+                        setStep("route");
+                      }}
+                      disabled={(date) => {
+                        const today = startOfDay(new Date());
+                        const dateStart = startOfDay(date);
+                        return dateStart.getTime() < today.getTime() || date > addDays(new Date(), 30);
+                      }}
+                      locale={ru}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {isToday(selectedDate!) && (
+                  <span className="text-sm text-muted-foreground">Сегодня</span>
                 )}
               </div>
             )}
 
-            {step === "route" && (
+            {dateBlocked && (step === "route" || step === "time") && (
+              <Card className="border-destructive">
+                <CardContent className="p-4 text-center text-destructive">
+                  {blockMessage || "Квадроциклы недоступны на эту дату"}
+                </CardContent>
+              </Card>
+            )}
+
+            {step === "route" && !dateBlocked && (
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold" data-testid="text-step-title">
                   Выберите маршрут
