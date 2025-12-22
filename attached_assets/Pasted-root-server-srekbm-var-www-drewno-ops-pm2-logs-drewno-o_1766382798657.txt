@@ -1,0 +1,29 @@
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 10
+[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:124872
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:160760
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at Object.<anonymous> (/var/www/drewno/dist/index.cjs:108:1428)
+0|drewno-o |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+0|drewno-o |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+0|drewno-o |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+0|drewno-o |
+0|drewno-o | Node.js v20.19.6
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | [Telegram Bot] Notifications scheduled
+0|drewno-o | 8:46:59 AM [scheduler] Scheduler initialized:
+0|drewno-o | 8:46:59 AM [scheduler]   - Shift auto-closure: 23:00 daily
+0|drewno-o | 8:46:59 AM [scheduler]   - Daily tasks: 06:00 daily
+0|drewno-o | 8:46:59 AM [scheduler]   - Weekly tasks: 06:00 Monday
+0|drewno-o | 8:46:59 AM [scheduler]   - Monthly tasks: 06:00 1st of month
+0|drewno-o | 8:46:59 AM [scheduler] Checked for missed shift closures on startup
+0|drewno-o | 8:47:04 AM [express] GET /api/auth/me 304 in 8ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"GUEST"}
+0|drewno-o | 8:47:08 AM [express] POST /api/auth/telegram 200 in 23ms :: {"user":{"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"GUEST"},"token":"62ef2ea9c5e8e63be016b20a85a206ac86e93542f5e1bd3ca6ae838f9379f1bb","expiresAt":"2025-12-29T05:47:08.962Z"}
+0|drewno-o | 8:47:09 AM [express] GET /api/auth/me 304 in 5ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"GUEST"}
+
+0|drewno-ops  | 8:53:05 AM [express] GET /api/auth/me 304 in 20ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"GUEST"}
+0|drewno-ops  | 8:53:09 AM [express] POST /api/auth/telegram 200 in 21ms :: {"user":{"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"GUEST"},"token":"8ec3047ced8a92d73ca1216c55dedc170f18f0fd2db443a4fa0396132f0580ce","expiresAt":"2025-12-29T05:53:09.489Z"}
+0|drewno-ops  | 8:53:09 AM [express] GET /api/auth/me 304 in 2ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"GUEST"}
