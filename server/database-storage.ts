@@ -599,9 +599,40 @@ export class DatabaseStorage implements IStorage {
     const id = randomUUID();
     const now = new Date().toISOString();
     const b = booking as any;
-    const endTime = b.endTime || (booking.routeType === "short" 
-      ? this.addMinutes(booking.startTime, 30) 
-      : this.addMinutes(booking.startTime, 60));
+    
+    // Calculate duration and end time
+    const duration = booking.routeType === "short" ? 30 : 60;
+    const endTime = b.endTime || this.addMinutes(booking.startTime, duration);
+    
+    // Calculate pricing (if not provided)
+    let pricing = b.pricing;
+    if (!pricing) {
+      const basePrice = booking.routeType === "short" ? PRICES.quad_30m : PRICES.quad_60m;
+      
+      // Check if joining existing slot for discount
+      let discountApplied = false;
+      let discount = 0;
+      
+      if (booking.slotId) {
+        const existingBookings = await this.getQuadBookingsForDate(booking.date);
+        const sameSlot = existingBookings.find(b => 
+          b.startTime === booking.startTime && 
+          b.routeType === booking.routeType &&
+          b.status !== "cancelled"
+        );
+        if (sameSlot) {
+          discountApplied = true;
+          discount = Math.round(basePrice * booking.quadsCount * 0.05);
+        }
+      }
+      
+      const total = basePrice * booking.quadsCount - discount;
+      pricing = { basePrice, total, discount, discountApplied };
+    }
+    
+    // Default payments if not provided
+    const payments = b.payments || { eripPaid: 0, cashPaid: 0 };
+    
     const newBooking: QuadBooking = {
       id,
       slotId: booking.slotId,
@@ -611,8 +642,8 @@ export class DatabaseStorage implements IStorage {
       routeType: booking.routeType,
       quadsCount: booking.quadsCount,
       customer: booking.customer,
-      pricing: b.pricing,
-      payments: b.payments,
+      pricing,
+      payments,
       status: b.status || "pending_call",
       comment: booking.comment,
       createdAt: now,
