@@ -1,0 +1,46 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && git pull && npm run build && pm2 restart drewno-ops
+remote: Enumerating objects: 6, done.
+remote: Counting objects: 100% (6/6), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 4 (delta 2), reused 4 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 1.88 KiB | 960.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+   9df1cf2..eb2a823  main       -> origin/main
+Updating 9df1cf2..eb2a823
+Fast-forward
+ ...-srekbm-var-www-drewno-ops-cd-var-www-drewno_1766381925687.txt | 46 ++++++++++++++++++++++++++++++
+ 1 file changed, 46 insertions(+)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1766381925687.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (4) src/App.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 2586 modules transformed.
+../dist/public/index.html                          1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp  328.56 kB
+../dist/public/assets/index-C8cveR4v.css          76.75 kB │ gzip:  12.50 kB
+../dist/public/assets/index-BJFXhmI0.js          720.20 kB │ gzip: 198.82 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 13.95s
+building server...
+
+  dist/index.cjs  1.2mb ⚠️
+
+⚡ Done in 435ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 7    │ online    │ 0%       │ 24.4mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops#
