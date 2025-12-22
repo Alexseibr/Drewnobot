@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, addDays, isToday, addHours, isBefore, parse } from "date-fns";
+import { format, addDays, isToday, addHours, isBefore, parse, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon, Bike, Clock, User, Check, Minus, Plus, Loader2, MapPin, MessageCircle, Phone, Percent } from "lucide-react";
 import { Header } from "@/components/layout/header";
@@ -364,7 +364,7 @@ export default function QuadBookingPage() {
                             setSelectedDate(date);
                             bookingForm.setValue("startTime", "");
                           }}
-                          disabled={(date) => date < new Date() || date > addDays(new Date(), 30)}
+                          disabled={(date) => isBefore(date, startOfDay(new Date())) || date > addDays(new Date(), 30)}
                           locale={ru}
                           initialFocus
                         />

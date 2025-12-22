@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, addDays, isToday, addHours, isBefore, parse } from "date-fns";
+import { format, addDays, isToday, addHours, isBefore, parse, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus, MessageCircle, Phone, Flame } from "lucide-react";
 import { Header } from "@/components/layout/header";
@@ -378,7 +378,7 @@ export default function SpaBookingPage() {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date() || date > addDays(new Date(), 60)}
+                            disabled={(date) => isBefore(date, startOfDay(new Date())) || date > addDays(new Date(), 60)}
                             locale={ru}
                             initialFocus
                           />
