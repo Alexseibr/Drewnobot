@@ -76,8 +76,6 @@ const UNITS = [
   { value: "Д2", label: "Домик 2" },
   { value: "Д3", label: "Домик 3" },
   { value: "Д4", label: "Домик 4" },
-  { value: "Б1", label: "Баня 1" },
-  { value: "Б2", label: "Баня 2" },
   { value: "СПА1", label: "СПА 1" },
   { value: "СПА2", label: "СПА 2" },
 ];

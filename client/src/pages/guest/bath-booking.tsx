@@ -173,8 +173,8 @@ export default function BathBookingPage() {
             </p>
             <div className="space-y-2 text-sm text-left w-full max-w-xs">
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Баня</span>
-                <span className="font-medium">{watchedValues.bathCode === "B1" ? "Баня 1" : "Баня 2"}</span>
+                <span className="text-muted-foreground">СПА</span>
+                <span className="font-medium">{watchedValues.bathCode === "B1" ? "СПА 1" : "СПА 2"}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Дата</span>
@@ -204,7 +204,7 @@ export default function BathBookingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Забронировать баню" showBack={step !== "select"} />
+      <Header title="Забронировать СПА" showBack={step !== "select"} />
       <PageContainer>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -212,7 +212,7 @@ export default function BathBookingPage() {
               <>
                 <div className="space-y-4">
                   <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                    Выберите дату и баню
+                    Выберите дату и СПА
                   </h2>
 
                   <FormField
@@ -259,7 +259,7 @@ export default function BathBookingPage() {
                       name="bathCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Выберите баню</FormLabel>
+                          <FormLabel>Выберите СПА</FormLabel>
                           <div className="grid grid-cols-2 gap-4">
                             {["B1", "B2"].map((code) => (
                               <Card
@@ -283,7 +283,7 @@ export default function BathBookingPage() {
                                       )} />
                                     </div>
                                     <div>
-                                      <p className="font-medium">Баня {code.slice(1)}</p>
+                                      <p className="font-medium">СПА {code.slice(1)}</p>
                                       <p className="text-sm text-muted-foreground">
                                         {code === "B1" ? "Уютная, традиционная" : "Просторная, современная"}
                                       </p>
@@ -576,7 +576,7 @@ export default function BathBookingPage() {
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">
                         <Bath className="h-5 w-5 text-primary" />
-                        Баня {selectedBath?.slice(1)}
+                        СПА {selectedBath?.slice(1)}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">

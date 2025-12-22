@@ -76,9 +76,9 @@ const TIME_SLOTS = [
 ];
 
 const BOOKING_TYPES: { value: SpaBookingType; label: string; description: string }[] = [
-  { value: "bath_only", label: "Только баня", description: "150 BYN" },
+  { value: "bath_only", label: "Только СПА", description: "150 BYN" },
   { value: "tub_only", label: "Только купель", description: "150/180 BYN" },
-  { value: "bath_with_tub", label: "Баня + купель", description: "330/300 BYN" },
+  { value: "bath_with_tub", label: "СПА + купель", description: "330/300 BYN" },
   { value: "terrace_only", label: "Терраса", description: "90 BYN" },
 ];
 

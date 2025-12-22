@@ -206,10 +206,10 @@ export default function BookingsPage() {
   const pendingSpa = spaBookings.filter(b => b.status === "pending_call");
 
   const SPA_TYPE_LABELS: Record<string, string> = {
-    bath_only: "Только баня",
+    bath_only: "Только СПА",
     terrace_only: "Только терраса",
     tub_only: "Только купель",
-    bath_with_tub: "Баня + Купель",
+    bath_with_tub: "СПА + Купель",
   };
 
   return (

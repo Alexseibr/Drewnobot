@@ -23,7 +23,7 @@ interface NavItem {
 }
 
 const guestNavItems: NavItem[] = [
-  { path: "/guest/bath", label: "Баня", icon: Bath },
+  { path: "/guest/bath", label: "СПА", icon: Bath },
   { path: "/guest/quads", label: "Квадро", icon: Bike },
 ];
 

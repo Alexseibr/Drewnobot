@@ -43,7 +43,7 @@ export default function LandingPage() {
               Village Drewno
             </h1>
             <p className="text-muted-foreground max-w-sm mx-auto" data-testid="text-hero-description">
-              Загородный комплекс. Аренда домиков. Баня. Горячая купель. Лучшее место, чтобы отдохнуть в гармонии с природой.
+              Загородный комплекс. Аренда домиков. СПА. Горячая купель. Лучшее место, чтобы отдохнуть в гармонии с природой.
             </p>
             
             {user && (
@@ -72,7 +72,7 @@ export default function LandingPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold">СПА-комплекс</h3>
                     <p className="text-sm text-muted-foreground">
-                      Баня, терраса, купель - отдых на любой вкус
+                      СПА, терраса, купель - отдых на любой вкус
                     </p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
