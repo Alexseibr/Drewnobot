@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, addDays } from "date-fns";
+import { format, addDays, isToday, addHours, isBefore, parse } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon, Clock, Bath, Flame, Package, Phone, User, Check } from "lucide-react";
 import { Header } from "@/components/layout/header";
@@ -44,6 +44,15 @@ type BookingFormData = z.infer<typeof bookingFormSchema>;
 const timeSlots = [
   "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
 ];
+
+const MIN_HOURS_ADVANCE_SPA = 3;
+
+const isSlotAvailableForToday = (timeSlot: string, minHoursAdvance: number): boolean => {
+  const now = new Date();
+  const minBookingTime = addHours(now, minHoursAdvance);
+  const slotTime = parse(timeSlot, "HH:mm", now);
+  return !isBefore(slotTime, minBookingTime);
+};
 
 const durationOptions = [3, 4, 5, 6];
 
@@ -314,11 +323,14 @@ export default function BathBookingPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {timeSlots.map((time) => (
-                                  <SelectItem key={time} value={time}>
-                                    {time}
-                                  </SelectItem>
-                                ))}
+                                {timeSlots.map((time) => {
+                                  const isTooSoon = selectedDate && isToday(selectedDate) && !isSlotAvailableForToday(time, MIN_HOURS_ADVANCE_SPA);
+                                  return (
+                                    <SelectItem key={time} value={time} disabled={isTooSoon}>
+                                      {time} {isTooSoon ? "(слишком рано)" : ""}
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                             <FormMessage />

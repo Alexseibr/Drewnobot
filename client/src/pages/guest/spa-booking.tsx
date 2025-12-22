@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, addDays } from "date-fns";
+import { format, addDays, isToday, addHours, isBefore, parse } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus, MessageCircle, Phone, Flame } from "lucide-react";
 import { Header } from "@/components/layout/header";
@@ -44,10 +44,18 @@ const bookingFormSchema = z.object({
 type BookingFormData = z.infer<typeof bookingFormSchema>;
 
 const CLOSE_HOUR = 22;
+const MIN_HOURS_ADVANCE_SPA = 3;
 
 const timeSlots = [
   "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
 ];
+
+const isSlotAvailableForToday = (timeSlot: string, minHoursAdvance: number): boolean => {
+  const now = new Date();
+  const minBookingTime = addHours(now, minHoursAdvance);
+  const slotTime = parse(timeSlot, "HH:mm", now);
+  return !isBefore(slotTime, minBookingTime);
+};
 
 const BOOKING_TYPES: { value: BookingType; label: string; description: string; icon: typeof Bath }[] = [
   { value: "bath_only", label: "Только СПА", description: "3 часа, до 6 гостей", icon: Bath },
@@ -446,13 +454,15 @@ export default function SpaBookingPage() {
                                 s => s.spaResource === selectedResource && s.startTime === time
                               );
                               const isAvailable = slot?.available ?? true;
+                              const isTooSoon = selectedDate && isToday(selectedDate) && !isSlotAvailableForToday(time, MIN_HOURS_ADVANCE_SPA);
+                              const isDisabled = !isAvailable || isTooSoon;
                               return (
                                 <SelectItem
                                   key={time}
                                   value={time}
-                                  disabled={!isAvailable}
+                                  disabled={isDisabled}
                                 >
-                                  {time} {!isAvailable && "(занято)"}
+                                  {time} {!isAvailable ? "(занято)" : isTooSoon ? "(слишком рано)" : ""}
                                 </SelectItem>
                               );
                             })}

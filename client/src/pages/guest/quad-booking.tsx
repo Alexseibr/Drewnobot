@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, addDays } from "date-fns";
+import { format, addDays, isToday, addHours, isBefore, parse } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon, Bike, Clock, User, Check, Minus, Plus, Loader2, MapPin, MessageCircle, Phone, Percent } from "lucide-react";
 import { Header } from "@/components/layout/header";
@@ -66,6 +66,15 @@ type BookingFormData = z.infer<typeof bookingFormSchema>;
 const DEFAULT_PRICES = {
   short: 50,
   long: 80,
+};
+
+const MIN_HOURS_ADVANCE_QUAD = 2;
+
+const isSlotAvailableForToday = (timeSlot: string, minHoursAdvance: number): boolean => {
+  const now = new Date();
+  const minBookingTime = addHours(now, minHoursAdvance);
+  const slotTime = parse(timeSlot, "HH:mm", now);
+  return !isBefore(slotTime, minBookingTime);
 };
 
 const ROUTE_INFO_BASE = {
@@ -153,8 +162,14 @@ export default function QuadBookingPage() {
   const allSlots = availabilityData?.slots || [];
 
   const filteredSlots = useMemo(() => {
-    return allSlots.filter(s => s.routeType === routeType);
-  }, [allSlots, routeType]);
+    return allSlots.filter(s => {
+      if (s.routeType !== routeType) return false;
+      if (selectedDate && isToday(selectedDate) && !isSlotAvailableForToday(s.startTime, MIN_HOURS_ADVANCE_QUAD)) {
+        return false;
+      }
+      return true;
+    });
+  }, [allSlots, routeType, selectedDate]);
 
   const selectedSlotInfo = useMemo(() => {
     const st = watchedValues.startTime;
