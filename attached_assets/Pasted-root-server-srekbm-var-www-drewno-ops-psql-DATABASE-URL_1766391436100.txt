@@ -1,0 +1,71 @@
+root@server-srekbm:/var/www/drewno-ops# psql $DATABASE_URL -c "
+> INSERT INTO staff_authorizations (id, telegram_id, role, note, assigned_by, is_active, created_at) VALUES
+> (gen_random_uuid(), '374243315', 'SUPER_ADMIN', 'Владелец и главный администратор', 'system', true, NOW()),
+> (gen_random_uuid(), '425182418', 'INSTRUCTOR', 'Инструктор квадроциклов', 'owner-manual', true, NOW())
+> ON CONFLICT (telegram_id) DO NOTHING;
+> "
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "root" does not exist
+root@server-srekbm:/var/www/drewno-ops# psql $DATABASE_URL -c "
+INSERT INTO staff_authorizations (id, telegram_id, role, note, assigned_by, is_active, created_at) VALUES
+(gen_random_uuid(), '374243315', 'SUPER_ADMIN', 'Владелец и главный администратор', 'system', true, NOW()),
+(gen_random_uuid(), '425182418', 'INSTRUCTOR', 'Инструктор квадроциклов', 'owner-manual', true, NOW())
+ON CONFLICT (telegram_id) DO NOTHING;
+"
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "root" does not exist
+root@server-srekbm:/var/www/drewno-ops# # 1. Подтянуть последние изменения из GitHub
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # 2. Установить зависимости (если были изменения в package.json)
+root@server-srekbm:/var/www/drewno-ops# npm install
+
+up to date, audited 481 packages in 2s
+
+67 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # 3. Собрать проект для production
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 2587 modules transformed.
+../dist/public/index.html                          1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp  328.56 kB
+../dist/public/assets/index-C7P754A5.css          77.93 kB │ gzip:  12.69 kB
+../dist/public/assets/index-DNN6jRGh.js          749.39 kB │ gzip: 204.41 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 13.57s
+building server...
+
+  dist/index.cjs  1.2mb ⚠️
+
+⚡ Done in 372ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # 4. Перезапустить через PM2
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 27   │ online    │ 0%       │ 25.8mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# echo $DATABASE_URL
+
+root@server-srekbm:/var/www/drewno-ops# cat /var/www/drewno-ops/.env | grep DATABASE
+root@server-srekbm:/var/www/drewno-ops#
