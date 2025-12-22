@@ -52,6 +52,17 @@ const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: "other", label: "Другое" },
 ];
 
+const INCOME_SOURCES = [
+  { value: "bath", label: "Баня" },
+  { value: "cottage_1", label: "Дом 1" },
+  { value: "cottage_2", label: "Дом 2" },
+  { value: "cottage_3", label: "Дом 3" },
+  { value: "cottage_4", label: "Дом 4" },
+  { value: "quads", label: "Квадроциклы" },
+  { value: "spa", label: "СПА" },
+  { value: "other", label: "Иное" },
+];
+
 interface CashData {
   currentShift: CashShift | null;
   transactions: CashTransaction[];
@@ -245,9 +256,11 @@ export default function CashPage() {
                               </div>
                               <div>
                                 <p className="font-medium text-sm">
-                                  {tx.type === "cash_in" ? "Приход" : 
-                                   tx.type === "expense" ? EXPENSE_CATEGORIES.find(c => c.value === tx.category)?.label || "Расход" : 
-                                   "Инкассация"}
+                                  {tx.type === "cash_in" 
+                                    ? INCOME_SOURCES.find(s => s.value === tx.category)?.label || "Приход"
+                                    : tx.type === "expense" 
+                                    ? EXPENSE_CATEGORIES.find(c => c.value === tx.category)?.label || "Расход" 
+                                    : "Инкассация"}
                                 </p>
                                 {tx.comment && (
                                   <p className="text-xs text-muted-foreground truncate max-w-[180px]">
@@ -361,6 +374,33 @@ export default function CashPage() {
                   </FormItem>
                 )}
               />
+
+              {transactionType === "cash_in" && (
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Источник</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-income-source">
+                            <SelectValue placeholder="Выберите за что" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {INCOME_SOURCES.map((src) => (
+                            <SelectItem key={src.value} value={src.value}>
+                              {src.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {transactionType === "expense" && (
                 <FormField
