@@ -24,6 +24,7 @@ import InstructorMaintenancePage from "@/pages/instructor/maintenance";
 import OwnerAnalyticsPage from "@/pages/owner/analytics";
 import OwnerCashPage from "@/pages/owner/cash";
 import OwnerSettingsPage from "@/pages/owner/settings";
+import OwnerStaffPage from "@/pages/owner/staff";
 import StaffManagementPage from "@/pages/admin/staff";
 import ClaimRolePage from "@/pages/claim-role";
 import NotFound from "@/pages/not-found";
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/owner/analytics" component={OwnerAnalyticsPage} />
       <Route path="/owner/cash" component={OwnerCashPage} />
       <Route path="/owner/settings" component={OwnerSettingsPage} />
+      <Route path="/owner/staff" component={OwnerStaffPage} />
       
       <Route path="/admin/staff" component={StaffManagementPage} />
       

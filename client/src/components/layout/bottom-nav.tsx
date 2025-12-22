@@ -9,7 +9,8 @@ import {
   Bath,
   Settings,
   DollarSign,
-  Wrench
+  Wrench,
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -43,6 +44,7 @@ const instructorNavItems: NavItem[] = [
 const ownerNavItems: NavItem[] = [
   { path: "/owner/cash", label: "Инкасация", icon: Wallet },
   { path: "/owner/analytics", label: "Аналитика", icon: BarChart3 },
+  { path: "/owner/staff", label: "Персонал", icon: Users },
   { path: "/owner/settings", label: "Настройки", icon: Settings },
 ];
 

@@ -78,10 +78,15 @@ export async function registerRoutes(
         const fullName = [telegramUser.first_name, telegramUser.last_name]
           .filter(Boolean).join(" ");
         
-        // Check for staff invitation by phone number (storage normalizes internally)
+        // Check for staff authorization by Telegram ID first (new system)
         let assignedRole: UserRole = "GUEST";
         let invitation = null;
-        if (phone) {
+        const staffAuth = await storage.getStaffAuthorizationByTelegramId(telegramIdStr);
+        if (staffAuth) {
+          assignedRole = staffAuth.role;
+          console.log(`[Auth] Found staff authorization for Telegram ID ${telegramIdStr}, assigning role: ${assignedRole}`);
+        } else if (phone) {
+          // Fall back to phone-based invitation (legacy system)
           invitation = await storage.getStaffInvitationByPhone(phone);
           if (invitation) {
             assignedRole = invitation.role;
@@ -97,8 +102,12 @@ export async function registerRoutes(
           isActive: true,
         });
         
-        // Mark invitation as used
-        if (invitation) {
+        // Mark authorization/invitation as used after user creation
+        if (staffAuth) {
+          // Deactivate Telegram ID authorization to prevent repeated use
+          await storage.updateStaffAuthorization(staffAuth.id, { isActive: false });
+          console.log(`[Auth] Staff authorization ${staffAuth.id} deactivated after user creation`);
+        } else if (invitation) {
           await storage.useStaffInvitation(invitation.id, user.id);
           console.log(`[Auth] Staff invitation ${invitation.id} marked as used by user ${user.id}`);
         }
@@ -109,14 +118,24 @@ export async function registerRoutes(
         // Pass undefined to preserve existing phone (not null which clears it)
         const phoneToUpdate = phone && phone.trim() ? phone : undefined;
         
-        // Check for staff invitation for existing GUEST users
+        // Check for staff authorization/invitation for existing GUEST users
         let upgradedRole = user.role;
-        if (user.role === "GUEST" && phone) {
-          const invitation = await storage.getStaffInvitationByPhone(phone);
-          if (invitation) {
-            upgradedRole = invitation.role;
-            await storage.useStaffInvitation(invitation.id, user.id);
-            console.log(`[Auth] Upgraded existing GUEST ${user.id} to ${upgradedRole} via invitation for phone ${phone}`);
+        if (user.role === "GUEST") {
+          // First check Telegram ID-based authorization (new system)
+          const staffAuth = await storage.getStaffAuthorizationByTelegramId(telegramIdStr);
+          if (staffAuth) {
+            upgradedRole = staffAuth.role;
+            // Deactivate the authorization after use to prevent repeated privilege escalation
+            await storage.updateStaffAuthorization(staffAuth.id, { isActive: false });
+            console.log(`[Auth] Upgraded existing GUEST ${user.id} to ${upgradedRole} via Telegram authorization (authorization deactivated)`);
+          } else if (phone) {
+            // Fall back to phone-based invitation (legacy system)
+            const invitation = await storage.getStaffInvitationByPhone(phone);
+            if (invitation) {
+              upgradedRole = invitation.role;
+              await storage.useStaffInvitation(invitation.id, user.id);
+              console.log(`[Auth] Upgraded existing GUEST ${user.id} to ${upgradedRole} via invitation for phone ${phone}`);
+            }
           }
         }
         
@@ -310,6 +329,93 @@ export async function registerRoutes(
       res.json({ ok: true });
     } catch (error) {
       res.status(500).json({ error: "Ошибка удаления приглашения" });
+    }
+  });
+
+  // ============ STAFF AUTHORIZATIONS (Telegram ID-based) ============
+  app.get("/api/admin/authorizations", authMiddleware, requireRole("SUPER_ADMIN", "OWNER"), async (req, res) => {
+    try {
+      const authorizations = await storage.getStaffAuthorizations();
+      res.json(authorizations);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка получения авторизаций" });
+    }
+  });
+  
+  app.post("/api/admin/authorizations", authMiddleware, requireRole("SUPER_ADMIN", "OWNER"), async (req, res) => {
+    try {
+      const { telegramId, role, note } = req.body;
+      const currentUser = (req as any).user;
+      
+      if (!telegramId || !role) {
+        return res.status(400).json({ error: "Укажите Telegram ID и роль" });
+      }
+      
+      const validRoles = ["OWNER", "ADMIN", "INSTRUCTOR"];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: "Недопустимая роль" });
+      }
+      
+      // Check if authorization for this Telegram ID already exists
+      const existing = await storage.getStaffAuthorizationByTelegramId(telegramId);
+      if (existing) {
+        return res.status(400).json({ error: "Авторизация для этого Telegram ID уже существует" });
+      }
+      
+      const authorization = await storage.createStaffAuthorization({
+        telegramId,
+        role: role as UserRole,
+        note,
+        assignedBy: currentUser.id,
+        isActive: true,
+      });
+      
+      console.log(`[Admin] Staff authorization created for Telegram ID ${telegramId} with role ${role} by ${currentUser.name}`);
+      res.json(authorization);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка создания авторизации" });
+    }
+  });
+
+  app.patch("/api/admin/authorizations/:id", authMiddleware, requireRole("SUPER_ADMIN", "OWNER"), async (req, res) => {
+    try {
+      const { role, note, isActive } = req.body;
+      const updates: Partial<{ role: UserRole; note: string; isActive: boolean }> = {};
+      
+      if (role !== undefined) {
+        const validRoles = ["OWNER", "ADMIN", "INSTRUCTOR"];
+        if (!validRoles.includes(role)) {
+          return res.status(400).json({ error: "Недопустимая роль" });
+        }
+        updates.role = role as UserRole;
+      }
+      if (note !== undefined) updates.note = note;
+      if (isActive !== undefined) updates.isActive = isActive;
+      
+      // Only update if there are actual changes
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "Нет данных для обновления" });
+      }
+      
+      const updated = await storage.updateStaffAuthorization(req.params.id, updates);
+      if (!updated) {
+        return res.status(404).json({ error: "Авторизация не найдена" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка обновления авторизации" });
+    }
+  });
+  
+  app.delete("/api/admin/authorizations/:id", authMiddleware, requireRole("SUPER_ADMIN", "OWNER"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteStaffAuthorization(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Авторизация не найдена" });
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка удаления авторизации" });
     }
   });
   

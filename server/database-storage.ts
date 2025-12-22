@@ -35,13 +35,14 @@ import type {
   QuadMaintenanceEvent, InsertQuadMaintenanceEvent,
   QuadMaintenanceStatus,
   StaffInvitation, InsertStaffInvitation,
+  StaffAuthorization, InsertStaffAuthorization,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
   cottageBookingsTable, bathBookingsTable, spaBookingsTable, quadBookingsTable,
   tasksTable, cashShiftsTable, cashTransactionsTable, incasationsTable,
   workLogsTable, quadPricingTable, instructorBlockedTimesTable, instructorExpensesTable,
-  authSessionsTable, staffInvitationsTable, quadMachinesTable, quadMileageLogsTable,
+  authSessionsTable, staffInvitationsTable, staffAuthorizationsTable, quadMachinesTable, quadMileageLogsTable,
   quadMaintenanceRulesTable, quadMaintenanceEventsTable, siteSettingsTable,
   blockedDatesTable, reviewsTable,
 } from "@shared/schema";
@@ -1998,6 +1999,88 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStaffInvitation(id: string): Promise<boolean> {
     await db.delete(staffInvitationsTable).where(eq(staffInvitationsTable.id, id));
+    return true;
+  }
+
+  // ============ STAFF AUTHORIZATIONS ============
+  async getStaffAuthorizations(): Promise<StaffAuthorization[]> {
+    const rows = await db.select().from(staffAuthorizationsTable).orderBy(desc(staffAuthorizationsTable.createdAt));
+    return rows.map(r => ({
+      id: r.id,
+      telegramId: r.telegramId,
+      role: r.role as UserRole,
+      note: r.note || undefined,
+      assignedBy: r.assignedBy,
+      isActive: r.isActive,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  async getStaffAuthorizationByTelegramId(telegramId: string): Promise<StaffAuthorization | undefined> {
+    const rows = await db.select().from(staffAuthorizationsTable)
+      .where(and(eq(staffAuthorizationsTable.telegramId, telegramId), eq(staffAuthorizationsTable.isActive, true)));
+    if (!rows[0]) return undefined;
+    return {
+      id: rows[0].id,
+      telegramId: rows[0].telegramId,
+      role: rows[0].role as UserRole,
+      note: rows[0].note || undefined,
+      assignedBy: rows[0].assignedBy,
+      isActive: rows[0].isActive,
+      createdAt: rows[0].createdAt,
+    };
+  }
+
+  async createStaffAuthorization(auth: InsertStaffAuthorization): Promise<StaffAuthorization> {
+    const id = randomUUID();
+    const createdAt = new Date().toISOString();
+    const staffAuth: StaffAuthorization = {
+      id,
+      telegramId: auth.telegramId,
+      role: auth.role,
+      note: auth.note,
+      assignedBy: auth.assignedBy,
+      isActive: auth.isActive ?? true,
+      createdAt,
+    };
+    await db.insert(staffAuthorizationsTable).values({
+      id: staffAuth.id,
+      telegramId: staffAuth.telegramId,
+      role: staffAuth.role,
+      note: staffAuth.note || null,
+      assignedBy: staffAuth.assignedBy,
+      isActive: staffAuth.isActive,
+      createdAt: staffAuth.createdAt,
+    });
+    return staffAuth;
+  }
+
+  async updateStaffAuthorization(id: string, updates: Partial<StaffAuthorization>): Promise<StaffAuthorization | undefined> {
+    // Only include fields that are actually provided (filter out undefined)
+    const setValues: Record<string, any> = {};
+    if (updates.role !== undefined) setValues.role = updates.role;
+    if (updates.note !== undefined) setValues.note = updates.note;
+    if (updates.isActive !== undefined) setValues.isActive = updates.isActive;
+    
+    if (Object.keys(setValues).length > 0) {
+      await db.update(staffAuthorizationsTable).set(setValues).where(eq(staffAuthorizationsTable.id, id));
+    }
+    
+    const rows = await db.select().from(staffAuthorizationsTable).where(eq(staffAuthorizationsTable.id, id));
+    if (!rows[0]) return undefined;
+    return {
+      id: rows[0].id,
+      telegramId: rows[0].telegramId,
+      role: rows[0].role as UserRole,
+      note: rows[0].note || undefined,
+      assignedBy: rows[0].assignedBy,
+      isActive: rows[0].isActive,
+      createdAt: rows[0].createdAt,
+    };
+  }
+
+  async deleteStaffAuthorization(id: string): Promise<boolean> {
+    await db.delete(staffAuthorizationsTable).where(eq(staffAuthorizationsTable.id, id));
     return true;
   }
 }

@@ -32,6 +32,7 @@ import type {
   QuadMaintenanceEvent, InsertQuadMaintenanceEvent,
   QuadMaintenanceStatus,
   StaffInvitation, InsertStaffInvitation,
+  StaffAuthorization, InsertStaffAuthorization,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -202,6 +203,13 @@ export interface IStorage {
   createStaffInvitation(invitation: InsertStaffInvitation): Promise<StaffInvitation>;
   useStaffInvitation(id: string, userId: string): Promise<StaffInvitation | undefined>;
   deleteStaffInvitation(id: string): Promise<boolean>;
+  
+  // Staff Authorizations (Telegram ID-based role pre-assignment)
+  getStaffAuthorizations(): Promise<StaffAuthorization[]>;
+  getStaffAuthorizationByTelegramId(telegramId: string): Promise<StaffAuthorization | undefined>;
+  createStaffAuthorization(auth: InsertStaffAuthorization): Promise<StaffAuthorization>;
+  updateStaffAuthorization(id: string, updates: Partial<StaffAuthorization>): Promise<StaffAuthorization | undefined>;
+  deleteStaffAuthorization(id: string): Promise<boolean>;
 }
 
 const PRICES: Record<string, number> = {
@@ -249,6 +257,7 @@ export class MemStorage implements IStorage {
   private quadMaintenanceRules: Map<string, QuadMaintenanceRule> = new Map();
   private quadMaintenanceEvents: Map<string, QuadMaintenanceEvent> = new Map();
   private staffInvitations: Map<string, StaffInvitation> = new Map();
+  private staffAuthorizations: Map<string, StaffAuthorization> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -1619,6 +1628,44 @@ export class MemStorage implements IStorage {
 
   async deleteStaffInvitation(id: string): Promise<boolean> {
     return this.staffInvitations.delete(id);
+  }
+
+  // ============ STAFF AUTHORIZATIONS ============
+  async getStaffAuthorizations(): Promise<StaffAuthorization[]> {
+    return Array.from(this.staffAuthorizations.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getStaffAuthorizationByTelegramId(telegramId: string): Promise<StaffAuthorization | undefined> {
+    return Array.from(this.staffAuthorizations.values())
+      .find(a => a.telegramId === telegramId && a.isActive);
+  }
+
+  async createStaffAuthorization(auth: InsertStaffAuthorization): Promise<StaffAuthorization> {
+    const id = randomUUID();
+    const newAuth: StaffAuthorization = {
+      id,
+      telegramId: auth.telegramId,
+      role: auth.role,
+      note: auth.note,
+      assignedBy: auth.assignedBy,
+      isActive: auth.isActive ?? true,
+      createdAt: new Date().toISOString(),
+    };
+    this.staffAuthorizations.set(id, newAuth);
+    return newAuth;
+  }
+
+  async updateStaffAuthorization(id: string, updates: Partial<StaffAuthorization>): Promise<StaffAuthorization | undefined> {
+    const auth = this.staffAuthorizations.get(id);
+    if (!auth) return undefined;
+    const updated = { ...auth, ...updates };
+    this.staffAuthorizations.set(id, updated);
+    return updated;
+  }
+
+  async deleteStaffAuthorization(id: string): Promise<boolean> {
+    return this.staffAuthorizations.delete(id);
   }
 }
 

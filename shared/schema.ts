@@ -759,6 +759,23 @@ export type StaffInvitation = z.infer<typeof staffInvitationSchema>;
 export const insertStaffInvitationSchema = staffInvitationSchema.omit({ id: true, usedBy: true, usedAt: true, createdAt: true });
 export type InsertStaffInvitation = z.infer<typeof insertStaffInvitationSchema>;
 
+// ============ STAFF AUTHORIZATION (Telegram ID-based role assignment) ============
+export const staffAuthorizationSchema = z.object({
+  id: z.string(),
+  telegramId: z.string(), // Telegram user ID
+  role: UserRole, // Role to assign
+  note: z.string().optional(), // Admin note about who this is
+  assignedBy: z.string(), // User ID who assigned
+  isActive: z.boolean().default(true),
+  createdAt: z.string(),
+});
+export type StaffAuthorization = z.infer<typeof staffAuthorizationSchema>;
+
+export const insertStaffAuthorizationSchema = staffAuthorizationSchema.omit({ id: true, createdAt: true }).extend({
+  isActive: z.boolean().optional().default(true),
+});
+export type InsertStaffAuthorization = z.infer<typeof insertStaffAuthorizationSchema>;
+
 // ============================================================================
 // DRIZZLE POSTGRESQL TABLES
 // These table definitions are used for database persistence with Drizzle ORM
@@ -987,6 +1004,17 @@ export const staffInvitationsTable = pgTable("staff_invitations", {
   createdBy: text("created_by").notNull(),
   usedBy: text("used_by"),
   usedAt: text("used_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ STAFF AUTHORIZATIONS TABLE ============
+export const staffAuthorizationsTable = pgTable("staff_authorizations", {
+  id: text("id").primaryKey(),
+  telegramId: text("telegram_id").notNull().unique(),
+  role: text("role").notNull(),
+  note: text("note"),
+  assignedBy: text("assigned_by").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: text("created_at").notNull(),
 });
 

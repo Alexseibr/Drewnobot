@@ -93,6 +93,17 @@ Five user roles with hierarchical permissions:
 - Staff menu: Role-based buttons (panel, bookings, cash, tasks, analytics)
 - Auto-detection of user role from database
 
+### Staff Authorization System
+- **Telegram ID-based authorizations**: Owner can pre-assign roles using Telegram user IDs
+  - Staff authorizations table: `staff_authorizations` with telegramId, role, note, isActive
+  - API: `/api/admin/authorizations` (GET, POST, PATCH, DELETE)
+  - UI: `/owner/staff` for managing authorizations
+- **Phone-based invitations (legacy)**: Still supported as fallback
+  - Staff invitations table: `staff_invitations` with phone, role, note
+  - API: `/api/admin/invitations` (GET, POST, DELETE)
+- **Auth flow priority**: Telegram ID authorization checked first, then phone invitation
+- **Role upgrade**: Existing GUEST users automatically upgrade when matching authorization found
+
 ### UI Framework Dependencies
 - Radix UI primitives for accessible components
 - Tailwind CSS for styling
