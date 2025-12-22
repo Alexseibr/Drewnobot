@@ -1,0 +1,60 @@
+root@server-srekbm:/var/www/drewno# # Удалить текущий процесс
+root@server-srekbm:/var/www/drewno# pm2 delete drewno-ops
+[PM2] Applying action deleteProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno#
+root@server-srekbm:/var/www/drewno# # Переименовать конфиг
+root@server-srekbm:/var/www/drewno# mv /var/www/drewno/ecosystem.config.js /var/www/drewno/ecosystem.config.cjs
+root@server-srekbm:/var/www/drewno#
+root@server-srekbm:/var/www/drewno# # Запустить
+root@server-srekbm:/var/www/drewno# pm2 start /var/www/drewno/ecosystem.config.cjs
+[PM2][WARN] Applications drewno-ops not running, starting...
+[PM2] App [drewno-ops] launched (1 instances)
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 18.6mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno# pm2 save
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+root@server-srekbm:/var/www/drewno#
+root@server-srekbm:/var/www/drewno# # Проверить логи
+root@server-srekbm:/var/www/drewno# pm2 logs drewno-ops --lines 15
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |            
+0|drewno-o |
+0|drewno-o | Error: DATABASE_URL must be set. Did you forget to provision a database?
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:124568
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:124872
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:160760
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at Object.<anonymous> (/var/www/drewno/dist/index.cjs:108:1428)
+0|drewno-o |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+0|drewno-o |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+0|drewno-o |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+0|drewno-o |
+0|drewno-o | Node.js v20.19.6
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o | 8:00:26 AM [express] serving on port 3000
+0|drewno-o | [Telegram Bot] Setting up webhook for production: https://d.drewno.by
+0|drewno-o | [Telegram Bot] Webhook set successfully
+0|drewno-o | [Telegram Bot] Notifications scheduled
+0|drewno-o | 8:00:27 AM [scheduler] Scheduler initialized:
+0|drewno-o | 8:00:27 AM [scheduler]   - Shift auto-closure: 23:00 daily
+0|drewno-o | 8:00:27 AM [scheduler]   - Daily tasks: 06:00 daily
+0|drewno-o | 8:00:27 AM [scheduler]   - Weekly tasks: 06:00 Monday
+0|drewno-o | 8:00:27 AM [scheduler]   - Monthly tasks: 06:00 1st of month
+0|drewno-o | 8:00:27 AM [scheduler] Checked for missed shift closures on startup
