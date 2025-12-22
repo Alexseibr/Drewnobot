@@ -35,21 +35,19 @@ import type { WorkLog } from "@shared/schema";
 
 const WORK_TYPES = [
   { value: "cleaning", label: "Уборка" },
-  { value: "maintenance", label: "Обслуживание" },
-  { value: "reception", label: "Ресепшн" },
-  { value: "kitchen", label: "Кухня" },
-  { value: "landscaping", label: "Благоустройство" },
-  { value: "security", label: "Охрана" },
+  { value: "bath_heating", label: "Растопка бани/купели" },
+  { value: "territory", label: "Территория уборка" },
+  { value: "fields", label: "На полях" },
+  { value: "school_tent", label: "В школе/шатре" },
   { value: "other", label: "Другое" },
 ];
 
 const workTypeLabels: Record<string, string> = {
   cleaning: "Уборка",
-  maintenance: "Обслуживание",
-  reception: "Ресепшн",
-  kitchen: "Кухня",
-  landscaping: "Благоустройство",
-  security: "Охрана",
+  bath_heating: "Растопка бани/купели",
+  territory: "Территория уборка",
+  fields: "На полях",
+  school_tent: "В школе/шатре",
   other: "Другое",
 };
 
