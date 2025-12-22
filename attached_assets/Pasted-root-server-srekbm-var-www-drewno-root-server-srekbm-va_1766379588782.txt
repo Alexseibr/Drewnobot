@@ -1,0 +1,82 @@
+root@server-srekbm:/var/www/drewno# # Остановить текущий процесс
+root@server-srekbm:/var/www/drewno# pm2 delete drewno-ops
+[PM2] Applying action deleteProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno#
+root@server-srekbm:/var/www/drewno# # Запустить с переменными окружения из .env файла
+root@server-srekbm:/var/www/drewno# cd /var/www/drewno
+root@server-srekbm:/var/www/drewno# pm2 start npm --name drewno-ops -- run start --env-file .env
+[PM2] Starting /usr/bin/npm in fork_mode (1 instance)
+[PM2] Done.
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 25.9mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno# cat > /var/www/drewno/ecosystem.config.js << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'drewno-ops',
+    script: 'npm',
+    args: 'run start',
+    cwd: '/var/www/drewno',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000,
+      DATABASE_URL: 'postgresql://drewno:39903990aSs$@localhost:5432/drewno',
+      SESSION_SECRET: 'e63275d3d707f9501ad1e9d347968781d54b43ff5f7e1f66cb8baf4d50290252',
+      TELEGRAM_BOT_TOKEN: '7409502547:AAEIpGl2VdyNmC92q7NLrMDhSqMZiQqNCPA',
+      WEBAPP_URL: 'https://d.drewno.by'
+    }
+  }]
+};
+EOF
+
+# Запустить через конфиг
+pm2 start ecosystem.config.js
+pm2 save
+
+# Проверить логи
+pm2 logs drewno-ops --lines 10
+[PM2][ERROR] File ecosystem.config.js malformated
+ReferenceError: module is not defined in ES module scope
+This file is being treated as an ES module because it has a '.js' file extension and '/var/www/drewno/package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
+    at file:///var/www/drewno/ecosystem.config.js:1:1
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:437:37)
+    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:389:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1363:24)
+    at Module._compile (node:internal/modules/cjs/loader:1503:5)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | > NODE_ENV=production node dist/index.cjs .env
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs .env
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs .env
+0|drewno-o |
+
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:124872
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:160760
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at Object.<anonymous> (/var/www/drewno/dist/index.cjs:108:1428)
+0|drewno-o |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+0|drewno-o |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+0|drewno-o |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+0|drewno-o |
+0|drewno-o | Node.js v20.19.6
