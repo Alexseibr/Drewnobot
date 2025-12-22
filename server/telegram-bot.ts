@@ -137,6 +137,30 @@ function getStaffKeyboard(role: string) {
     ]);
     keyboard.push([
       {
+        text: "Расписание",
+        web_app: { url: `${webAppUrl}/instructor/schedule` }
+      }
+    ]);
+    keyboard.push([
+      {
+        text: "Цены на квадроциклы",
+        web_app: { url: `${webAppUrl}/instructor/pricing` }
+      }
+    ]);
+    keyboard.push([
+      {
+        text: "Сервисная книга",
+        web_app: { url: `${webAppUrl}/instructor/maintenance` }
+      }
+    ]);
+    keyboard.push([
+      {
+        text: "Финансы",
+        web_app: { url: `${webAppUrl}/instructor/finances` }
+      }
+    ]);
+    keyboard.push([
+      {
         text: "Управление инструкторами",
         web_app: { url: `${webAppUrl}/instructor/manage` }
       }
