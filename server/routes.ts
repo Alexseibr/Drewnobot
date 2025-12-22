@@ -108,9 +108,22 @@ export async function registerRoutes(
         // Only update phone if a new valid phone is provided
         // Pass undefined to preserve existing phone (not null which clears it)
         const phoneToUpdate = phone && phone.trim() ? phone : undefined;
+        
+        // Check for staff invitation for existing GUEST users
+        let upgradedRole = user.role;
+        if (user.role === "GUEST" && phone) {
+          const invitation = await storage.getStaffInvitationByPhone(phone);
+          if (invitation) {
+            upgradedRole = invitation.role;
+            await storage.useStaffInvitation(invitation.id, user.id);
+            console.log(`[Auth] Upgraded existing GUEST ${user.id} to ${upgradedRole} via invitation for phone ${phone}`);
+          }
+        }
+        
         user = await storage.updateUser(user.id, {
           name: fullName || user.name,
           ...(phoneToUpdate ? { phone: phoneToUpdate } : {}),
+          ...(upgradedRole !== user.role ? { role: upgradedRole } : {}),
         }) || user;
       }
       
