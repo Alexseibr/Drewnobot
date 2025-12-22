@@ -1,0 +1,47 @@
+root@server-srekbm:/var/www/drewno# # Создать конфиг nginx
+root@server-srekbm:/var/www/drewno# sudo nano /etc/nginx/sites-available/drewno
+root@server-srekbm:/var/www/drewno# # Активировать конфиг
+sudo ln -s /etc/nginx/sites-available/drewno /etc/nginx/sites-enabled/
+
+# Проверить конфигурацию
+sudo nginx -t
+
+# Перезагрузить nginx
+sudo systemctl reload nginx
+
+# Установить certbot для SSL
+sudo apt install -y certbot python3-certbot-nginx
+
+# Получить SSL сертификат
+sudo certbot --nginx -d d.drewno.by
+nginx: [warn] conflicting server name "d.drewno.by" on 0.0.0.0:80, ignored
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+certbot is already the newest version (1.21.0-1build1).
+python3-certbot-nginx is already the newest version (1.21.0-1).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Certificate not yet due for renewal
+
+You have an existing certificate that has exactly the same domains or certificate name you requested and isn't close to expiry.
+(ref: /etc/letsencrypt/renewal/d.drewno.by.conf)
+
+What would you like to do?
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+1: Attempt to reinstall this existing certificate
+2: Renew & replace the certificate (may be subject to CA rate limits)
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Select the appropriate number [1-2] then [enter] (press 'c' to cancel): 1
+Deploying certificate
+Successfully deployed certificate for d.drewno.by to /etc/nginx/sites-enabled/d.drewno.by
+Congratulations! You have successfully enabled HTTPS on https://d.drewno.by
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+If you like Certbot, please consider supporting our work by:
+ * Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+ * Donating to EFF:                    https://eff.org/donate-le
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+root@server-srekbm:/var/www/drewno#
