@@ -1,0 +1,107 @@
+root@server-srekbm:/var/www/drewno-ops# pm2 show drewno-ops | grep -A5 "environment"
+ Use `pm2 env 0` to display environment variables
+ Use `pm2 monit` to monitor CPU and Memory usage drewno-ops
+root@server-srekbm:/var/www/drewno-ops# pm2 show drewno-ops | grep "cwd"
+│ exec cwd          │ /var/www/drewno                      │
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+pm2 delete drewno-ops
+DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno" pm2 start npm --name "drewno-ops" -- run start
+pm2 save
+[PM2] Applying action deleteProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Starting /usr/bin/npm in fork_mode (1 instance)
+[PM2] Done.
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 18.6mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+root@server-srekbm:/var/www/drewno-ops# psql "postgresql://drewno:39903990aSs\$@localhost:5432/drewno" -c "UPDATE users SET role = 'SUPER_ADMIN' WHERE telegram_id = '374243315'; UPDATE users SET role = 'INSTRUCTOR' WHERE telegram_id = '425182418';"
+UPDATE 1
+root@server-srekbm:/var/www/drewno-ops# # 1. Подтянуть последние изменения из GitHub
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+remote: Enumerating objects: 6, done.
+remote: Counting objects: 100% (6/6), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 4 (delta 2), reused 4 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 4.06 KiB | 2.03 MiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   75259b6..2be6d45  main       -> origin/main
+Updating 75259b6..2be6d45
+Fast-forward
+ ...9-2025-from-92-118-112-185_1766392250198.txt | 27 +++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+ create mode 100644 attached_assets/Pasted-Last-login-Mon-Dec-22-11-24-59-2025-from-92-118-112-185_1766392250198.txt
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # 2. Установить зависимости (еслибыли изменения в package.json)
+root@server-srekbm:/var/www/drewno-ops# npm install
+
+up to date, audited 481 packages in 2s
+
+67 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # 3. Собрать проект для productionroot@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 2587 modules transformed.
+../dist/public/index.html                          1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp  328.56 kB
+../dist/public/assets/index-C7P754A5.css          77.93 kB │ gzip:  12.69kB
+../dist/public/assets/index-DNN6jRGh.js          749.39 kB │ gzip: 204.41kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 14.07s
+building server...
+
+  dist/index.cjs  1.2mb ⚠️
+
+⚡ Done in 409ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # 4. Перезапустить через PM2
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 1    │ online    │ 0%       │ 26.0mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+pm2 delete drewno-ops
+export DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno"
+pm2 start npm --name "drewno-ops" -- run start
+pm2 save
+[PM2] Applying action deleteProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Starting /usr/bin/npm in fork_mode (1 instance)
+[PM2] Done.
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 25.9mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+root@server-srekbm:/var/www/drewno-ops#
