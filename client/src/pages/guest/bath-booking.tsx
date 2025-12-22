@@ -251,7 +251,11 @@ export default function BathBookingPage() {
                               mode="single"
                               selected={field.value}
                               onSelect={field.onChange}
-                              disabled={(date) => isBefore(date, startOfDay(new Date())) || date > addDays(new Date(), 60)}
+                              disabled={(date) => {
+                                const today = startOfDay(new Date());
+                                const dateStart = startOfDay(date);
+                                return dateStart.getTime() < today.getTime() || date > addDays(new Date(), 60);
+                              }}
                               locale={ru}
                               initialFocus
                             />
