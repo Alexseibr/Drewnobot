@@ -15,6 +15,7 @@ import {
   DollarSign,
   AlertTriangle
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
@@ -73,6 +74,9 @@ export default function CashPage() {
   const [showTransactionDialog, setShowTransactionDialog] = useState(false);
   const [transactionType, setTransactionType] = useState<"cash_in" | "expense">("cash_in");
   const { toast } = useToast();
+  const { hasRole } = useAuth();
+  
+  const canIncasate = hasRole("OWNER", "SUPER_ADMIN");
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionFormSchema),
@@ -300,40 +304,42 @@ export default function CashPage() {
 
               <Separator />
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-destructive text-destructive hover:bg-destructive/10"
-                    data-testid="button-incasation"
-                  >
-                    <LockKeyhole className="mr-2 h-4 w-4" />
-                    Закрыть смену (Инкассация)
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                      Закрыть смену?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Текущий баланс смены составляет <strong>{balance.toFixed(2)} BYN</strong>.
-                      После закрытия вы не сможете просматривать транзакции этой смены.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Отмена</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => incasationMutation.mutate()}
-                      disabled={incasationMutation.isPending}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              {canIncasate && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-destructive text-destructive"
+                      data-testid="button-incasation"
                     >
-                      {incasationMutation.isPending ? "Закрытие..." : "Закрыть смену"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      <LockKeyhole className="mr-2 h-4 w-4" />
+                      Закрыть смену (Инкассация)
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        Закрыть смену?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Текущий баланс смены составляет <strong>{balance.toFixed(2)} BYN</strong>.
+                        После закрытия вы не сможете просматривать транзакции этой смены.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Отмена</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => incasationMutation.mutate()}
+                        disabled={incasationMutation.isPending}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {incasationMutation.isPending ? "Закрытие..." : "Закрыть смену"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </>
           )}
         </div>

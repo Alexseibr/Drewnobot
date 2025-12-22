@@ -822,8 +822,9 @@ export class DatabaseStorage implements IStorage {
     return rows.map(r => this.mapRowToCashShift(r));
   }
 
-  async getCurrentShift(): Promise<CashShift | undefined> {
-    const rows = await db.select().from(cashShiftsTable).where(eq(cashShiftsTable.isOpen, true));
+  async getCurrentShift(cashBox: "main" | "quads" = "main"): Promise<CashShift | undefined> {
+    const rows = await db.select().from(cashShiftsTable)
+      .where(and(eq(cashShiftsTable.isOpen, true), eq(cashShiftsTable.cashBox, cashBox)));
     return rows[0] ? this.mapRowToCashShift(rows[0]) : undefined;
   }
 
@@ -832,7 +833,7 @@ export class DatabaseStorage implements IStorage {
     return rows[0] ? this.mapRowToCashShift(rows[0]) : undefined;
   }
 
-  async createCashShift(shift: InsertCashShift): Promise<CashShift> {
+  async createCashShift(shift: InsertCashShift, cashBox: "main" | "quads" = "main"): Promise<CashShift> {
     const id = randomUUID();
     const now = new Date().toISOString();
     const newShift: CashShift = {
@@ -842,6 +843,7 @@ export class DatabaseStorage implements IStorage {
       openedBy: shift.openedBy,
       isOpen: true,
       visibleToAdmin: true,
+      cashBox,
     };
     await db.insert(cashShiftsTable).values({
       id: newShift.id,
@@ -850,6 +852,7 @@ export class DatabaseStorage implements IStorage {
       openedBy: newShift.openedBy,
       isOpen: newShift.isOpen,
       visibleToAdmin: newShift.visibleToAdmin,
+      cashBox: newShift.cashBox,
     });
     return newShift;
   }
@@ -877,6 +880,7 @@ export class DatabaseStorage implements IStorage {
       openedBy: row.openedBy,
       isOpen: row.isOpen,
       visibleToAdmin: row.visibleToAdmin,
+      cashBox: row.cashBox || "main",
     };
   }
 

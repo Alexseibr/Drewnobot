@@ -1367,7 +1367,8 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/cash/shift/incasation", async (req, res) => {
+  // Incasation - only OWNER/SUPER_ADMIN can close shifts
+  app.post("/api/cash/shift/incasation", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const currentShift = await storage.getCurrentShift();
       if (!currentShift) {
@@ -1381,13 +1382,14 @@ export async function registerRoutes(
         return sum;
       }, 0);
       
+      const user = (req as any).user;
       if (balance > 0) {
         await storage.createCashTransaction({
           shiftId: currentShift.id,
           type: "cash_out",
           amount: balance,
-          comment: "Incasation",
-          createdBy: "admin",
+          comment: "Инкассация",
+          createdBy: user?.id || "owner",
         });
       }
       
@@ -2075,6 +2077,121 @@ export async function registerRoutes(
       res.json({ ok: true });
     } catch (error) {
       res.status(500).json({ error: "Не удалось удалить цену" });
+    }
+  });
+
+  // ============ INSTRUCTOR QUAD CASH REGISTER ============
+  // Get current quad shift
+  app.get("/api/instructor/cash/shift/current", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
+    try {
+      const currentShift = await storage.getCurrentShift("quads");
+      if (!currentShift) {
+        return res.json({ currentShift: null, transactions: [], balance: 0 });
+      }
+      
+      const transactions = await storage.getCashTransactions(currentShift.id);
+      const balance = transactions.reduce((sum, tx) => {
+        if (tx.type === "cash_in") return sum + tx.amount;
+        if (tx.type === "expense" || tx.type === "cash_out") return sum - tx.amount;
+        return sum;
+      }, 0);
+      
+      res.json({ currentShift, transactions, balance });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch quad shift" });
+    }
+  });
+
+  // Open quad shift
+  app.post("/api/instructor/cash/shift/open", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
+    try {
+      const existingShift = await storage.getCurrentShift("quads");
+      if (existingShift) {
+        return res.status(400).json({ error: "Смена квадроциклов уже открыта" });
+      }
+      
+      const user = (req as any).user;
+      const shift = await storage.createCashShift({
+        openedBy: user?.id || "instructor",
+      }, "quads");
+      res.json(shift);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to open quad shift" });
+    }
+  });
+
+  // Add transaction to quad cash
+  app.post("/api/instructor/cash/transactions", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
+    try {
+      const currentShift = await storage.getCurrentShift("quads");
+      if (!currentShift) {
+        return res.status(400).json({ error: "Нет открытой смены квадроциклов" });
+      }
+      
+      const { type, amount, category, comment, incomeSource } = req.body;
+      
+      if (!type || !["cash_in", "expense"].includes(type)) {
+        return res.status(400).json({ error: "Некорректный тип транзакции" });
+      }
+      
+      if (typeof amount !== "number" || amount <= 0) {
+        return res.status(400).json({ error: "Некорректная сумма" });
+      }
+      
+      const user = (req as any).user;
+      const tx = await storage.createCashTransaction({
+        shiftId: currentShift.id,
+        type,
+        amount,
+        category: category || null,
+        comment: comment || null,
+        incomeSource: incomeSource || null,
+        createdBy: user?.id || "instructor",
+        cashBox: "quads",
+      });
+      res.json(tx);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create transaction" });
+    }
+  });
+
+  // Incasation for quad cash - only INSTRUCTOR can do this
+  app.post("/api/instructor/cash/shift/incasation", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
+    try {
+      const currentShift = await storage.getCurrentShift("quads");
+      if (!currentShift) {
+        return res.status(400).json({ error: "Нет открытой смены квадроциклов" });
+      }
+      
+      const transactions = await storage.getCashTransactions(currentShift.id);
+      const balance = transactions.reduce((sum, tx) => {
+        if (tx.type === "cash_in") return sum + tx.amount;
+        if (tx.type === "expense" || tx.type === "cash_out") return sum - tx.amount;
+        return sum;
+      }, 0);
+      
+      const user = (req as any).user;
+      if (balance > 0) {
+        await storage.createCashTransaction({
+          shiftId: currentShift.id,
+          type: "cash_out",
+          amount: balance,
+          comment: "Инкассация квадроциклов",
+          createdBy: user?.id || "instructor",
+          cashBox: "quads",
+        });
+      }
+      
+      const closedShift = await storage.updateCashShift(currentShift.id, {
+        isOpen: false,
+        closedAt: new Date().toISOString(),
+        visibleToAdmin: false,
+        cashBox: "quads",
+      });
+      
+      res.json(closedShift);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to close quad shift" });
     }
   });
 

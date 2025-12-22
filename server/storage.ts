@@ -71,9 +71,9 @@ export interface IStorage {
   updateTask(id: string, updates: Partial<Task>): Promise<Task | undefined>;
   
   getCashShifts(): Promise<CashShift[]>;
-  getCurrentShift(): Promise<CashShift | undefined>;
+  getCurrentShift(cashBox?: "main" | "quads"): Promise<CashShift | undefined>;
   getCashShift(id: string): Promise<CashShift | undefined>;
-  createCashShift(shift: InsertCashShift): Promise<CashShift>;
+  createCashShift(shift: InsertCashShift, cashBox?: "main" | "quads"): Promise<CashShift>;
   updateCashShift(id: string, updates: Partial<CashShift>): Promise<CashShift | undefined>;
   
   getCashTransactions(shiftId?: string): Promise<CashTransaction[]>;
@@ -598,21 +598,22 @@ export class MemStorage implements IStorage {
     return Array.from(this.cashShifts.values());
   }
 
-  async getCurrentShift(): Promise<CashShift | undefined> {
-    return Array.from(this.cashShifts.values()).find(s => s.isOpen);
+  async getCurrentShift(cashBox: "main" | "quads" = "main"): Promise<CashShift | undefined> {
+    return Array.from(this.cashShifts.values()).find(s => s.isOpen && s.cashBox === cashBox);
   }
 
   async getCashShift(id: string): Promise<CashShift | undefined> {
     return this.cashShifts.get(id);
   }
 
-  async createCashShift(insertShift: InsertCashShift): Promise<CashShift> {
+  async createCashShift(insertShift: InsertCashShift, cashBox: "main" | "quads" = "main"): Promise<CashShift> {
     const shift: CashShift = {
       id: randomUUID(),
       openedAt: new Date().toISOString(),
       openedBy: insertShift.openedBy,
       isOpen: true,
       visibleToAdmin: true,
+      cashBox,
     };
     this.cashShifts.set(shift.id, shift);
     return shift;

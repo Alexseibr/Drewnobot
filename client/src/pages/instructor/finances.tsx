@@ -36,7 +36,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";
 import { BookingCardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { InstructorExpense, ExpenseCategory } from "@shared/schema";
+import type { InstructorExpense } from "@shared/schema";
+
+type InstructorExpenseCategory = "fuel" | "maintenance" | "parts" | "other";
 
 const expenseFormSchema = z.object({
   date: z.string().min(1, "Укажите дату"),
@@ -58,14 +60,14 @@ interface FinancesData {
   netProfit: number;
 }
 
-const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+const CATEGORY_LABELS: Record<InstructorExpenseCategory, string> = {
   fuel: "Топливо",
   maintenance: "Обслуживание",
   parts: "Запчасти",
   other: "Прочее",
 };
 
-const CATEGORY_ICONS: Record<ExpenseCategory, typeof Fuel> = {
+const CATEGORY_ICONS: Record<InstructorExpenseCategory, typeof Fuel> = {
   fuel: Fuel,
   maintenance: Wrench,
   parts: Package,
@@ -273,11 +275,11 @@ export default function InstructorFinancesPage() {
                   {Object.keys(expensesByCategory).length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       {Object.entries(expensesByCategory).map(([category, amount]) => {
-                        const Icon = CATEGORY_ICONS[category as ExpenseCategory];
+                        const Icon = CATEGORY_ICONS[category as InstructorExpenseCategory];
                         return (
                           <Badge key={category} variant="secondary" className="gap-1">
                             <Icon className="h-3 w-3" />
-                            {CATEGORY_LABELS[category as ExpenseCategory]}: {amount} BYN
+                            {CATEGORY_LABELS[category as InstructorExpenseCategory]}: {amount} BYN
                           </Badge>
                         );
                       })}

@@ -52,6 +52,9 @@ export type CashTransactionType = z.infer<typeof CashTransactionType>;
 export const ExpenseCategory = z.enum(["food_staff", "supplies", "salary", "contractor", "other"]);
 export type ExpenseCategory = z.infer<typeof ExpenseCategory>;
 
+export const CashBoxType = z.enum(["main", "quads"]);
+export type CashBoxType = z.infer<typeof CashBoxType>;
+
 export const PaymentMethod = z.enum(["erip", "cash"]);
 export type PaymentMethod = z.infer<typeof PaymentMethod>;
 
@@ -214,10 +217,11 @@ export const cashShiftSchema = z.object({
   openedBy: z.string(),
   isOpen: z.boolean().default(true),
   visibleToAdmin: z.boolean().default(true),
+  cashBox: CashBoxType.default("main"),
 });
 export type CashShift = z.infer<typeof cashShiftSchema>;
 
-export const insertCashShiftSchema = cashShiftSchema.omit({ id: true, openedAt: true, isOpen: true, visibleToAdmin: true });
+export const insertCashShiftSchema = cashShiftSchema.omit({ id: true, openedAt: true, isOpen: true, visibleToAdmin: true, cashBox: true });
 export type InsertCashShift = z.infer<typeof insertCashShiftSchema>;
 
 // ============ CASH TRANSACTION ============
@@ -913,6 +917,7 @@ export const cashShiftsTable = pgTable("cash_shifts", {
   openedBy: text("opened_by").notNull(),
   isOpen: boolean("is_open").notNull().default(true),
   visibleToAdmin: boolean("visible_to_admin").notNull().default(true),
+  cashBox: text("cash_box").notNull().default("main"),
 });
 
 // ============ CASH TRANSACTIONS TABLE ============
