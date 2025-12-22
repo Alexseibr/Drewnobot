@@ -98,20 +98,14 @@ function getGuestKeyboard() {
     inline_keyboard: [
       [
         {
-          text: "Забронировать баню",
-          web_app: { url: `${webAppUrl}/guest/bath` }
+          text: "Забронировать баню / СПА",
+          web_app: { url: `${webAppUrl}/guest/spa` }
         }
       ],
       [
         {
           text: "Забронировать квадроциклы",
           web_app: { url: `${webAppUrl}/guest/quads` }
-        }
-      ],
-      [
-        {
-          text: "СПА-комплекс",
-          web_app: { url: `${webAppUrl}/guest/spa` }
         }
       ],
       [
