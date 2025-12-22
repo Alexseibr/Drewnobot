@@ -1,0 +1,72 @@
+root@server-srekbm:/var/www/drewno-ops# # Измените порт в конфиге
+root@server-srekbm:/var/www/drewno-ops# sed -i 's/127.0.0.1:3000/127.0.0.1:5000/g' /etc/nginx/sites-available/d.drewno.by
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Проверьте конфигурацию
+root@server-srekbm:/var/www/drewno-ops# nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Перезагрузите nginx
+root@server-srekbm:/var/www/drewno-ops# systemctl reload nginx
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# psql "postgresql://drewno:39903990aSs\$@localhost:5432/drewno" -c "
+INSERT INTO users (telegram_id, first_name, role)
+VALUES ('7511011608', 'Валентина', 'ADMIN')
+ON CONFLICT (telegram_id)
+DO UPDATE SET role = 'ADMIN';
+"
+ERROR:  column "first_name" of relation "users" does not exist
+LINE 2: INSERT INTO users (telegram_id, first_name, role)
+                                        ^
+root@server-srekbm:/var/www/drewno-ops# # Проверьте порт в конфиге
+grep "proxy_pass" /etc/nginx/sites-available/d.drewno.by
+
+# Если всё ещё 3000, исправьте:
+sed -i 's/127.0.0.1:3000/127.0.0.1:5000/g' /etc/nginx/sites-available/d.drewno.by
+nginx -t && systemctl reload nginx
+
+# Проверьте логи бота
+pm2 logs drewno-ops --lines 30
+        proxy_pass http://127.0.0.1:5000;
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+[TAILING] Tailing last 30 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 30 lines:
+0|drewno-o | ,role:r[0].role,note:r[0].note||void 0,createdBy:r[0].createdBy,usedBy:r[0].usedBy||void 0,usedAt:r[0].usedAt||void 0,createdAt:r[0].createdAt}}async createStaffInvitation(e){let n=(0,ke.randomUUID)(),r=new Date().toISOString(),i=_s(e.phone);if(!i)throw new Error("\u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0430. \u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043C\u0438\u043D\u0438\u043C\u0443\u043C 7 \u0446\u0438\u0444\u0440.");let a={id:n,phone:i,role:e.role,note:e.note,createdBy:e.createdBy,createdAt:r};return await C.insert(Ze).values({id:a.id,phone:a.phone,role:a.role,note:a.note||null,createdBy:a.createdBy,createdAt:a.createdAt}),a}async useStaffInvitation(e,n){if(!(await C.select().from(Ze).where($(Ze.id,e)))[0])return;let i=new Date().toISOString();await C.update(Ze).set({usedBy:n,usedAt:i}).where($(Ze.id,e));let a=await C.select().from(Ze).where($(Ze.id,e));if(a[0])return{id:a[0].id,phone:a[0].phone,role:a[0].role,note:a[0].note||void 0,createdBy:a[0].createdBy,usedBy:a[0].usedBy||void 0,usedAt:a[0].usedAt||void 0,createdAt:a[0].createdAt}}async deleteStaffInvitation(e){return await C.delete(Ze).where($(Ze.id,e)),!0}}});var b,ru=A(()=>{"use strict";k_();b=new nu});var j_={};ou(j_,{handleTelegramUpdate:()=>Bh,initTelegramBot:()=>jh,notifyNewQuadBooking:()=>e3,removeTelegramWebhook:()=>XO,sendEveningReminder:()=>Ph,sendMaintenanceAlerts:()=>Ih,sendMorningSummary:()=>Eh,setupTelegramWebhook:()=>Ps});async function Es(t,e={}){if(!Cs)return console.error("[Telegram Bot] No bot token configured"),null;let r=await(await fetch(`https://api.telegram.org/bot${Cs}/${t}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(e)})).json();return r.ok||console.error(`[Telegram Bot] API error:${t}`,r),r}function P_(){return Ch}async function Pn(t,e,n={}){return Es("sendMessage",{chat_id:t,text:e,parse_mode:"HTML",...n})}async function GO(t,e){return Es("answerCallbackQuery",{callback_query_id:t,text:e})}function I_(){let t=P_();return{inline_keyboard:[[{text:"\u0417\u0430\u0431\u0440\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0431\u0430\u043D\u044E",web_app:{url:`${t}/guest/bath`}}],[{text:"\u0417\u0430\u0431\u0440\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043A\u0432\u0430\u0434\u0440\u043E\u0446\u0438\u043A\u043B\u044B",web_app:{url:`${t}/guest/quads`}}],[{text:"\u0421\u041F\u0410-\u043A\u043E\u043C\u043F\u043B\u0435\u043A\u0441",web_app:{url:`${t}/guest/spa`}}],[{text:"\u041D\u0430\u0448 \u0441\u0430\u0439\u0442",web_app:{url:t}}],[{text:"\u042F \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u043A",web_app:{url:`${t}/staff-login`}}]]}}function B_(t){let e=P_(),n=[];return t==="INSTRUCTOR"&&(n.push([{text:"\u041C\u043E\u0438 \u0441\u0435\u0430\u043D\u0441\u044B",web_app:{url:`${e}/instructor`}}]),n.push([{text:"\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0438\u043D\u0441\u0442\u0440\u0443\u043A\u0442\u043E\u0440\u0430\u043C\u0438",web_app:{url:`${e}/instructor/manage`}}])),(t==="ADMIN"||t==="OWNER"||t==="SUPER_ADMIN")&&(n.push([{text:"\u041F\u0430\u043D\u0435\u043B\u044C \u0443\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u044F",web_app:{url:`${e}/ops`}}]),n.push([{text:"\u0411\u0440\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F",web_app:{url:`${e}/ops/bookings`}}]),n.push([{text:"\u041A\u0430\u0441\u0441\u0430",web_app:{url:`${e}/ops/cash`}}]),n.push([{text:"\u0417\u0430\u0434\u0430\u0447\u0438",web_app:{url:`${e}/ops/tasks`}}])),(t==="OWNER"||t==="SUPER_ADMIN")&&n.push([{text:"\u0410\u043D\u0430\u043B\u0438\u0442\u0438\u043A\u0430",web_app:{url:`${e}/owner/analytics`}}]),t==="SUPER_ADMIN"&&n.push([{text:"\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u043A\u0430\u043C\u0438",web_app:{url:`${e}/admin/staff`}}]),n.push([{text:"\u0413\u043B\u0430\u0432\u043D\u0430\u044F",web_app:{url:e}}]),{inline_keyboard:n}}async function JO(t,e){let n=e.id.toString(),r=await b.getUserByTelegramId(n),i=[e.first_name,e.last_name].filter(Boolean).join(" ");if(r&&r.isActive&&r.role!=="GUEST"){let a=ZO[r.role]||r.role;await Pn(t,`\u0414\u043E\u0431\u0440\u043E \u043F\u043E\u0436\u0430\u043B\u043E\u0432\u0430\u0442\u044C, <b>${r.name||i}</b>!
+0|drewno-o |            
+0|drewno-o |
+0|drewno-o | Error: DATABASE_URL must be set. Did you forget to provisiona database?
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:124568
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:124872
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:70:160760
+0|drewno-o |     at /var/www/drewno/dist/index.cjs:1:225
+0|drewno-o |     at Object.<anonymous> (/var/www/drewno/dist/index.cjs:108:1428)
+0|drewno-o |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+0|drewno-o |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+0|drewno-o |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+0|drewno-o |
+0|drewno-o | Node.js v20.19.6
+
+/root/.pm2/logs/drewno-ops-out.log last 30 lines:
+0|drewno-o | GET /api/quads/price 200 in 36ms :: {"routeType":"short","date":"2025-12-22","price":50}
+0|drewno-o | 6:10:26 PM [express] GET /api/quads/price 200 in 28ms :: {"routeType":"long","date":"2025-12-22","price":80}
+0|drewno-o | 6:43:00 PM [express] GET /api/auth/me 200 in 14ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-o | 6:43:00 PM [express] GET /api/admin/authorizations 200 in 6ms :: [{"id":"sa-001","telegramId":"374243315","role":"SUPER_ADMIN","note":"Владелец и главный администратор","assignedBy":"system","isActive":true,"createdAt":"2025-12-22 11:20:13.276272+03"},{"id":"instr-001","telegramId":"425182418","role":"INSTRUCTOR","note":"Инструктор квадроциклов","assignedBy":"owner-manual","isActive":true,"createdAt":"2025-12-22 11:20:13.276272+03"}]
+0|drewno-o | [Admin] Staff authorization created for Telegram ID 7511011608 with role ADMIN by А.А
+0|drewno-o | 6:43:17 PM [express] POST /api/admin/authorizations 200 in 16ms :: {"id":"f7fc3bd1-baec-436a-9606-7ead5fa9b0f5","telegramId":"7511011608","role":"ADMIN","note":"Валентина","assignedBy":"9354fddc-eb32-4d80-8856-ebce7c48c663","isActive":true,"createdAt":"2025-12-22T15:43:17.681Z"}
+0|drewno-o | 6:43:17 PM [express] GET /api/admin/authorizations 200 in 4ms :: [{"id":"f7fc3bd1-baec-436a-9606-7ead5fa9b0f5","telegramId":"7511011608","role":"ADMIN","note":"Валентина","assignedBy":"9354fddc-eb32-4d80-8856-ebce7c48c663","isActive":true,"createdAt":"2025-12-22T15:43:17.681Z"},{"id":"sa-001","telegramId":"374243315","role":"SUPER_ADMIN","note":"Владелеци главный администратор","assignedBy":"system","isActive":true,"createdAt":"2025-12-22 11:20:13.276272+03"},{"id":"instr-001","telegramId":"425182418","role":"INSTRUCTOR","note":"Инструктор квадроциклов","assignedBy":"owner-manual","isActive":true,"createdAt":"2025-12-22 11:20:13.276272+03"}]
+0|drewno-o | 6:44:29 PM [express] GET /api/guest/quads/availability/2025-12-25 200 in 12ms :: {"slots":[{"startTime":"09:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"09:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"09:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"09:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"10:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"10:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"10:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"10:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"11:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"11:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"11:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"11:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"12:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"12:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"12:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"12:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"13:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"13:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"13:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"13:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"14:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"14:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"14:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"14:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"15:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"15:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"15:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"15:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"16:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"16:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"16:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"16:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"17:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"17:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"17:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"17:30","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"18:00","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false},{"startTime":"18:00","routeType":"long","price":80,"availableQuads":4,"hasDiscount":false},{"startTime":"18:30","routeType":"short","price":50,"availableQuads":4,"hasDiscount":false}],"blockedTimes":[],"blocked":false}
+0|drewno-o | 6:44:29 PM [express] GET /api/quads/price 200 in 3ms :: {"routeType":"short","date":"2025-12-25","price":50}
+0|drewno-o | 6:44:29 PM [express] GET /api/quads/price 200 in 2ms :: {"routeType":"long","date":"2025-12-25","price":80}
+0|drewno-o | 6:44:35 PM [express] POST /api/telegram/webhook 200 in 218ms:: {"ok":true}
+0|drewno-o | 6:47:02 PM [express] POST /api/telegram/webhook 200 in 216ms:: {"ok":true}
+
+
+^C
+root@server-srekbm:/var/www/drewno-ops# psql "postgresql://drewno:39903990aSs\$@localhost:5432/drewno" -c "SELECT telegram_id, first_name, role FROM users;"
+ERROR:  column "first_name" does not exist
+LINE 1: SELECT telegram_id, first_name, role FROM users;
+                            ^
+root@server-srekbm:/var/www/drewno-ops#
