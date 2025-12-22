@@ -26,8 +26,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/lib/auth-context";
 import type { QuadRouteType } from "@shared/schema";
 
-// v2.1 - calendar fix
-type Step = "route" | "time" | "details" | "success";
+// v2.2 - only hourly rides (no short routes)
+type Step = "time" | "details" | "success";
 
 interface SlotInfo {
   startTime: string;
@@ -101,7 +101,7 @@ interface PriceResponse {
 
 export default function QuadBookingPage() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<Step>("route");
+  const [step, setStep] = useState<Step>("time");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(startOfDay(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | undefined>();
   const { toast } = useToast();
@@ -110,7 +110,7 @@ export default function QuadBookingPage() {
   const bookingForm = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      routeType: "short",
+      routeType: "long",
       startTime: "",
       quadsCount: 1,
       fullName: user?.name || "",
@@ -235,7 +235,7 @@ export default function QuadBookingPage() {
 
   const handleReset = () => {
     bookingForm.reset({
-      routeType: "short",
+      routeType: "long",
       startTime: "",
       quadsCount: 1,
       fullName: user?.name || "",
@@ -244,7 +244,7 @@ export default function QuadBookingPage() {
     });
     setSelectedDate(startOfDay(new Date()));
     setSelectedSlot(undefined);
-    setStep("route");
+    setStep("time");
   };
 
   const priceInfo = calculatePrice();
@@ -312,18 +312,15 @@ export default function QuadBookingPage() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header 
         title="Забронировать квадроциклы" 
-        showBack={step === "route"}
+        showBack={step === "time"}
       />
       
-      {step !== "route" && (
+      {step === "details" && (
         <div className="px-4 pt-2">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              if (step === "time") setStep("route");
-              else if (step === "details") setStep("time");
-            }}
+            onClick={() => setStep("time")}
             data-testid="button-back-step"
           >
             Назад
@@ -334,8 +331,8 @@ export default function QuadBookingPage() {
         <Form {...bookingForm}>
           <form onSubmit={bookingForm.handleSubmit(handleBookingSubmit)} className="space-y-6">
             
-            {/* Compact date selector - always visible on route/time steps */}
-            {(step === "route" || step === "time") && (
+            {/* Compact date selector - always visible on time step */}
+            {step === "time" && (
               <div className="flex items-center justify-between gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -355,7 +352,6 @@ export default function QuadBookingPage() {
                       onSelect={(date) => {
                         setSelectedDate(date);
                         bookingForm.setValue("startTime", "");
-                        setStep("route");
                       }}
                       disabled={(date) => {
                         const today = startOfDay(new Date());
@@ -373,7 +369,7 @@ export default function QuadBookingPage() {
               </div>
             )}
 
-            {dateBlocked && (step === "route" || step === "time") && (
+            {dateBlocked && step === "time" && (
               <Card className="border-destructive">
                 <CardContent className="p-4 text-center text-destructive">
                   {blockMessage || "Квадроциклы недоступны на эту дату"}
@@ -381,79 +377,7 @@ export default function QuadBookingPage() {
               </Card>
             )}
 
-            {step === "route" && !dateBlocked && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                  Выберите маршрут
-                </h2>
-
-                <FormField
-                  control={bookingForm.control}
-                  name="routeType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <RadioGroup
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            bookingForm.setValue("startTime", "");
-                          }}
-                          className="space-y-3"
-                        >
-                          {(["short", "long"] as const).map((type) => {
-                            const info = ROUTE_INFO_BASE[type];
-                            return (
-                              <Card
-                                key={type}
-                                className={cn(
-                                  "cursor-pointer transition-colors",
-                                  field.value === type && "border-primary ring-1 ring-primary"
-                                )}
-                                onClick={() => {
-                                  field.onChange(type);
-                                  bookingForm.setValue("startTime", "");
-                                }}
-                              >
-                                <CardContent className="p-4">
-                                  <div className="flex items-start gap-3">
-                                    <RadioGroupItem value={type} id={type} className="mt-1" />
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <Label htmlFor={type} className="text-base font-semibold cursor-pointer">
-                                          {info.name}
-                                        </Label>
-                                        <Badge variant="secondary" className="text-xs">
-                                          {info.icon}
-                                        </Badge>
-                                      </div>
-                                      <p className="text-sm text-muted-foreground">{info.description}</p>
-                                      <p className="text-lg font-bold text-primary mt-2">{prices[type]} BYN</p>
-                                    </div>
-                                    <Bike className="h-8 w-8 text-muted-foreground" />
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                        </RadioGroup>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="button"
-                  className="w-full"
-                  onClick={() => setStep("time")}
-                  data-testid="button-next-step"
-                >
-                  Далее
-                </Button>
-              </div>
-            )}
-
-            {step === "time" && (
+            {step === "time" && !dateBlocked && (
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold" data-testid="text-step-title">
                   Выберите время

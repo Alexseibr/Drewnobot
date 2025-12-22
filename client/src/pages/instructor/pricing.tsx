@@ -21,11 +21,9 @@ export default function InstructorPricingPage() {
   const { hasRole } = useAuth();
   const { toast } = useToast();
   
-  const [shortDefaultPrice, setShortDefaultPrice] = useState<string>("");
   const [longDefaultPrice, setLongDefaultPrice] = useState<string>("");
   
   const [overrideDate, setOverrideDate] = useState<Date | undefined>();
-  const [overrideShortPrice, setOverrideShortPrice] = useState<string>("");
   const [overrideLongPrice, setOverrideLongPrice] = useState<string>("");
 
   const { data: pricing = [], isLoading } = useQuery<QuadPricing[]>({
@@ -33,9 +31,8 @@ export default function InstructorPricingPage() {
   });
 
   const defaults = pricing.filter(p => !p.date);
-  const overrides = pricing.filter(p => p.date);
+  const overrides = pricing.filter(p => p.date && p.routeType === "long");
 
-  const shortDefault = defaults.find(p => p.routeType === "short");
   const longDefault = defaults.find(p => p.routeType === "long");
 
   const saveMutation = useMutation({
@@ -67,12 +64,7 @@ export default function InstructorPricingPage() {
   });
 
   const handleSaveDefaults = () => {
-    const shortPrice = parseFloat(shortDefaultPrice);
     const longPrice = parseFloat(longDefaultPrice);
-    
-    if (shortDefaultPrice && !isNaN(shortPrice) && shortPrice >= 0) {
-      saveMutation.mutate({ routeType: "short", price: shortPrice });
-    }
     
     if (longDefaultPrice && !isNaN(longPrice) && longPrice >= 0) {
       saveMutation.mutate({ routeType: "long", price: longPrice });
@@ -86,16 +78,11 @@ export default function InstructorPricingPage() {
     }
     
     const dateStr = format(overrideDate, "yyyy-MM-dd");
-    const shortPrice = parseFloat(overrideShortPrice);
     const longPrice = parseFloat(overrideLongPrice);
     
-    if (!overrideShortPrice && !overrideLongPrice) {
-      toast({ title: "Укажите хотя бы одну цену", variant: "destructive" });
+    if (!overrideLongPrice) {
+      toast({ title: "Укажите цену", variant: "destructive" });
       return;
-    }
-    
-    if (overrideShortPrice && !isNaN(shortPrice) && shortPrice >= 0) {
-      saveMutation.mutate({ routeType: "short", price: shortPrice, date: dateStr });
     }
     
     if (overrideLongPrice && !isNaN(longPrice) && longPrice >= 0) {
@@ -103,7 +90,6 @@ export default function InstructorPricingPage() {
     }
     
     setOverrideDate(undefined);
-    setOverrideShortPrice("");
     setOverrideLongPrice("");
   };
 
@@ -147,53 +133,32 @@ export default function InstructorPricingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="short-price">Малый маршрут (30 мин)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="short-price"
-                    type="number"
-                    value={shortDefaultPrice}
-                    onChange={(e) => setShortDefaultPrice(e.target.value)}
-                    placeholder={shortDefault?.price?.toString() || "50"}
-                    data-testid="input-short-default-price"
-                  />
-                  <span className="text-muted-foreground">BYN</span>
-                </div>
-                {shortDefault && (
-                  <p className="text-xs text-muted-foreground">
-                    Текущая: {shortDefault.price} BYN
-                  </p>
-                )}
+            <div className="space-y-2">
+              <Label htmlFor="long-price">Часовая поездка (60 мин)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="long-price"
+                  type="number"
+                  value={longDefaultPrice}
+                  onChange={(e) => setLongDefaultPrice(e.target.value)}
+                  placeholder={longDefault?.price?.toString() || "80"}
+                  data-testid="input-long-default-price"
+                />
+                <span className="text-muted-foreground">BYN</span>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="long-price">Большой маршрут (60 мин)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="long-price"
-                    type="number"
-                    value={longDefaultPrice}
-                    onChange={(e) => setLongDefaultPrice(e.target.value)}
-                    placeholder={longDefault?.price?.toString() || "80"}
-                    data-testid="input-long-default-price"
-                  />
-                  <span className="text-muted-foreground">BYN</span>
-                </div>
-                {longDefault && (
-                  <p className="text-xs text-muted-foreground">
-                    Текущая: {longDefault.price} BYN
-                  </p>
-                )}
-              </div>
+              {longDefault && (
+                <p className="text-xs text-muted-foreground">
+                  Текущая: {longDefault.price} BYN
+                </p>
+              )}
             </div>
             <Button 
               onClick={handleSaveDefaults}
-              disabled={saveMutation.isPending || (!shortDefaultPrice && !longDefaultPrice)}
+              disabled={saveMutation.isPending || !longDefaultPrice}
               data-testid="button-save-defaults"
             >
               <Save className="h-4 w-4 mr-2" />
-              Сохранить базовые цены
+              Сохранить базовую цену
             </Button>
           </CardContent>
         </Card>
@@ -238,34 +203,18 @@ export default function InstructorPricingPage() {
                 </Popover>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="override-short">Малый (30 мин)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="override-short"
-                      type="number"
-                      value={overrideShortPrice}
-                      onChange={(e) => setOverrideShortPrice(e.target.value)}
-                      placeholder="Цена"
-                      data-testid="input-override-short-price"
-                    />
-                    <span className="text-muted-foreground text-sm">BYN</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="override-long">Большой (60 мин)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="override-long"
-                      type="number"
-                      value={overrideLongPrice}
-                      onChange={(e) => setOverrideLongPrice(e.target.value)}
-                      placeholder="Цена"
-                      data-testid="input-override-long-price"
-                    />
-                    <span className="text-muted-foreground text-sm">BYN</span>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="override-long">Цена (60 мин)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="override-long"
+                    type="number"
+                    value={overrideLongPrice}
+                    onChange={(e) => setOverrideLongPrice(e.target.value)}
+                    placeholder="Цена"
+                    data-testid="input-override-long-price"
+                  />
+                  <span className="text-muted-foreground text-sm">BYN</span>
                 </div>
               </div>
               
