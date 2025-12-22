@@ -1,0 +1,80 @@
+postgres=# CREATE DATABASE drewno;
+CREATE DATABASE
+postgres=# CREATE USER drewno WITH PASSWORD '39903990aSs$';
+CREATE ROLE
+postgres=# GRANT ALL PRIVILEGES ON DATABASE drewno TO drewno;
+GRANT
+postgres=# \q
+CREATE: command not found
+CREATE: command not found
+GRANT: command not found
+Command 'q' not found, but can be installed with:
+apt install python3-q-text-as-data
+root@server-srekbm:~# sudo -u postgres psql -d drewno -c "GRANT ALL ON SCHEMA public TO drewno;"
+could not change directory to "/root": Permission denied
+GRANT
+root@server-srekbm:~# # На VPS выполните эту команду для генерации нового секрета:
+openssl rand -hex 32
+e63275d3d707f9501ad1e9d347968781d54b43ff5f7e1f66cb8baf4d50290252
+root@server-srekbm:~# cd /var/www/drewno
+
+cat > .env << 'EOF'
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgresql://drewno:39903990aSs$@localhost:5432/drewno
+SESSION_SECRET=e63275d3d707f9501ad1e9d347968781d54b43ff5f7e1f66cb8baf4d50290252
+TELEGRAM_BOT_TOKEN=7409502547:AAEIpGl2VdyNmC92q7NLrMDhSqMZiQqNCPA
+WEBAPP_URL=https://d.drewno.by
+EOF
+-bash: cd: /var/www/drewno: No such file or directory
+root@server-srekbm:~# # Подтянуть код
+git pull origin main
+
+# Установить зависимости
+npm install
+
+# Применить схему БД
+npm run db:push
+
+# Собрать проект
+npm run build
+
+# Запустить
+pm2 start npm --name drewno-ops -- run start
+pm2 save
+fatal: not a git repository (or any of the parent directories): .git
+npm error code ENOENT
+npm error syscall open
+npm error path /root/package.json
+npm error errno -2
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/root/package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: /root/.npm/_logs/2025-12-22T04_54_36_859Z-debug-0.log
+npm error code ENOENT
+npm error syscall open
+npm error path /root/package.json
+npm error errno -2
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/root/package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: /root/.npm/_logs/2025-12-22T04_54_37_369Z-debug-0.log
+npm error code ENOENT
+npm error syscall open
+npm error path /root/package.json
+npm error errno -2
+npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/root/package.json'
+npm error enoent This is related to npm not being able to find a file.
+npm error enoent
+npm error A complete log of this run can be found in: /root/.npm/_logs/2025-12-22T04_54_37_529Z-debug-0.log
+[PM2] Starting /usr/bin/npm in fork_mode (1 instance)
+[PM2] Done.
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 3    │ online    │ 0%       │ 59.8mb   │
+│ 1  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 26.2mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+root@server-srekbm:~#
