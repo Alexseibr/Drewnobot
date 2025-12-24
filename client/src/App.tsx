@@ -10,7 +10,6 @@ import LandingPage from "@/pages/landing";
 import BathBookingPage from "@/pages/guest/bath-booking";
 import QuadBookingPage from "@/pages/guest/quad-booking";
 import SpaBookingPage from "@/pages/guest/spa-booking";
-import MapPage from "@/pages/guest/map";
 import OpsDashboard from "@/pages/ops/dashboard";
 import BookingsPage from "@/pages/ops/bookings";
 import NewBookingPage from "@/pages/ops/new-booking";
@@ -40,7 +39,6 @@ function Router() {
       <Route path="/guest/bath" component={BathBookingPage} />
       <Route path="/guest/quads" component={QuadBookingPage} />
       <Route path="/guest/spa" component={SpaBookingPage} />
-      <Route path="/guest/map" component={MapPage} />
       
       <Route path="/ops" component={OpsDashboard} />
       <Route path="/ops/bookings" component={BookingsPage} />
