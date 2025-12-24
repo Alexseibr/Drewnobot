@@ -90,6 +90,18 @@ Five user roles with hierarchical permissions:
   - Action logs with correlation IDs and trigger types (SCHEDULED, MANUAL)
   - Provider interface: Mock (dev) and Tuya (production, placeholder)
   - API: `/api/admin/thermostats/houses`, `/api/admin/thermostats/plan/today`, `/api/admin/thermostats/houses/:id/heat-now`, `/api/admin/thermostats/houses/:id/set-temp`, `/api/admin/thermostats/logs`
+- **Utilities Tracking** (`/owner/utilities`)
+  - 2 electricity meters with automatic initialization
+  - Meter readings with consumption calculation
+  - 30-day statistics (total consumption, daily average)
+  - Reading history with timestamps
+  - API: `/api/owner/electricity-meters`, `/api/owner/electricity-meters/:id/readings`, `/api/owner/electricity-meters/:id/statistics`
+- **Completed Tasks Visibility** (`/owner/completed-tasks`)
+  - Owner view of all tasks completed by administrators
+  - Date range filtering with calendar picker
+  - Tasks grouped by date with task type and assignee info
+  - API: `/api/owner/tasks/completed`
+  
 ### Project Structure
 ```
 /client          - React frontend application
