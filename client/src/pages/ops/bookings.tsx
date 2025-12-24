@@ -38,6 +38,31 @@ interface BookingsData {
   bathBookings: BathBooking[];
 }
 
+// Helper to format SPA booking options
+function formatSpaOptions(options: { tub?: string; terrace?: boolean; grill?: boolean; charcoal?: boolean } | undefined): string[] {
+  if (!options) return [];
+  const items: string[] = [];
+  
+  // Always include bath for SPA bookings (except terrace-only)
+  if (options.tub === "none" && !options.terrace) {
+    items.push("Баня");
+  } else if (options.tub === "small") {
+    items.push("Баня", "Купель М");
+  } else if (options.tub === "large") {
+    items.push("Баня", "Купель Б");
+  } else if (options.terrace && options.tub === "none") {
+    items.push("Терраса");
+  }
+  
+  if (options.terrace && options.tub !== "none") {
+    items.push("Терраса");
+  }
+  if (options.grill) items.push("Мангал");
+  if (options.charcoal) items.push("+уголь");
+  
+  return items;
+}
+
 export default function BookingsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -304,7 +329,7 @@ export default function BookingsPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 mb-3 flex-wrap">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <Badge variant="secondary" className="text-xs">
                               {SPA_TYPE_LABELS[booking.bookingType] || booking.bookingType}
                             </Badge>
@@ -312,6 +337,11 @@ export default function BookingsPage() {
                               {booking.guestsCount} гост.
                             </Badge>
                           </div>
+                          {formatSpaOptions(booking.options).length > 0 && (
+                            <p className="text-sm text-muted-foreground mb-3">
+                              {formatSpaOptions(booking.options).join(" / ")}
+                            </p>
+                          )}
                           <div className="flex items-center justify-between pt-3 border-t gap-2">
                             <div>
                               <p className="font-semibold">
@@ -382,6 +412,11 @@ export default function BookingsPage() {
                           </div>
                           <p className="font-medium">{booking.customer.fullName}</p>
                           <p className="text-sm text-muted-foreground">{booking.customer.phone}</p>
+                          {formatSpaOptions(booking.options).length > 0 && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {formatSpaOptions(booking.options).join(" / ")}
+                            </p>
+                          )}
                           <div className="flex items-center justify-between mt-2 gap-2">
                             <div>
                               <span className="font-semibold">

@@ -698,6 +698,12 @@ export const spaBookingSchema = z.object({
   guestsCount: z.number().min(1).max(12),
   customer: customerSchema,
   comment: z.string().optional(),
+  options: z.object({
+    tub: TubType.default("none"),
+    terrace: z.boolean().default(false),
+    grill: z.boolean().default(false),
+    charcoal: z.boolean().default(false),
+  }).optional(),
   pricing: z.object({
     base: z.number(),
     total: z.number(),
@@ -1100,6 +1106,7 @@ export const spaBookingsTable = pgTable("spa_bookings", {
   guestsCount: integer("guests_count").notNull(),
   customer: jsonb("customer").notNull(),
   comment: text("comment"),
+  options: jsonb("options"), // { tub, terrace, grill, charcoal }
   pricing: jsonb("pricing").notNull(),
   payments: jsonb("payments").notNull(),
   status: text("status").notNull().default("pending_call"),

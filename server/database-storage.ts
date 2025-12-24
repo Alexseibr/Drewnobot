@@ -534,6 +534,21 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  private deriveSpaOptions(bookingType: string): { tub: string; terrace: boolean; grill: boolean; charcoal: boolean } {
+    switch (bookingType) {
+      case "bath_only":
+        return { tub: "none", terrace: false, grill: false, charcoal: false };
+      case "terrace_only":
+        return { tub: "none", terrace: true, grill: false, charcoal: false };
+      case "tub_only":
+        return { tub: "small", terrace: false, grill: false, charcoal: false };
+      case "bath_with_tub":
+        return { tub: "large", terrace: false, grill: false, charcoal: false };
+      default:
+        return { tub: "none", terrace: false, grill: false, charcoal: false };
+    }
+  }
+
   async createSpaBooking(booking: InsertSpaBooking): Promise<SpaBooking> {
     const id = randomUUID();
     const now = new Date().toISOString();
@@ -546,6 +561,9 @@ export class DatabaseStorage implements IStorage {
       pricing = { base: basePrice, total: basePrice, discountPercent: 0, discountAmount: 0 };
     }
     
+    // Derive options from bookingType
+    const options = b.options || this.deriveSpaOptions(booking.bookingType);
+    
     const newBooking: SpaBooking = {
       id,
       spaResource: booking.spaResource,
@@ -557,6 +575,7 @@ export class DatabaseStorage implements IStorage {
       guestsCount: booking.guestsCount,
       customer: booking.customer,
       comment: booking.comment,
+      options,
       pricing,
       payments: b.payments || { eripPaid: 0, cashPaid: 0 },
       status: b.status || "pending_call",
@@ -575,6 +594,7 @@ export class DatabaseStorage implements IStorage {
       guestsCount: newBooking.guestsCount,
       customer: newBooking.customer,
       comment: newBooking.comment || null,
+      options: newBooking.options || null,
       pricing: newBooking.pricing,
       payments: newBooking.payments,
       status: newBooking.status,
@@ -628,6 +648,7 @@ export class DatabaseStorage implements IStorage {
       guestsCount: row.guestsCount,
       customer: row.customer as any,
       comment: row.comment || undefined,
+      options: row.options || undefined,
       pricing: row.pricing as any,
       payments: row.payments as any,
       status: row.status as any,
