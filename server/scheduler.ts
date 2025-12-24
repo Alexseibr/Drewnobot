@@ -21,9 +21,9 @@ const CLIMATE_ON_CRON = "0 12 * * *";           // 12:00 - Climate control ON
 const CLIMATE_OFF_CRON = "0 14 * * *";          // 14:00 - Climate control OFF
 const WEATHER_CHECK_CRON = "0 18 * * *";        // 18:00 - Weather forecast check
 
-// Village Drewno coordinates (near Minsk)
-const LOCATION_LAT = 53.9;
-const LOCATION_LON = 27.567;
+// Village Drewno coordinates (Polesie region)
+const LOCATION_LAT = 51.87728;
+const LOCATION_LON = 24.0249;
 const FROST_THRESHOLD = 2; // Alert when min temp is below this (Celsius)
 
 interface ScheduledTask {

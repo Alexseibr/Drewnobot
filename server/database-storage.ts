@@ -392,6 +392,28 @@ export class DatabaseStorage implements IStorage {
     const id = randomUUID();
     const now = new Date().toISOString();
     const b = booking as any;
+    
+    // Calculate pricing if not provided
+    let pricing = b.pricing;
+    if (!pricing) {
+      const prices = await this.getServicePrices();
+      const getPrice = (key: string) => prices.find(p => p.key === key)?.price || PRICES[key] || 0;
+      
+      const startHour = parseInt(booking.startTime.split(":")[0]);
+      const endHour = parseInt(booking.endTime.split(":")[0]);
+      const hours = endHour - startHour;
+      
+      let base = getPrice("bath_base_3h");
+      let extras = 0;
+      if (hours > 3) extras += (hours - 3) * getPrice("bath_extra_hour");
+      if (booking.options?.tub === "small") extras += getPrice("tub_small");
+      if (booking.options?.tub === "large") extras += getPrice("tub_large");
+      if (booking.options?.grill) extras += getPrice("grill");
+      if (booking.options?.charcoal) extras += getPrice("charcoal");
+      
+      pricing = { base, extras, total: base + extras };
+    }
+    
     const newBooking: BathBooking = {
       id,
       bathCode: booking.bathCode,
@@ -399,9 +421,9 @@ export class DatabaseStorage implements IStorage {
       startTime: booking.startTime,
       endTime: booking.endTime,
       customer: booking.customer,
-      options: booking.options,
-      pricing: b.pricing,
-      payments: b.payments,
+      options: booking.options || { tub: "none", grill: false, charcoal: false },
+      pricing,
+      payments: b.payments || { eripPaid: 0, cashPaid: 0 },
       status: b.status || "pending_call",
       holdUntil: b.holdUntil,
       assignedAdmin: b.assignedAdmin,
@@ -482,10 +504,33 @@ export class DatabaseStorage implements IStorage {
     return rows.map(r => this.mapRowToSpaBooking(r));
   }
 
+  private calculateSpaPrice(bookingType: string, guestsCount: number): number {
+    switch (bookingType) {
+      case "bath_only":
+        return PRICES.spa_bath_only_base3h;
+      case "terrace_only":
+        return PRICES.spa_terrace_only_base3h;
+      case "tub_only":
+        return guestsCount <= 4 ? PRICES.spa_tub_only_up_to_4 : PRICES.spa_tub_only_5_plus;
+      case "bath_with_tub":
+        return guestsCount <= 4 ? PRICES.spa_bath_with_tub_up_to_4 : PRICES.spa_bath_with_tub_5_plus;
+      default:
+        return 0;
+    }
+  }
+
   async createSpaBooking(booking: InsertSpaBooking): Promise<SpaBooking> {
     const id = randomUUID();
     const now = new Date().toISOString();
     const b = booking as any;
+    
+    // Calculate pricing if not provided
+    let pricing = b.pricing;
+    if (!pricing) {
+      const basePrice = this.calculateSpaPrice(booking.bookingType, booking.guestsCount);
+      pricing = { base: basePrice, total: basePrice, discountPercent: 0, discountAmount: 0 };
+    }
+    
     const newBooking: SpaBooking = {
       id,
       spaResource: booking.spaResource,
@@ -497,8 +542,8 @@ export class DatabaseStorage implements IStorage {
       guestsCount: booking.guestsCount,
       customer: booking.customer,
       comment: booking.comment,
-      pricing: b.pricing,
-      payments: b.payments,
+      pricing,
+      payments: b.payments || { eripPaid: 0, cashPaid: 0 },
       status: b.status || "pending_call",
       holdUntil: b.holdUntil,
       assignedAdmin: b.assignedAdmin,
@@ -526,13 +571,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSpaBookingWithDiscount(booking: InsertSpaBooking, discountPercent: number): Promise<SpaBooking> {
-    const b = booking as any;
-    const discountMultiplier = 1 - discountPercent / 100;
+    const basePrice = this.calculateSpaPrice(booking.bookingType, booking.guestsCount);
+    const discountAmount = Math.round(basePrice * discountPercent / 100);
+    const totalPrice = basePrice - discountAmount;
+    
     const discountedPricing = {
-      ...b.pricing,
-      base: Math.round(b.pricing.base * discountMultiplier),
-      total: Math.round(b.pricing.total * discountMultiplier),
-      discount: discountPercent,
+      base: basePrice,
+      total: totalPrice,
+      discountPercent: discountPercent,
+      discountAmount: discountAmount,
     };
     return this.createSpaBooking({ ...booking, pricing: discountedPricing } as any);
   }

@@ -629,9 +629,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Time slot is not available" });
       }
       
-      const booking = await storage.createBathBooking(req.body);
+      // Ensure required fields have defaults
+      const bookingData = {
+        ...req.body,
+        payments: req.body.payments || { prepayment: null, eripPaid: 0, cashPaid: 0 },
+        status: req.body.status || "pending_call",
+      };
+      
+      const booking = await storage.createBathBooking(bookingData);
       res.json(booking);
     } catch (error) {
+      console.error("[Routes] Failed to create bath booking:", error);
       res.status(500).json({ error: "Failed to create booking" });
     }
   });
@@ -1752,7 +1760,8 @@ export async function registerRoutes(
       
       res.json(booking);
     } catch (error) {
-      res.status(500).json({ error: "Не удалось создать бронирование" });
+      console.error("[Routes] Failed to create SPA booking:", error);
+      res.status(500).json({ error: "Failed to create booking" });
     }
   });
 
