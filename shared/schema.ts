@@ -83,11 +83,17 @@ export type PaymentMethod = z.infer<typeof PaymentMethod>;
 export const LaundryBatchStatus = z.enum(["pending", "washing", "drying", "ready", "delivered"]);
 export type LaundryBatchStatus = z.infer<typeof LaundryBatchStatus>;
 
-export const TextileColor = z.enum(["white", "beige", "green", "grey"]);
+// Colors for bedding: white, light grey, dark grey; Towels are always grey
+export const TextileColor = z.enum(["white", "grey_light", "grey_dark", "grey"]);
 export type TextileColor = z.infer<typeof TextileColor>;
 
-export const TextileType = z.enum(["sheets", "pillowcases", "towels_large", "towels_small", "robes", "mattress_covers"]);
+// Textile types - duvet_covers added
+export const TextileType = z.enum(["sheets", "duvet_covers", "pillowcases", "towels_large", "towels_small", "robes", "mattress_covers"]);
 export type TextileType = z.infer<typeof TextileType>;
+
+// Locations for textile tracking
+export const TextileLocation = z.enum(["warehouse", "laundry", "D1", "D2", "D3", "D4"]);
+export type TextileLocation = z.infer<typeof TextileLocation>;
 
 // ============ USER ============
 export const userSchema = z.object({
@@ -395,6 +401,97 @@ export const insertTextileAuditSchema = z.object({
   notes: z.string().optional(),
 });
 export type InsertTextileAudit = z.infer<typeof insertTextileAuditSchema>;
+
+// ============ TEXTILE STOCK (Inventory by location) ============
+export const textileStockSchema = z.object({
+  id: z.string(),
+  location: TextileLocation, // warehouse, laundry, D1, D2, D3, D4
+  type: TextileType,
+  color: TextileColor,
+  quantity: z.number().min(0),
+  updatedBy: z.string().optional(),
+  updatedAt: z.string(),
+});
+export type TextileStock = z.infer<typeof textileStockSchema>;
+
+export const insertTextileStockSchema = z.object({
+  location: TextileLocation,
+  type: TextileType,
+  color: TextileColor,
+  quantity: z.number().min(0),
+});
+export type InsertTextileStock = z.infer<typeof insertTextileStockSchema>;
+
+// ============ TEXTILE CHECK-IN EVENT (Заселение с текстилем) ============
+// Bedding set = 1 sheet + 1 duvet_cover + 2 pillowcases
+// Towel set = 2 large + 2 small towels
+export const beddingSetSchema = z.object({
+  color: TextileColor, // white, grey_light, grey_dark
+  count: z.number().min(1).max(3), // Number of bedding sets of this color
+});
+
+export const textileCheckInSchema = z.object({
+  id: z.string(),
+  unitCode: z.string(), // D1, D2, D3, D4
+  beddingSets: z.array(beddingSetSchema), // e.g. [{color: "white", count: 1}, {color: "grey_dark", count: 1}]
+  towelSets: z.number().min(1).max(6), // Total towel sets (typically 2 per bedding set)
+  robes: z.number().min(0).max(6).default(0), // Optional robes
+  createdBy: z.string(),
+  createdAt: z.string(),
+  notes: z.string().optional(),
+});
+export type TextileCheckIn = z.infer<typeof textileCheckInSchema>;
+
+export const insertTextileCheckInSchema = z.object({
+  unitCode: z.string(),
+  beddingSets: z.array(beddingSetSchema),
+  towelSets: z.number().min(1).max(6),
+  robes: z.number().min(0).max(6).default(0),
+  notes: z.string().optional(),
+});
+export type InsertTextileCheckIn = z.infer<typeof insertTextileCheckInSchema>;
+
+// ============ TEXTILE EVENT LOG (Audit trail) ============
+export const TextileEventType = z.enum([
+  "init_stock",      // Initial warehouse stock setup
+  "check_in",        // Textiles moved to unit for guest check-in
+  "mark_dirty",      // Unit checkout - textiles moved to laundry
+  "mark_clean",      // Laundry done - textiles returned to warehouse
+  "adjustment",      // Manual correction
+  "transfer",        // Move between locations
+]);
+export type TextileEventType = z.infer<typeof TextileEventType>;
+
+export const textileEventSchema = z.object({
+  id: z.string(),
+  eventType: TextileEventType,
+  fromLocation: TextileLocation.optional(),
+  toLocation: TextileLocation.optional(),
+  items: z.array(z.object({
+    type: TextileType,
+    color: TextileColor,
+    quantity: z.number(),
+  })),
+  relatedUnitCode: z.string().optional(), // D1, D2, D3, D4
+  createdBy: z.string(),
+  createdAt: z.string(),
+  notes: z.string().optional(),
+});
+export type TextileEvent = z.infer<typeof textileEventSchema>;
+
+export const insertTextileEventSchema = z.object({
+  eventType: TextileEventType,
+  fromLocation: TextileLocation.optional(),
+  toLocation: TextileLocation.optional(),
+  items: z.array(z.object({
+    type: TextileType,
+    color: TextileColor,
+    quantity: z.number(),
+  })),
+  relatedUnitCode: z.string().optional(),
+  notes: z.string().optional(),
+});
+export type InsertTextileEvent = z.infer<typeof insertTextileEventSchema>;
 
 // ============ QUAD ROUTE TYPE ============
 export const QuadRouteType = z.enum(["short", "long"]); // short = 30min/50 BYN, long = 60min/80 BYN
@@ -1231,4 +1328,40 @@ export const textileAuditsTable = pgTable("textile_audits", {
   auditedBy: text("audited_by").notNull(),
   notes: text("notes"),
   createdAt: text("created_at").notNull(),
+});
+
+// ============ TEXTILE STOCK TABLE (Inventory by location) ============
+export const textileStockTable = pgTable("textile_stock", {
+  id: text("id").primaryKey(),
+  location: text("location").notNull(), // warehouse, laundry, D1, D2, D3, D4
+  type: text("type").notNull(), // sheets, duvet_covers, pillowcases, towels_large, towels_small, robes
+  color: text("color").notNull(), // white, grey_light, grey_dark, grey
+  quantity: integer("quantity").notNull().default(0),
+  updatedBy: text("updated_by"),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// ============ TEXTILE CHECK-INS TABLE (Guest check-in textile records) ============
+export const textileCheckInsTable = pgTable("textile_check_ins", {
+  id: text("id").primaryKey(),
+  unitCode: text("unit_code").notNull(), // D1, D2, D3, D4
+  beddingSets: jsonb("bedding_sets").notNull(), // [{color: "white", count: 1}]
+  towelSets: integer("towel_sets").notNull(),
+  robes: integer("robes").notNull().default(0),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  notes: text("notes"),
+});
+
+// ============ TEXTILE EVENTS TABLE (Audit trail) ============
+export const textileEventsTable = pgTable("textile_events", {
+  id: text("id").primaryKey(),
+  eventType: text("event_type").notNull(), // init_stock, check_in, mark_dirty, mark_clean, adjustment, transfer
+  fromLocation: text("from_location"),
+  toLocation: text("to_location"),
+  items: jsonb("items").notNull(), // [{type, color, quantity}]
+  relatedUnitCode: text("related_unit_code"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  notes: text("notes"),
 });

@@ -35,6 +35,10 @@ import type {
   StaffAuthorization, InsertStaffAuthorization,
   LaundryBatch, InsertLaundryBatch,
   TextileAudit, InsertTextileAudit,
+  TextileStock, InsertTextileStock,
+  TextileCheckIn, InsertTextileCheckIn,
+  TextileEvent, InsertTextileEvent,
+  TextileLocation, TextileType, TextileColor,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -223,6 +227,28 @@ export interface IStorage {
   getTextileAudits(): Promise<TextileAudit[]>;
   getTextileAudit(id: string): Promise<TextileAudit | undefined>;
   createTextileAudit(audit: InsertTextileAudit, auditedBy: string): Promise<TextileAudit>;
+  
+  // Textile Stock Inventory
+  getTextileStock(): Promise<TextileStock[]>;
+  getTextileStockByLocation(location: TextileLocation): Promise<TextileStock[]>;
+  upsertTextileStock(location: TextileLocation, type: TextileType, color: TextileColor, quantity: number, updatedBy: string): Promise<TextileStock>;
+  adjustTextileStock(location: TextileLocation, type: TextileType, color: TextileColor, delta: number, updatedBy: string): Promise<TextileStock>;
+  initWarehouseStock(items: { type: TextileType; color: TextileColor; quantity: number }[], userId: string): Promise<void>;
+  
+  // Textile Check-ins
+  getTextileCheckIns(): Promise<TextileCheckIn[]>;
+  createTextileCheckIn(checkIn: InsertTextileCheckIn, userId: string): Promise<TextileCheckIn>;
+  markTextileDirty(unitCode: string, userId: string, notes?: string): Promise<void>;
+  markTextileClean(items: { type: TextileType; color: TextileColor; quantity: number }[], userId: string, notes?: string): Promise<void>;
+  
+  // Textile Events (audit log)
+  getTextileEvents(limit?: number): Promise<TextileEvent[]>;
+  createTextileEvent(event: InsertTextileEvent, userId: string): Promise<TextileEvent>;
+  getTextileStockSummary(): Promise<{
+    warehouse: { [key: string]: number };
+    laundry: { [key: string]: number };
+    units: { [unit: string]: { [key: string]: number } };
+  }>;
 }
 
 const PRICES: Record<string, number> = {
@@ -1740,6 +1766,30 @@ export class MemStorage implements IStorage {
     };
     this.textileAudits.set(id, newAudit);
     return newAudit;
+  }
+
+  // Textile Stock (stub methods - use DatabaseStorage for production)
+  async getTextileStock(): Promise<TextileStock[]> { return []; }
+  async getTextileStockByLocation(_location: TextileLocation): Promise<TextileStock[]> { return []; }
+  async upsertTextileStock(location: TextileLocation, type: TextileType, color: TextileColor, quantity: number, updatedBy: string): Promise<TextileStock> {
+    return { id: randomUUID(), location, type, color, quantity, updatedBy, updatedAt: new Date().toISOString() };
+  }
+  async adjustTextileStock(location: TextileLocation, type: TextileType, color: TextileColor, _delta: number, updatedBy: string): Promise<TextileStock> {
+    return { id: randomUUID(), location, type, color, quantity: 0, updatedBy, updatedAt: new Date().toISOString() };
+  }
+  async initWarehouseStock(_items: { type: TextileType; color: TextileColor; quantity: number }[], _userId: string): Promise<void> {}
+  async getTextileCheckIns(): Promise<TextileCheckIn[]> { return []; }
+  async createTextileCheckIn(checkIn: InsertTextileCheckIn, userId: string): Promise<TextileCheckIn> {
+    return { id: randomUUID(), unitCode: checkIn.unitCode, beddingSets: checkIn.beddingSets, towelSets: checkIn.towelSets, robes: checkIn.robes, createdBy: userId, createdAt: new Date().toISOString(), notes: checkIn.notes };
+  }
+  async markTextileDirty(_unitCode: string, _userId: string, _notes?: string): Promise<void> {}
+  async markTextileClean(_items: { type: TextileType; color: TextileColor; quantity: number }[], _userId: string, _notes?: string): Promise<void> {}
+  async getTextileEvents(_limit?: number): Promise<TextileEvent[]> { return []; }
+  async createTextileEvent(event: InsertTextileEvent, userId: string): Promise<TextileEvent> {
+    return { id: randomUUID(), eventType: event.eventType, fromLocation: event.fromLocation, toLocation: event.toLocation, items: event.items, relatedUnitCode: event.relatedUnitCode, createdBy: userId, createdAt: new Date().toISOString(), notes: event.notes };
+  }
+  async getTextileStockSummary(): Promise<{ warehouse: { [key: string]: number }; laundry: { [key: string]: number }; units: { [unit: string]: { [key: string]: number } }; }> {
+    return { warehouse: {}, laundry: {}, units: {} };
   }
 }
 

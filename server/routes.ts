@@ -2619,6 +2619,186 @@ export async function registerRoutes(
     }
   });
 
+  // ============ TEXTILE STOCK INVENTORY ============
+  
+  // Get all textile stock
+  app.get("/api/textile/stock", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const stock = await storage.getTextileStock();
+      res.json(stock);
+    } catch (error) {
+      console.error("[Textile] Get stock error:", error);
+      res.status(500).json({ error: "Ошибка загрузки инвентаря" });
+    }
+  });
+
+  // Get stock summary (grouped by location)
+  app.get("/api/textile/stock/summary", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const summary = await storage.getTextileStockSummary();
+      res.json(summary);
+    } catch (error) {
+      console.error("[Textile] Get stock summary error:", error);
+      res.status(500).json({ error: "Ошибка загрузки сводки инвентаря" });
+    }
+  });
+
+  // Initialize warehouse stock (first-time setup)
+  app.post("/api/textile/stock/init", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { items } = req.body;
+      if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ error: "Необходимо указать items" });
+      }
+      await storage.initWarehouseStock(items, req.user!.id);
+      res.json({ ok: true, message: "Склад инициализирован" });
+    } catch (error) {
+      console.error("[Textile] Init stock error:", error);
+      res.status(500).json({ error: "Ошибка инициализации склада" });
+    }
+  });
+
+  // Manual stock adjustment
+  app.post("/api/textile/stock/adjust", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { location, type, color, quantity, notes } = req.body;
+      if (!location || !type || !color || quantity === undefined) {
+        return res.status(400).json({ error: "Необходимо заполнить все поля" });
+      }
+      const updated = await storage.upsertTextileStock(location, type, color, quantity, req.user!.id);
+      
+      // Log adjustment event
+      await storage.createTextileEvent({
+        eventType: "adjustment",
+        toLocation: location,
+        items: [{ type, color, quantity }],
+        notes: notes || "Ручная корректировка",
+      }, req.user!.id);
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("[Textile] Adjust stock error:", error);
+      res.status(500).json({ error: "Ошибка корректировки остатков" });
+    }
+  });
+
+  // ============ TEXTILE CHECK-INS (Guest arrivals) ============
+  
+  // Get all check-ins
+  app.get("/api/textile/check-ins", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const checkIns = await storage.getTextileCheckIns();
+      res.json(checkIns);
+    } catch (error) {
+      console.error("[Textile] Get check-ins error:", error);
+      res.status(500).json({ error: "Ошибка загрузки заселений" });
+    }
+  });
+
+  // Create check-in (move textiles from warehouse to unit)
+  app.post("/api/textile/check-ins", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { unitCode, beddingSets, towelSets, robes, notes } = req.body;
+      if (!unitCode || !beddingSets || !Array.isArray(beddingSets) || towelSets === undefined) {
+        return res.status(400).json({ error: "Необходимо заполнить все поля" });
+      }
+      
+      // Validate unit code
+      const validUnits = ["D1", "D2", "D3", "D4"];
+      if (!validUnits.includes(unitCode)) {
+        return res.status(400).json({ error: "Неверный код домика" });
+      }
+      
+      // Validate bedding sets
+      const validColors = ["white", "grey_light", "grey_dark"];
+      for (const set of beddingSets) {
+        if (!set.color || !validColors.includes(set.color) || !set.count || set.count < 1) {
+          return res.status(400).json({ error: "Неверный формат комплекта белья" });
+        }
+      }
+      
+      // Validate bedding sets count based on unit
+      const totalBeddingSets = beddingSets.reduce((sum: number, s: any) => sum + s.count, 0);
+      const maxSets = unitCode === "D4" ? 3 : 2;
+      if (totalBeddingSets > maxSets) {
+        return res.status(400).json({ error: `Максимум ${maxSets} комплектов для ${unitCode}` });
+      }
+      if (totalBeddingSets < 1) {
+        return res.status(400).json({ error: "Нужен минимум 1 комплект белья" });
+      }
+      
+      // Validate towel sets
+      if (towelSets < 1 || towelSets > 6) {
+        return res.status(400).json({ error: "Количество комплектов полотенец: от 1 до 6" });
+      }
+      
+      // Validate robes
+      const robesCount = robes || 0;
+      if (robesCount < 0 || robesCount > 6) {
+        return res.status(400).json({ error: "Количество халатов: от 0 до 6" });
+      }
+      
+      const checkIn = await storage.createTextileCheckIn({
+        unitCode,
+        beddingSets,
+        towelSets,
+        robes: robesCount,
+        notes,
+      }, req.user!.id);
+      
+      res.json(checkIn);
+    } catch (error: any) {
+      console.error("[Textile] Create check-in error:", error);
+      // Return error message from storage (e.g., stock shortage)
+      if (error.message && error.message.includes("Недостаточно")) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Ошибка создания заселения" });
+    }
+  });
+
+  // Mark textiles as dirty (move from unit to laundry)
+  app.post("/api/textile/mark-dirty", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { unitCode, notes } = req.body;
+      if (!unitCode) {
+        return res.status(400).json({ error: "Необходимо указать unitCode" });
+      }
+      await storage.markTextileDirty(unitCode, req.user!.id, notes);
+      res.json({ ok: true, message: "Бельё отмечено как грязное" });
+    } catch (error) {
+      console.error("[Textile] Mark dirty error:", error);
+      res.status(500).json({ error: "Ошибка отметки грязного белья" });
+    }
+  });
+
+  // Mark textiles as clean (move from laundry to warehouse)
+  app.post("/api/textile/mark-clean", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { items, notes } = req.body;
+      if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ error: "Необходимо указать items" });
+      }
+      await storage.markTextileClean(items, req.user!.id, notes);
+      res.json({ ok: true, message: "Бельё возвращено на склад" });
+    } catch (error) {
+      console.error("[Textile] Mark clean error:", error);
+      res.status(500).json({ error: "Ошибка возврата белья на склад" });
+    }
+  });
+
+  // Get textile events (audit log)
+  app.get("/api/textile/events", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const events = await storage.getTextileEvents(limit);
+      res.json(events);
+    } catch (error) {
+      console.error("[Textile] Get events error:", error);
+      res.status(500).json({ error: "Ошибка загрузки истории" });
+    }
+  });
+
   // ============ TELEGRAM BOT WEBHOOK ============
   app.post("/api/telegram/webhook", async (req, res) => {
     try {

@@ -38,6 +38,10 @@ import type {
   StaffAuthorization, InsertStaffAuthorization,
   LaundryBatch, InsertLaundryBatch,
   TextileAudit, InsertTextileAudit,
+  TextileStock, InsertTextileStock,
+  TextileCheckIn, InsertTextileCheckIn,
+  TextileEvent, InsertTextileEvent,
+  TextileLocation, TextileType, TextileColor,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
@@ -47,6 +51,7 @@ import {
   authSessionsTable, staffInvitationsTable, staffAuthorizationsTable, quadMachinesTable, quadMileageLogsTable,
   quadMaintenanceRulesTable, quadMaintenanceEventsTable, siteSettingsTable,
   blockedDatesTable, reviewsTable, laundryBatchesTable, textileAuditsTable,
+  textileStockTable, textileCheckInsTable, textileEventsTable,
 } from "@shared/schema";
 
 const PRICES: Record<string, number> = {
@@ -2297,5 +2302,404 @@ export class DatabaseStorage implements IStorage {
       createdAt: newAudit.createdAt,
     });
     return newAudit;
+  }
+
+  // ============ TEXTILE STOCK METHODS ============
+  
+  async getTextileStock(): Promise<TextileStock[]> {
+    const rows = await db.select().from(textileStockTable);
+    return rows.map(row => ({
+      id: row.id,
+      location: row.location as TextileLocation,
+      type: row.type as TextileType,
+      color: row.color as TextileColor,
+      quantity: row.quantity,
+      updatedBy: row.updatedBy || undefined,
+      updatedAt: row.updatedAt,
+    }));
+  }
+
+  async getTextileStockByLocation(location: TextileLocation): Promise<TextileStock[]> {
+    const rows = await db.select().from(textileStockTable)
+      .where(eq(textileStockTable.location, location));
+    return rows.map(row => ({
+      id: row.id,
+      location: row.location as TextileLocation,
+      type: row.type as TextileType,
+      color: row.color as TextileColor,
+      quantity: row.quantity,
+      updatedBy: row.updatedBy || undefined,
+      updatedAt: row.updatedAt,
+    }));
+  }
+
+  async upsertTextileStock(
+    location: TextileLocation,
+    type: TextileType,
+    color: TextileColor,
+    quantity: number,
+    updatedBy: string
+  ): Promise<TextileStock> {
+    const existing = await db.select().from(textileStockTable)
+      .where(and(
+        eq(textileStockTable.location, location),
+        eq(textileStockTable.type, type),
+        eq(textileStockTable.color, color)
+      ));
+    
+    const now = new Date().toISOString();
+    
+    if (existing[0]) {
+      await db.update(textileStockTable)
+        .set({ quantity, updatedBy, updatedAt: now })
+        .where(eq(textileStockTable.id, existing[0].id));
+      return {
+        id: existing[0].id,
+        location,
+        type,
+        color,
+        quantity,
+        updatedBy,
+        updatedAt: now,
+      };
+    } else {
+      const id = randomUUID();
+      await db.insert(textileStockTable).values({
+        id,
+        location,
+        type,
+        color,
+        quantity,
+        updatedBy,
+        updatedAt: now,
+      });
+      return { id, location, type, color, quantity, updatedBy, updatedAt: now };
+    }
+  }
+
+  async adjustTextileStock(
+    location: TextileLocation,
+    type: TextileType,
+    color: TextileColor,
+    delta: number,
+    updatedBy: string
+  ): Promise<TextileStock> {
+    const existing = await db.select().from(textileStockTable)
+      .where(and(
+        eq(textileStockTable.location, location),
+        eq(textileStockTable.type, type),
+        eq(textileStockTable.color, color)
+      ));
+    
+    const currentQty = existing[0]?.quantity || 0;
+    const newQty = Math.max(0, currentQty + delta);
+    
+    return this.upsertTextileStock(location, type, color, newQty, updatedBy);
+  }
+
+  async initWarehouseStock(
+    items: { type: TextileType; color: TextileColor; quantity: number }[],
+    userId: string
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    
+    for (const item of items) {
+      await this.upsertTextileStock("warehouse", item.type, item.color, item.quantity, userId);
+    }
+    
+    // Log the event
+    await this.createTextileEvent({
+      eventType: "init_stock",
+      toLocation: "warehouse",
+      items: items.map(i => ({ type: i.type, color: i.color, quantity: i.quantity })),
+      notes: "Начальная инициализация склада",
+    }, userId);
+  }
+
+  // ============ TEXTILE CHECK-IN METHODS ============
+  
+  async getTextileCheckIns(): Promise<TextileCheckIn[]> {
+    const rows = await db.select().from(textileCheckInsTable)
+      .orderBy(desc(textileCheckInsTable.createdAt));
+    return rows.map(row => ({
+      id: row.id,
+      unitCode: row.unitCode,
+      beddingSets: row.beddingSets as any,
+      towelSets: row.towelSets,
+      robes: row.robes,
+      createdBy: row.createdBy,
+      createdAt: row.createdAt,
+      notes: row.notes || undefined,
+    }));
+  }
+
+  async createTextileCheckIn(
+    checkIn: InsertTextileCheckIn,
+    userId: string
+  ): Promise<TextileCheckIn> {
+    // Calculate required stock from warehouse
+    const required: { type: TextileType; color: TextileColor; quantity: number }[] = [];
+    
+    // Process bedding sets (each = 1 sheet + 1 duvet_cover + 2 pillowcases)
+    for (const set of checkIn.beddingSets) {
+      required.push({ type: "sheets", color: set.color, quantity: set.count });
+      required.push({ type: "duvet_covers", color: set.color, quantity: set.count });
+      required.push({ type: "pillowcases", color: set.color, quantity: set.count * 2 });
+    }
+    
+    // Process towel sets (each = 2 large + 2 small, always grey)
+    required.push({ type: "towels_large", color: "grey", quantity: checkIn.towelSets * 2 });
+    required.push({ type: "towels_small", color: "grey", quantity: checkIn.towelSets * 2 });
+    
+    // Process robes (grey)
+    if (checkIn.robes > 0) {
+      required.push({ type: "robes", color: "grey", quantity: checkIn.robes });
+    }
+    
+    // Validate warehouse stock sufficiency
+    const warehouseStock = await this.getTextileStockByLocation("warehouse");
+    const stockMap = new Map<string, number>();
+    for (const item of warehouseStock) {
+      stockMap.set(`${item.type}_${item.color}`, item.quantity);
+    }
+    
+    const shortages: string[] = [];
+    for (const req of required) {
+      const key = `${req.type}_${req.color}`;
+      const available = stockMap.get(key) || 0;
+      if (available < req.quantity) {
+        const typeLabel = req.type === "sheets" ? "Простыни" :
+          req.type === "duvet_covers" ? "Пододеяльники" :
+          req.type === "pillowcases" ? "Наволочки" :
+          req.type === "towels_large" ? "Полотенца большие" :
+          req.type === "towels_small" ? "Полотенца малые" :
+          req.type === "robes" ? "Халаты" : req.type;
+        shortages.push(`${typeLabel} (${req.color}): нужно ${req.quantity}, на складе ${available}`);
+      }
+    }
+    
+    if (shortages.length > 0) {
+      throw new Error(`Недостаточно на складе: ${shortages.join("; ")}`);
+    }
+    
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    
+    const newCheckIn: TextileCheckIn = {
+      id,
+      unitCode: checkIn.unitCode,
+      beddingSets: checkIn.beddingSets,
+      towelSets: checkIn.towelSets,
+      robes: checkIn.robes,
+      createdBy: userId,
+      createdAt: now,
+      notes: checkIn.notes,
+    };
+    
+    await db.insert(textileCheckInsTable).values({
+      id: newCheckIn.id,
+      unitCode: newCheckIn.unitCode,
+      beddingSets: newCheckIn.beddingSets,
+      towelSets: newCheckIn.towelSets,
+      robes: newCheckIn.robes,
+      createdBy: newCheckIn.createdBy,
+      createdAt: newCheckIn.createdAt,
+      notes: newCheckIn.notes || null,
+    });
+    
+    // Move textiles from warehouse to unit
+    const unitLocation = checkIn.unitCode as TextileLocation;
+    
+    // Process bedding sets
+    for (const set of checkIn.beddingSets) {
+      // Each bedding set = 1 sheet + 1 duvet_cover + 2 pillowcases
+      await this.adjustTextileStock("warehouse", "sheets", set.color, -set.count, userId);
+      await this.adjustTextileStock(unitLocation, "sheets", set.color, set.count, userId);
+      
+      await this.adjustTextileStock("warehouse", "duvet_covers", set.color, -set.count, userId);
+      await this.adjustTextileStock(unitLocation, "duvet_covers", set.color, set.count, userId);
+      
+      await this.adjustTextileStock("warehouse", "pillowcases", set.color, -set.count * 2, userId);
+      await this.adjustTextileStock(unitLocation, "pillowcases", set.color, set.count * 2, userId);
+    }
+    
+    // Process towel sets (always grey color)
+    // Each towel set = 2 large + 2 small
+    await this.adjustTextileStock("warehouse", "towels_large", "grey", -checkIn.towelSets * 2, userId);
+    await this.adjustTextileStock(unitLocation, "towels_large", "grey", checkIn.towelSets * 2, userId);
+    
+    await this.adjustTextileStock("warehouse", "towels_small", "grey", -checkIn.towelSets * 2, userId);
+    await this.adjustTextileStock(unitLocation, "towels_small", "grey", checkIn.towelSets * 2, userId);
+    
+    // Process robes (grey color)
+    if (checkIn.robes > 0) {
+      await this.adjustTextileStock("warehouse", "robes", "grey", -checkIn.robes, userId);
+      await this.adjustTextileStock(unitLocation, "robes", "grey", checkIn.robes, userId);
+    }
+    
+    // Create event log
+    const eventItems: { type: TextileType; color: TextileColor; quantity: number }[] = [];
+    for (const set of checkIn.beddingSets) {
+      eventItems.push({ type: "sheets", color: set.color, quantity: set.count });
+      eventItems.push({ type: "duvet_covers", color: set.color, quantity: set.count });
+      eventItems.push({ type: "pillowcases", color: set.color, quantity: set.count * 2 });
+    }
+    eventItems.push({ type: "towels_large", color: "grey", quantity: checkIn.towelSets * 2 });
+    eventItems.push({ type: "towels_small", color: "grey", quantity: checkIn.towelSets * 2 });
+    if (checkIn.robes > 0) {
+      eventItems.push({ type: "robes", color: "grey", quantity: checkIn.robes });
+    }
+    
+    await this.createTextileEvent({
+      eventType: "check_in",
+      fromLocation: "warehouse",
+      toLocation: unitLocation,
+      items: eventItems,
+      relatedUnitCode: checkIn.unitCode,
+      notes: checkIn.notes,
+    }, userId);
+    
+    return newCheckIn;
+  }
+
+  async markTextileDirty(
+    unitCode: string,
+    userId: string,
+    notes?: string
+  ): Promise<void> {
+    const unitLocation = unitCode as TextileLocation;
+    
+    // Get all stock at this unit
+    const unitStock = await this.getTextileStockByLocation(unitLocation);
+    
+    const eventItems: { type: TextileType; color: TextileColor; quantity: number }[] = [];
+    
+    // Move all textiles from unit to laundry
+    for (const item of unitStock) {
+      if (item.quantity > 0) {
+        await this.adjustTextileStock(unitLocation, item.type, item.color, -item.quantity, userId);
+        await this.adjustTextileStock("laundry", item.type, item.color, item.quantity, userId);
+        eventItems.push({ type: item.type, color: item.color, quantity: item.quantity });
+      }
+    }
+    
+    if (eventItems.length > 0) {
+      await this.createTextileEvent({
+        eventType: "mark_dirty",
+        fromLocation: unitLocation,
+        toLocation: "laundry",
+        items: eventItems,
+        relatedUnitCode: unitCode,
+        notes,
+      }, userId);
+    }
+  }
+
+  async markTextileClean(
+    items: { type: TextileType; color: TextileColor; quantity: number }[],
+    userId: string,
+    notes?: string
+  ): Promise<void> {
+    // Move from laundry to warehouse
+    for (const item of items) {
+      await this.adjustTextileStock("laundry", item.type, item.color, -item.quantity, userId);
+      await this.adjustTextileStock("warehouse", item.type, item.color, item.quantity, userId);
+    }
+    
+    await this.createTextileEvent({
+      eventType: "mark_clean",
+      fromLocation: "laundry",
+      toLocation: "warehouse",
+      items,
+      notes,
+    }, userId);
+  }
+
+  // ============ TEXTILE EVENT METHODS ============
+  
+  async getTextileEvents(limit: number = 50): Promise<TextileEvent[]> {
+    const rows = await db.select().from(textileEventsTable)
+      .orderBy(desc(textileEventsTable.createdAt))
+      .limit(limit);
+    return rows.map(row => ({
+      id: row.id,
+      eventType: row.eventType as any,
+      fromLocation: row.fromLocation as TextileLocation | undefined,
+      toLocation: row.toLocation as TextileLocation | undefined,
+      items: row.items as any,
+      relatedUnitCode: row.relatedUnitCode || undefined,
+      createdBy: row.createdBy,
+      createdAt: row.createdAt,
+      notes: row.notes || undefined,
+    }));
+  }
+
+  async createTextileEvent(
+    event: InsertTextileEvent,
+    userId: string
+  ): Promise<TextileEvent> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    
+    const newEvent: TextileEvent = {
+      id,
+      eventType: event.eventType,
+      fromLocation: event.fromLocation,
+      toLocation: event.toLocation,
+      items: event.items,
+      relatedUnitCode: event.relatedUnitCode,
+      createdBy: userId,
+      createdAt: now,
+      notes: event.notes,
+    };
+    
+    await db.insert(textileEventsTable).values({
+      id: newEvent.id,
+      eventType: newEvent.eventType,
+      fromLocation: newEvent.fromLocation || null,
+      toLocation: newEvent.toLocation || null,
+      items: newEvent.items,
+      relatedUnitCode: newEvent.relatedUnitCode || null,
+      createdBy: newEvent.createdBy,
+      createdAt: newEvent.createdAt,
+      notes: newEvent.notes || null,
+    });
+    
+    return newEvent;
+  }
+
+  async getTextileStockSummary(): Promise<{
+    warehouse: { [key: string]: number };
+    laundry: { [key: string]: number };
+    units: { [unit: string]: { [key: string]: number } };
+  }> {
+    const allStock = await this.getTextileStock();
+    
+    const summary: {
+      warehouse: { [key: string]: number };
+      laundry: { [key: string]: number };
+      units: { [unit: string]: { [key: string]: number } };
+    } = {
+      warehouse: {},
+      laundry: {},
+      units: {},
+    };
+    
+    for (const item of allStock) {
+      const key = `${item.type}_${item.color}`;
+      
+      if (item.location === "warehouse") {
+        summary.warehouse[key] = (summary.warehouse[key] || 0) + item.quantity;
+      } else if (item.location === "laundry") {
+        summary.laundry[key] = (summary.laundry[key] || 0) + item.quantity;
+      } else {
+        if (!summary.units[item.location]) {
+          summary.units[item.location] = {};
+        }
+        summary.units[item.location][key] = (summary.units[item.location][key] || 0) + item.quantity;
+      }
+    }
+    
+    return summary;
   }
 }

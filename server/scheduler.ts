@@ -5,7 +5,8 @@ import {
   sendShiftReminder, 
   sendBathBookingsSummary, 
   sendClimateControlReminder,
-  sendWeatherAlert 
+  sendWeatherAlert,
+  sendLaundryCheckInReminder
 } from "./telegram-bot";
 
 const SHIFT_CLOSURE_CRON = "0 23 * * *";
@@ -19,6 +20,7 @@ const SHIFT_REMINDER_CRON = "30 8 * * *";       // 08:30 - Shift reminder
 const BATH_SUMMARY_CRON = "0 9 * * *";          // 09:00 - Bath bookings
 const CLIMATE_ON_CRON = "0 12 * * *";           // 12:00 - Climate control ON
 const CLIMATE_OFF_CRON = "0 14 * * *";          // 14:00 - Climate control OFF
+const LAUNDRY_REMINDER_CRON = "0 15 * * *";     // 15:00 - Laundry check-in reminder
 const WEATHER_CHECK_CRON = "0 18 * * *";        // 18:00 - Weather forecast check
 
 // Village Drewno coordinates (Polesie region)
@@ -285,6 +287,13 @@ export function initScheduler(): void {
     timezone: "Europe/Minsk"
   });
 
+  cron.schedule(LAUNDRY_REMINDER_CRON, async () => {
+    log("Sending laundry check-in reminder (15:00)", "scheduler");
+    await sendLaundryCheckInReminder();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
   cron.schedule(WEATHER_CHECK_CRON, async () => {
     log("Checking weather forecast (18:00)", "scheduler");
     await checkWeatherAndAlert();
@@ -303,6 +312,7 @@ export function initScheduler(): void {
   log("    - Bath summary: 09:00 daily", "scheduler");
   log("    - Climate ON: 12:00 daily", "scheduler");
   log("    - Climate OFF: 14:00 daily", "scheduler");
+  log("    - Laundry check-in: 15:00 daily", "scheduler");
 }
 
 export { createDailyTasks, createWeeklyTasks, createMonthlyTasks };

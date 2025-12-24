@@ -472,6 +472,22 @@ export async function sendWeatherAlert(alertType: "frost" | "storm", details: st
   }
 }
 
+export async function sendLaundryCheckInReminder() {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    
+    let message = `<b>[*] Напоминание: Заселения</b>\n\n`;
+    message += `Не забудьте внести данные о выданном белье для сегодняшних заселений.\n\n`;
+    message += `Откройте раздел "Прачечная" -> "Заселить"`;
+    
+    await notifyAdmins(message, { deepLink: "/ops/laundry" });
+    
+    console.log("[Telegram Bot] Sent laundry check-in reminder");
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send laundry reminder:", error);
+  }
+}
+
 export async function notifyNewQuadBooking(booking: {
   date: string;
   startTime: string;
