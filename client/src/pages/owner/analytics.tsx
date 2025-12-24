@@ -91,7 +91,7 @@ export default function OwnerAnalyticsPage() {
   };
 
   const totalRevenue = analytics 
-    ? analytics.cottageRevenue + analytics.bathRevenue + analytics.quadRevenue
+    ? analytics.cottageRevenue + analytics.bathRevenue
     : 0;
 
   return (
@@ -188,24 +188,6 @@ export default function OwnerAnalyticsPage() {
                     <p className="text-xs text-muted-foreground">бронирований</p>
                     <p className="text-sm font-medium text-primary mt-2">
                       {analytics.bathRevenue.toFixed(2)} BYN
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="rounded-full bg-chart-4/10 p-2">
-                        <Bike className="h-4 w-4 text-chart-4" />
-                      </div>
-                      <span className="text-sm font-medium">Квадро</span>
-                    </div>
-                    <p className="text-2xl font-bold font-mono" data-testid="stat-quad-sessions">
-                      {analytics.quadSessionsCount}
-                    </p>
-                    <p className="text-xs text-muted-foreground">сессий</p>
-                    <p className="text-sm font-medium text-primary mt-2">
-                      {analytics.quadRevenue.toFixed(2)} BYN
                     </p>
                   </CardContent>
                 </Card>

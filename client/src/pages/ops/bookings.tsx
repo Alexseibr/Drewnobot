@@ -218,22 +218,13 @@ export default function BookingsPage() {
       
       <PageContainer>
         <Tabs defaultValue="spa" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="spa" className="gap-2" data-testid="tab-spa">
               <Droplets className="h-4 w-4" />
               СПА
               {pendingSpa.length > 0 && (
                 <Badge className="ml-1 text-xs bg-status-pending text-black">
                   {pendingSpa.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="baths" className="gap-2" data-testid="tab-baths">
-              <Bath className="h-4 w-4" />
-              Бани
-              {pendingBaths.length > 0 && (
-                <Badge className="ml-1 text-xs bg-status-pending text-black">
-                  {pendingBaths.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -482,178 +473,6 @@ export default function BookingsPage() {
                   </Card>
                 )}
               </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="baths" className="space-y-4">
-            {pendingBaths.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-status-pending flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-status-pending animate-pulse" />
-                  Ожидают подтверждения
-                </h3>
-                {pendingBaths.map((booking) => (
-                  <Card key={booking.id} className="border-status-pending/30">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3 gap-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline">{booking.bathCode}</Badge>
-                            <StatusBadge status={booking.status} />
-                          </div>
-                          <p className="font-medium">{booking.customer.fullName}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {booking.customer.phone}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-mono text-sm">
-                            {booking.startTime} - {booking.endTime}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(parseISO(booking.date), "d MMM", { locale: ru })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mb-3 flex-wrap">
-                        {booking.options.tub !== "none" && (
-                          <Badge variant="secondary" className="text-xs">
-                            Купель: {booking.options.tub === "small" ? "малая" : "большая"}
-                          </Badge>
-                        )}
-                        {booking.options.grill && (
-                          <Badge variant="secondary" className="text-xs">Мангал</Badge>
-                        )}
-                        {booking.options.charcoal && (
-                          <Badge variant="secondary" className="text-xs">Уголь</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between pt-3 border-t gap-2">
-                        <p className="font-semibold">
-                          {booking.pricing.total} BYN
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => cancelBathMutation.mutate(booking.id)}
-                            disabled={cancelBathMutation.isPending}
-                            data-testid={`button-cancel-${booking.id}`}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => acceptBathMutation.mutate(booking.id)}
-                            disabled={acceptBathMutation.isPending}
-                            data-testid={`button-accept-${booking.id}`}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Принять
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {todayBaths.filter(b => b.status !== "pending_call").length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm">Сегодня</h3>
-                {todayBaths.filter(b => b.status !== "pending_call").map((booking) => (
-                  <Card key={booking.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2 gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline">{booking.bathCode}</Badge>
-                          <StatusBadge status={booking.status} />
-                        </div>
-                        <span className="text-sm font-mono">
-                          {booking.startTime} - {booking.endTime}
-                        </span>
-                      </div>
-                      <p className="font-medium">{booking.customer.fullName}</p>
-                      <p className="text-sm text-muted-foreground">{booking.customer.phone}</p>
-                      
-                      {booking.status === "confirmed" && (
-                        <div className="flex gap-2 mt-3 pt-3 border-t">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => closeBathPaymentMutation.mutate({ 
-                              bookingId: booking.id, 
-                              method: "erip" 
-                            })}
-                            disabled={closeBathPaymentMutation.isPending}
-                            data-testid={`button-erip-${booking.id}`}
-                          >
-                            <CreditCard className="h-4 w-4 mr-1" />
-                            ЕРИП
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => closeBathPaymentMutation.mutate({ 
-                              bookingId: booking.id, 
-                              method: "cash" 
-                            })}
-                            disabled={closeBathPaymentMutation.isPending}
-                            data-testid={`button-cash-${booking.id}`}
-                          >
-                            <Banknote className="h-4 w-4 mr-1" />
-                            Наличные
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {upcomingBaths.filter(b => b.status !== "pending_call").length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm">Предстоящие</h3>
-                {upcomingBaths.filter(b => b.status !== "pending_call").map((booking) => (
-                  <Card key={booking.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2 gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline">{booking.bathCode}</Badge>
-                          <StatusBadge status={booking.status} />
-                        </div>
-                        <div className="text-right">
-                          <p className="font-mono text-sm">
-                            {booking.startTime} - {booking.endTime}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(parseISO(booking.date), "d MMM", { locale: ru })}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="font-medium">{booking.customer.fullName}</p>
-                      <p className="text-sm text-muted-foreground">{booking.customer.phone}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {bathBookings.length === 0 && !isLoading && (
-              <Card>
-                <CardContent className="p-6">
-                  <EmptyState
-                    icon={Bath}
-                    title="Нет бронирований бань"
-                    description="Бронирования бань появятся здесь"
-                  />
-                </CardContent>
-              </Card>
             )}
           </TabsContent>
 

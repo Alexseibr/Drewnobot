@@ -54,13 +54,11 @@ const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
 ];
 
 const INCOME_SOURCES = [
-  { value: "bath", label: "Баня" },
+  { value: "spa", label: "СПА" },
   { value: "cottage_1", label: "Дом 1" },
   { value: "cottage_2", label: "Дом 2" },
   { value: "cottage_3", label: "Дом 3" },
   { value: "cottage_4", label: "Дом 4" },
-  { value: "quads", label: "Квадроциклы" },
-  { value: "spa", label: "СПА" },
   { value: "other", label: "Иное" },
 ];
 

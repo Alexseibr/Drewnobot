@@ -10,7 +10,8 @@ import {
   Settings,
   DollarSign,
   Wrench,
-  Users
+  Users,
+  Shirt
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -19,7 +20,6 @@ interface NavItem {
   path: string;
   label: string;
   icon: React.ElementType;
-  roles?: string[];
 }
 
 const guestNavItems: NavItem[] = [
@@ -32,6 +32,7 @@ const adminNavItems: NavItem[] = [
   { path: "/ops", label: "Сегодня", icon: Home },
   { path: "/ops/bookings", label: "Брони", icon: CalendarDays },
   { path: "/ops/cash", label: "Касса", icon: Wallet },
+  { path: "/ops/laundry", label: "Прачечная", icon: Shirt },
   { path: "/ops/tasks", label: "Задачи", icon: ClipboardList },
 ];
 
@@ -57,6 +58,7 @@ export function BottomNav() {
     if (!user) return guestNavItems;
     
     switch (user.role) {
+      case "SUPER_ADMIN":
       case "OWNER":
         return [...adminNavItems, ...ownerNavItems];
       case "ADMIN":
