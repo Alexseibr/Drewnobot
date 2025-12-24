@@ -229,16 +229,31 @@ async function createMonthlyTasks(): Promise<void> {
 
 async function checkScheduledTaskNotifications(): Promise<void> {
   try {
+    // Get current time in Minsk timezone
     const now = new Date();
-    const currentHour = now.getHours();
+    const minskTime = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Minsk",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(now);
+    const minskDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Minsk",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(now);
     
-    // Quiet hours: 23:00 - 08:00 (no notifications)
+    const [hourStr, minuteStr] = minskTime.split(":");
+    const currentHour = parseInt(hourStr, 10);
+    
+    // Quiet hours: 23:00 - 08:00 (no notifications) in Minsk time
     if (currentHour >= 23 || currentHour < 8) {
       return;
     }
     
-    const today = now.toISOString().split("T")[0];
-    const currentTime = `${String(currentHour).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const today = minskDate;
+    const currentTime = minskTime;
     
     const tasks = await storage.getTasks();
     const tasksToNotify = tasks.filter(t => 
