@@ -159,6 +159,24 @@ export const prepaymentSchema = z.object({
 });
 export type Prepayment = z.infer<typeof prepaymentSchema>;
 
+// ============ GUEST PROFILE ============
+export const guestSchema = z.object({
+  id: z.string(),
+  phone: z.string(), // normalized phone number (unique)
+  fullName: z.string().optional(),
+  telegramId: z.string().optional(),
+  totalVisits: z.number().default(0),
+  completedVisits: z.number().default(0), // only arrived visits count
+  noShowCount: z.number().default(0),
+  lastVisitAt: z.string().optional(),
+  notes: z.string().optional(),
+  createdAt: z.string(),
+});
+export type Guest = z.infer<typeof guestSchema>;
+
+export const insertGuestSchema = guestSchema.omit({ id: true, createdAt: true, totalVisits: true, completedVisits: true, noShowCount: true });
+export type InsertGuest = z.infer<typeof insertGuestSchema>;
+
 // ============ COTTAGE BOOKING ============
 export const cottageBookingSchema = z.object({
   id: z.string(),
@@ -191,8 +209,10 @@ export const bathBookingSchema = z.object({
   startTime: z.string(), // HH:mm
   endTime: z.string(), // HH:mm
   customer: customerSchema,
+  guestId: z.string().optional(), // link to guest profile
   options: z.object({
     tub: TubType.default("none"),
+    terrace: z.boolean().default(false), // only terrace rental
     grill: z.boolean().default(false),
     charcoal: z.boolean().default(false),
   }),
@@ -209,6 +229,8 @@ export const bathBookingSchema = z.object({
   status: BathBookingStatus.default("pending_call"),
   holdUntil: z.string().optional(),
   assignedAdmin: z.string().optional(),
+  arrivedAt: z.string().optional(), // when guest arrived
+  noShow: z.boolean().default(false), // marked as no-show
   createdAt: z.string(),
 });
 export type BathBooking = z.infer<typeof bathBookingSchema>;
@@ -221,6 +243,7 @@ export const insertBathBookingSchema = z.object({
   customer: customerSchema,
   options: z.object({
     tub: TubType.default("none"),
+    terrace: z.boolean().default(false),
     grill: z.boolean().default(false),
     charcoal: z.boolean().default(false),
   }),
@@ -1031,6 +1054,20 @@ export const cottageBookingsTable = pgTable("cottage_bookings", {
   createdAt: text("created_at").notNull(),
 });
 
+// ============ GUESTS TABLE ============
+export const guestsTable = pgTable("guests", {
+  id: text("id").primaryKey(),
+  phone: text("phone").notNull().unique(), // normalized phone
+  fullName: text("full_name"),
+  telegramId: text("telegram_id"),
+  totalVisits: integer("total_visits").notNull().default(0),
+  completedVisits: integer("completed_visits").notNull().default(0),
+  noShowCount: integer("no_show_count").notNull().default(0),
+  lastVisitAt: text("last_visit_at"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+});
+
 // ============ BATH BOOKINGS TABLE ============
 export const bathBookingsTable = pgTable("bath_bookings", {
   id: text("id").primaryKey(),
@@ -1039,12 +1076,15 @@ export const bathBookingsTable = pgTable("bath_bookings", {
   startTime: text("start_time").notNull(),
   endTime: text("end_time").notNull(),
   customer: jsonb("customer").notNull(),
-  options: jsonb("options").notNull(), // { tub, grill, charcoal }
+  guestId: text("guest_id"), // link to guests table
+  options: jsonb("options").notNull(), // { tub, terrace, grill, charcoal }
   pricing: jsonb("pricing").notNull(), // { base, extras, total }
   payments: jsonb("payments").notNull(),
   status: text("status").notNull().default("pending_call"),
   holdUntil: text("hold_until"),
   assignedAdmin: text("assigned_admin"),
+  arrivedAt: text("arrived_at"), // when guest actually arrived
+  noShow: boolean("no_show").notNull().default(false), // marked as no-show
   createdAt: text("created_at").notNull(),
 });
 

@@ -42,6 +42,7 @@ import type {
   TextileCheckIn, InsertTextileCheckIn,
   TextileEvent, InsertTextileEvent,
   TextileLocation, TextileType, TextileColor,
+  Guest, InsertGuest,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
@@ -51,7 +52,7 @@ import {
   authSessionsTable, staffInvitationsTable, staffAuthorizationsTable, quadMachinesTable, quadMileageLogsTable,
   quadMaintenanceRulesTable, quadMaintenanceEventsTable, siteSettingsTable,
   blockedDatesTable, reviewsTable, laundryBatchesTable, textileAuditsTable,
-  textileStockTable, textileCheckInsTable, textileEventsTable,
+  textileStockTable, textileCheckInsTable, textileEventsTable, guestsTable,
 } from "@shared/schema";
 
 const PRICES: Record<string, number> = {
@@ -426,12 +427,15 @@ export class DatabaseStorage implements IStorage {
       startTime: booking.startTime,
       endTime: booking.endTime,
       customer: booking.customer,
-      options: booking.options || { tub: "none", grill: false, charcoal: false },
+      guestId: b.guestId,
+      options: booking.options || { tub: "none", terrace: false, grill: false, charcoal: false },
       pricing,
       payments: b.payments || { eripPaid: 0, cashPaid: 0 },
       status: b.status || "pending_call",
       holdUntil: b.holdUntil,
       assignedAdmin: b.assignedAdmin,
+      arrivedAt: undefined,
+      noShow: false,
       createdAt: now,
     };
     await db.insert(bathBookingsTable).values({
@@ -441,12 +445,15 @@ export class DatabaseStorage implements IStorage {
       startTime: newBooking.startTime,
       endTime: newBooking.endTime,
       customer: newBooking.customer,
+      guestId: newBooking.guestId || null,
       options: newBooking.options,
       pricing: newBooking.pricing,
       payments: newBooking.payments,
       status: newBooking.status,
       holdUntil: newBooking.holdUntil || null,
       assignedAdmin: newBooking.assignedAdmin || null,
+      arrivedAt: newBooking.arrivedAt || null,
+      noShow: newBooking.noShow,
       createdAt: newBooking.createdAt,
     });
     return newBooking;
@@ -476,12 +483,15 @@ export class DatabaseStorage implements IStorage {
       startTime: row.startTime,
       endTime: row.endTime,
       customer: row.customer as any,
+      guestId: row.guestId || undefined,
       options: row.options as any,
       pricing: row.pricing as any,
       payments: row.payments as any,
       status: row.status as any,
       holdUntil: row.holdUntil || undefined,
       assignedAdmin: row.assignedAdmin || undefined,
+      arrivedAt: row.arrivedAt || undefined,
+      noShow: row.noShow ?? false,
       createdAt: row.createdAt,
     };
   }
@@ -2701,5 +2711,195 @@ export class DatabaseStorage implements IStorage {
     }
     
     return summary;
+  }
+
+  // ============ GUEST PROFILE METHODS ============
+  
+  async getGuests(): Promise<Guest[]> {
+    const rows = await db.select().from(guestsTable).orderBy(desc(guestsTable.completedVisits));
+    return rows.map(row => ({
+      id: row.id,
+      phone: row.phone,
+      fullName: row.fullName || undefined,
+      telegramId: row.telegramId || undefined,
+      totalVisits: row.totalVisits,
+      completedVisits: row.completedVisits,
+      noShowCount: row.noShowCount,
+      lastVisitAt: row.lastVisitAt || undefined,
+      notes: row.notes || undefined,
+      createdAt: row.createdAt,
+    }));
+  }
+
+  async getGuest(id: string): Promise<Guest | undefined> {
+    const [row] = await db.select().from(guestsTable).where(eq(guestsTable.id, id));
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      phone: row.phone,
+      fullName: row.fullName || undefined,
+      telegramId: row.telegramId || undefined,
+      totalVisits: row.totalVisits,
+      completedVisits: row.completedVisits,
+      noShowCount: row.noShowCount,
+      lastVisitAt: row.lastVisitAt || undefined,
+      notes: row.notes || undefined,
+      createdAt: row.createdAt,
+    };
+  }
+
+  async getGuestByPhone(phone: string): Promise<Guest | undefined> {
+    const normalized = normalizePhoneOrNull(phone);
+    if (!normalized) return undefined;
+    
+    const [row] = await db.select().from(guestsTable).where(eq(guestsTable.phone, normalized));
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      phone: row.phone,
+      fullName: row.fullName || undefined,
+      telegramId: row.telegramId || undefined,
+      totalVisits: row.totalVisits,
+      completedVisits: row.completedVisits,
+      noShowCount: row.noShowCount,
+      lastVisitAt: row.lastVisitAt || undefined,
+      notes: row.notes || undefined,
+      createdAt: row.createdAt,
+    };
+  }
+
+  async createGuest(guest: InsertGuest): Promise<Guest> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const normalized = normalizePhoneOrNull(guest.phone) || guest.phone;
+    
+    const newGuest: Guest = {
+      id,
+      phone: normalized,
+      fullName: guest.fullName,
+      telegramId: guest.telegramId,
+      totalVisits: 0,
+      completedVisits: 0,
+      noShowCount: 0,
+      lastVisitAt: guest.lastVisitAt,
+      notes: guest.notes,
+      createdAt: now,
+    };
+    
+    await db.insert(guestsTable).values({
+      id: newGuest.id,
+      phone: newGuest.phone,
+      fullName: newGuest.fullName || null,
+      telegramId: newGuest.telegramId || null,
+      totalVisits: newGuest.totalVisits,
+      completedVisits: newGuest.completedVisits,
+      noShowCount: newGuest.noShowCount,
+      lastVisitAt: newGuest.lastVisitAt || null,
+      notes: newGuest.notes || null,
+      createdAt: newGuest.createdAt,
+    });
+    
+    return newGuest;
+  }
+
+  async updateGuest(id: string, updates: Partial<Guest>): Promise<Guest | undefined> {
+    await db.update(guestsTable)
+      .set({
+        fullName: updates.fullName,
+        telegramId: updates.telegramId,
+        totalVisits: updates.totalVisits,
+        completedVisits: updates.completedVisits,
+        noShowCount: updates.noShowCount,
+        lastVisitAt: updates.lastVisitAt,
+        notes: updates.notes,
+      })
+      .where(eq(guestsTable.id, id));
+    return this.getGuest(id);
+  }
+
+  async getOrCreateGuestByPhone(phone: string, name?: string, telegramId?: string): Promise<Guest> {
+    const existing = await this.getGuestByPhone(phone);
+    if (existing) {
+      // Update name/telegramId if provided and different
+      if ((name && name !== existing.fullName) || (telegramId && telegramId !== existing.telegramId)) {
+        return (await this.updateGuest(existing.id, {
+          fullName: name || existing.fullName,
+          telegramId: telegramId || existing.telegramId,
+        }))!;
+      }
+      return existing;
+    }
+    
+    return this.createGuest({
+      phone,
+      fullName: name,
+      telegramId,
+    });
+  }
+
+  async incrementGuestVisit(guestId: string, completed: boolean): Promise<Guest | undefined> {
+    const guest = await this.getGuest(guestId);
+    if (!guest) return undefined;
+    
+    const now = new Date().toISOString();
+    return this.updateGuest(guestId, {
+      totalVisits: guest.totalVisits + 1,
+      completedVisits: completed ? guest.completedVisits + 1 : guest.completedVisits,
+      lastVisitAt: now,
+    });
+  }
+
+  async markGuestNoShow(guestId: string): Promise<Guest | undefined> {
+    const guest = await this.getGuest(guestId);
+    if (!guest) return undefined;
+    
+    return this.updateGuest(guestId, {
+      totalVisits: guest.totalVisits + 1,
+      noShowCount: guest.noShowCount + 1,
+    });
+  }
+
+  // ============ BATH BOOKING ARRIVAL TRACKING ============
+
+  async markBathBookingArrived(bookingId: string): Promise<BathBooking | undefined> {
+    const booking = await this.getBathBooking(bookingId);
+    if (!booking) return undefined;
+    
+    const now = new Date().toISOString();
+    
+    // Update booking with arrival time
+    await db.update(bathBookingsTable)
+      .set({
+        arrivedAt: now,
+        noShow: false,
+      })
+      .where(eq(bathBookingsTable.id, bookingId));
+    
+    // Increment guest visit count if linked
+    if (booking.guestId) {
+      await this.incrementGuestVisit(booking.guestId, true);
+    }
+    
+    return this.getBathBooking(bookingId);
+  }
+
+  async markBathBookingNoShow(bookingId: string): Promise<BathBooking | undefined> {
+    const booking = await this.getBathBooking(bookingId);
+    if (!booking) return undefined;
+    
+    // Update booking as no-show
+    await db.update(bathBookingsTable)
+      .set({
+        noShow: true,
+        status: "cancelled",
+      })
+      .where(eq(bathBookingsTable.id, bookingId));
+    
+    // Increment guest no-show count if linked
+    if (booking.guestId) {
+      await this.markGuestNoShow(booking.guestId);
+    }
+    
+    return this.getBathBooking(bookingId);
   }
 }

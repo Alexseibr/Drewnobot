@@ -39,6 +39,7 @@ import type {
   TextileCheckIn, InsertTextileCheckIn,
   TextileEvent, InsertTextileEvent,
   TextileLocation, TextileType, TextileColor,
+  Guest, InsertGuest,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -249,6 +250,20 @@ export interface IStorage {
     laundry: { [key: string]: number };
     units: { [unit: string]: { [key: string]: number } };
   }>;
+  
+  // Guest Profiles (visit tracking)
+  getGuests(): Promise<Guest[]>;
+  getGuest(id: string): Promise<Guest | undefined>;
+  getGuestByPhone(phone: string): Promise<Guest | undefined>;
+  createGuest(guest: InsertGuest): Promise<Guest>;
+  updateGuest(id: string, updates: Partial<Guest>): Promise<Guest | undefined>;
+  getOrCreateGuestByPhone(phone: string, name?: string, telegramId?: string): Promise<Guest>;
+  incrementGuestVisit(guestId: string, completed: boolean): Promise<Guest | undefined>;
+  markGuestNoShow(guestId: string): Promise<Guest | undefined>;
+  
+  // Bath booking arrival tracking
+  markBathBookingArrived(bookingId: string): Promise<BathBooking | undefined>;
+  markBathBookingNoShow(bookingId: string): Promise<BathBooking | undefined>;
 }
 
 const PRICES: Record<string, number> = {
@@ -586,10 +601,12 @@ export class MemStorage implements IStorage {
       startTime: insertBooking.startTime,
       endTime: insertBooking.endTime,
       customer: insertBooking.customer,
-      options: insertBooking.options || { tub: "none", grill: false, charcoal: false },
+      options: insertBooking.options || { tub: "none", terrace: false, grill: false, charcoal: false },
       pricing: { base, extras, total: base + extras },
       payments: { eripPaid: 0, cashPaid: 0 },
       status: "pending_call",
+      arrivedAt: undefined,
+      noShow: false,
       createdAt: new Date().toISOString(),
     };
     this.bathBookings.set(booking.id, booking);
@@ -1791,6 +1808,22 @@ export class MemStorage implements IStorage {
   async getTextileStockSummary(): Promise<{ warehouse: { [key: string]: number }; laundry: { [key: string]: number }; units: { [unit: string]: { [key: string]: number } }; }> {
     return { warehouse: {}, laundry: {}, units: {} };
   }
+
+  // Guest Profiles (stub methods - use DatabaseStorage for production)
+  async getGuests(): Promise<Guest[]> { return []; }
+  async getGuest(_id: string): Promise<Guest | undefined> { return undefined; }
+  async getGuestByPhone(_phone: string): Promise<Guest | undefined> { return undefined; }
+  async createGuest(guest: InsertGuest): Promise<Guest> {
+    return { id: randomUUID(), phone: guest.phone, fullName: guest.fullName, telegramId: guest.telegramId, totalVisits: 0, completedVisits: 0, noShowCount: 0, notes: guest.notes, createdAt: new Date().toISOString() };
+  }
+  async updateGuest(_id: string, _updates: Partial<Guest>): Promise<Guest | undefined> { return undefined; }
+  async getOrCreateGuestByPhone(phone: string, name?: string, telegramId?: string): Promise<Guest> {
+    return { id: randomUUID(), phone, fullName: name, telegramId, totalVisits: 0, completedVisits: 0, noShowCount: 0, createdAt: new Date().toISOString() };
+  }
+  async incrementGuestVisit(_guestId: string, _completed: boolean): Promise<Guest | undefined> { return undefined; }
+  async markGuestNoShow(_guestId: string): Promise<Guest | undefined> { return undefined; }
+  async markBathBookingArrived(_bookingId: string): Promise<BathBooking | undefined> { return undefined; }
+  async markBathBookingNoShow(_bookingId: string): Promise<BathBooking | undefined> { return undefined; }
 }
 
 import { DatabaseStorage } from "./database-storage";
