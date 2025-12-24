@@ -2024,7 +2024,7 @@ export async function registerRoutes(
 
   // ============ QUAD PRICING - INSTRUCTOR ============
   // Get all quad pricing (defaults + date overrides) - instructor only
-  app.get("/api/instructor/quads/pricing", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.get("/api/instructor/quads/pricing", authMiddleware, requireRole("INSTRUCTOR", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const pricing = await storage.getQuadPricing();
       res.json(pricing);
@@ -2048,7 +2048,7 @@ export async function registerRoutes(
   });
 
   // Set quad pricing (default or date-specific) - instructor only
-  app.post("/api/instructor/quads/pricing", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.post("/api/instructor/quads/pricing", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const { routeType, price, date } = req.body;
       
@@ -2077,7 +2077,7 @@ export async function registerRoutes(
   });
 
   // Delete date-specific price override - instructor only
-  app.delete("/api/instructor/quads/pricing/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.delete("/api/instructor/quads/pricing/:id", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const deleted = await storage.deleteQuadPriceOverride(req.params.id);
       if (!deleted) {
@@ -2205,7 +2205,7 @@ export async function registerRoutes(
   });
 
   // ============ INSTRUCTOR MANAGEMENT ============
-  app.get("/api/instructors", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.get("/api/instructors", authMiddleware, requireRole("INSTRUCTOR", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const users = await storage.getUsers();
       const instructors = users.filter(u => u.role === "INSTRUCTOR" && u.isActive);
@@ -2215,7 +2215,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/instructors", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.post("/api/instructors", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const { name, telegramId } = req.body;
       if (!name || !telegramId) {
@@ -2241,7 +2241,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/instructors/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.delete("/api/instructors/:id", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user || user.role !== "INSTRUCTOR") {
@@ -2259,7 +2259,7 @@ export async function registerRoutes(
   // ============ QUAD MAINTENANCE (SERVICE BOOK) ============
   
   // Get all quad machines
-  app.get("/api/quads/machines", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.get("/api/quads/machines", authMiddleware, requireRole("INSTRUCTOR", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const machines = await storage.getQuadMachines();
       res.json(machines);
@@ -2269,7 +2269,7 @@ export async function registerRoutes(
   });
 
   // Create new quad machine
-  app.post("/api/quads/machines", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.post("/api/quads/machines", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const { code, name, ownerType, notes, commissioningDate } = req.body;
       
@@ -2300,7 +2300,7 @@ export async function registerRoutes(
   });
 
   // Get maintenance statuses for all quads
-  app.get("/api/quads/maintenance/statuses", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.get("/api/quads/maintenance/statuses", authMiddleware, requireRole("INSTRUCTOR", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const statuses = await storage.getQuadMaintenanceStatuses();
       res.json(statuses);
@@ -2310,7 +2310,7 @@ export async function registerRoutes(
   });
 
   // Get maintenance status for a specific quad
-  app.get("/api/quads/:quadId/maintenance/status", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.get("/api/quads/:quadId/maintenance/status", authMiddleware, requireRole("INSTRUCTOR", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const statuses = await storage.getQuadMaintenanceStatusesForQuad(req.params.quadId);
       res.json(statuses);
@@ -2320,7 +2320,7 @@ export async function registerRoutes(
   });
 
   // Get mileage logs
-  app.get("/api/quads/mileage", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.get("/api/quads/mileage", authMiddleware, requireRole("INSTRUCTOR", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const quadId = req.query.quadId as string | undefined;
       const logs = await storage.getQuadMileageLogs(quadId);
@@ -2331,7 +2331,7 @@ export async function registerRoutes(
   });
 
   // Log mileage after a ride
-  app.post("/api/quads/mileage", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.post("/api/quads/mileage", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const { quadId, mileageKm, notes } = req.body;
       const user = (req as any).user;
@@ -2363,7 +2363,7 @@ export async function registerRoutes(
   });
 
   // Get maintenance rules
-  app.get("/api/quads/maintenance/rules", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.get("/api/quads/maintenance/rules", authMiddleware, requireRole("INSTRUCTOR", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const quadId = req.query.quadId as string | undefined;
       const rules = await storage.getQuadMaintenanceRules(quadId);
@@ -2374,7 +2374,7 @@ export async function registerRoutes(
   });
 
   // Create maintenance rule
-  app.post("/api/quads/maintenance/rules", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.post("/api/quads/maintenance/rules", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const { quadId, title, description, triggerType, intervalKm, intervalDays, warningKm, warningDays } = req.body;
       const user = (req as any).user;
@@ -2415,7 +2415,7 @@ export async function registerRoutes(
   });
 
   // Update maintenance rule
-  app.patch("/api/quads/maintenance/rules/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.patch("/api/quads/maintenance/rules/:id", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const rule = await storage.updateQuadMaintenanceRule(req.params.id, req.body);
       if (!rule) {
@@ -2428,7 +2428,7 @@ export async function registerRoutes(
   });
 
   // Delete maintenance rule
-  app.delete("/api/quads/maintenance/rules/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.delete("/api/quads/maintenance/rules/:id", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const deleted = await storage.deleteQuadMaintenanceRule(req.params.id);
       if (!deleted) {
@@ -2441,7 +2441,7 @@ export async function registerRoutes(
   });
 
   // Get maintenance events (service history)
-  app.get("/api/quads/maintenance/events", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.get("/api/quads/maintenance/events", authMiddleware, requireRole("INSTRUCTOR", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const quadId = req.query.quadId as string | undefined;
       const events = await storage.getQuadMaintenanceEvents(quadId);
@@ -2452,7 +2452,7 @@ export async function registerRoutes(
   });
 
   // Record maintenance event
-  app.post("/api/quads/maintenance/events", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.post("/api/quads/maintenance/events", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const { quadId, ruleId, title, description, mileageKm, partsUsed, totalCost, performedAt } = req.body;
       const user = (req as any).user;
@@ -2485,7 +2485,7 @@ export async function registerRoutes(
   });
 
   // Update quad machine (name, notes, active status)
-  app.patch("/api/quads/machines/:id", authMiddleware, requireRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+  app.patch("/api/quads/machines/:id", authMiddleware, requireRole("INSTRUCTOR"), async (req, res) => {
     try {
       const machine = await storage.updateQuadMachine(req.params.id, req.body);
       if (!machine) {
