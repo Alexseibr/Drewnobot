@@ -11,7 +11,8 @@ import {
   DollarSign,
   Wrench,
   Users,
-  Shirt
+  Shirt,
+  Map
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -26,6 +27,7 @@ const guestNavItems: NavItem[] = [
   { path: "/", label: "Главная", icon: Home },
   { path: "/guest/spa", label: "СПА", icon: Bath },
   { path: "/guest/quads", label: "Квадро", icon: Bike },
+  { path: "/guest/map", label: "Карта", icon: Map },
 ];
 
 const adminNavItems: NavItem[] = [
