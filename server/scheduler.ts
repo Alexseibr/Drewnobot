@@ -6,7 +6,8 @@ import {
   sendBathBookingsSummary, 
   sendClimateControlReminder,
   sendWeatherAlert,
-  sendLaundryCheckInReminder
+  sendLaundryCheckInReminder,
+  sendTaskNotification
 } from "./telegram-bot";
 
 const SHIFT_CLOSURE_CRON = "0 23 * * *";
@@ -22,6 +23,7 @@ const CLIMATE_ON_CRON = "0 12 * * *";           // 12:00 - Climate control ON
 const CLIMATE_OFF_CRON = "0 14 * * *";          // 14:00 - Climate control OFF
 const LAUNDRY_REMINDER_CRON = "0 15 * * *";     // 15:00 - Laundry check-in reminder
 const WEATHER_CHECK_CRON = "0 18 * * *";        // 18:00 - Weather forecast check
+const SCHEDULED_TASK_CHECK_CRON = "* * * * *";  // Every minute - Check for scheduled task notifications
 
 // Village Drewno coordinates (Polesie region)
 const LOCATION_LAT = 51.87728;
@@ -203,6 +205,7 @@ async function createScheduledTasks(tasks: ScheduledTask[], period: string): Pro
         unitCode: task.unitCode,
         checklist: task.checklist,
         status: "open",
+        priority: "normal",
         createdBySystem: true,
       });
     }
@@ -222,6 +225,49 @@ async function createWeeklyTasks(): Promise<void> {
 
 async function createMonthlyTasks(): Promise<void> {
   await createScheduledTasks(MONTHLY_TASKS, "monthly");
+}
+
+async function checkScheduledTaskNotifications(): Promise<void> {
+  try {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Quiet hours: 23:00 - 08:00 (no notifications)
+    if (currentHour >= 23 || currentHour < 8) {
+      return;
+    }
+    
+    const today = now.toISOString().split("T")[0];
+    const currentTime = `${String(currentHour).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    
+    const tasks = await storage.getTasks();
+    const tasksToNotify = tasks.filter(t => 
+      t.date === today &&
+      t.status === "open" &&
+      t.notifyAt &&
+      !t.notified &&
+      t.notifyAt <= currentTime
+    );
+    
+    if (tasksToNotify.length === 0) return;
+    
+    for (const task of tasksToNotify) {
+      await sendTaskNotification({
+        id: task.id,
+        title: task.title,
+        type: task.type,
+        date: task.date,
+        unitCode: task.unitCode,
+        priority: task.priority,
+        assignedTo: task.assignedTo,
+      });
+      
+      await storage.updateTask(task.id, { notified: true });
+      log(`Sent scheduled notification for task: ${task.title}`, "scheduler");
+    }
+  } catch (error) {
+    console.error("[Scheduler] Failed to check scheduled task notifications:", error);
+  }
 }
 
 export function initScheduler(): void {
@@ -301,12 +347,19 @@ export function initScheduler(): void {
     timezone: "Europe/Minsk"
   });
 
+  cron.schedule(SCHEDULED_TASK_CHECK_CRON, async () => {
+    await checkScheduledTaskNotifications();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
   log("Scheduler initialized:", "scheduler");
   log("  - Shift auto-closure: 23:00 daily", "scheduler");
   log("  - Daily tasks: 06:00 daily", "scheduler");
   log("  - Weekly tasks: 06:00 Monday", "scheduler");
   log("  - Monthly tasks: 06:00 1st of month", "scheduler");
   log("  - Weather check: 18:00 daily", "scheduler");
+  log("  - Scheduled task notifications: every minute", "scheduler");
   log("  - Notifications:", "scheduler");
   log("    - Shift reminder: 08:30 daily", "scheduler");
   log("    - Bath summary: 09:00 daily", "scheduler");

@@ -696,7 +696,15 @@ export async function sendMaintenanceAlerts() {
 
 // ============ TASK NOTIFICATIONS ============
 
-export async function sendTaskNotification(task: { id: string; title: string; type: string; date: string; unitCode?: string }) {
+export async function sendTaskNotification(task: { 
+  id: string; 
+  title: string; 
+  type: string; 
+  date: string; 
+  unitCode?: string;
+  priority?: string;
+  assignedTo?: string;
+}) {
   try {
     const users = await storage.getUsers();
     const admins = users.filter(u => 
@@ -723,11 +731,14 @@ export async function sendTaskNotification(task: { id: string; title: string; ty
     
     const typeLabel = typeLabels[task.type] || task.type;
     const unitInfo = task.unitCode ? ` (${task.unitCode})` : "";
+    const isUrgent = task.priority === "urgent";
+    const urgentPrefix = isUrgent ? "СРОЧНО! " : "";
     
-    const message = `<b>Новая задача</b>\n\n` +
+    const message = `<b>${urgentPrefix}Новая задача</b>\n\n` +
       `${task.title}${unitInfo}\n` +
       `Тип: ${typeLabel}\n` +
-      `Дата: ${task.date}`;
+      `Дата: ${task.date}` +
+      (isUrgent ? "\n\n<b>Требует срочного выполнения!</b>" : "");
     
     const keyboard = {
       inline_keyboard: [
@@ -746,7 +757,7 @@ export async function sendTaskNotification(task: { id: string; title: string; ty
       }
     }
     
-    console.log(`[Telegram Bot] Sent task notification to ${admins.length} admins`);
+    console.log(`[Telegram Bot] Sent task notification to ${admins.length} admins${isUrgent ? " (URGENT)" : ""}`);
   } catch (error) {
     console.error("[Telegram Bot] Failed to send task notification:", error);
   }

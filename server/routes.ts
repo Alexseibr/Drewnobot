@@ -476,7 +476,7 @@ export async function registerRoutes(
 
   app.post("/api/tasks", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
-      const { title, type, date, unitCode } = req.body;
+      const { title, type, date, unitCode, priority, notifyAt, assignedTo } = req.body;
       
       if (!title || !type || !date) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -487,18 +487,28 @@ export async function registerRoutes(
         type,
         date,
         unitCode: unitCode && unitCode !== "none" ? unitCode : undefined,
+        priority: priority || "normal",
+        notifyAt: notifyAt || undefined,
+        assignedTo: assignedTo || undefined,
         status: "open",
         createdBySystem: false,
       });
       
-      // Send Telegram notification to admins (async, don't wait)
-      sendTaskNotification({
-        id: task.id,
-        title: task.title,
-        type: task.type,
-        date: task.date,
-        unitCode: task.unitCode,
-      }).catch(err => console.error("[Tasks] Notification error:", err));
+      // Only send notification immediately if no scheduled time is set
+      if (!notifyAt) {
+        sendTaskNotification({
+          id: task.id,
+          title: task.title,
+          type: task.type,
+          date: task.date,
+          unitCode: task.unitCode,
+          priority: task.priority,
+          assignedTo: task.assignedTo,
+        }).catch(err => console.error("[Tasks] Notification error:", err));
+        
+        // Mark as notified immediately
+        await storage.updateTask(task.id, { notified: true });
+      }
       
       res.json(task);
     } catch (error) {

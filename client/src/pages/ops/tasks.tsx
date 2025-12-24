@@ -39,7 +39,8 @@ import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { TaskCardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { Task, TaskType, MeterReading } from "@shared/schema";
+import type { Task, TaskType, MeterReading, TaskPriority } from "@shared/schema";
+import { AlertCircle } from "lucide-react";
 
 const taskIcons: Record<TaskType, React.ElementType> = {
   climate_off: ThermometerSnowflake,
@@ -94,11 +95,19 @@ const METER_TYPES: { value: MeterReading["meterType"]; label: string }[] = [
   { value: "gas", label: "Газ" },
 ];
 
+const PRIORITIES: { value: TaskPriority; label: string }[] = [
+  { value: "normal", label: "По мере освобождения" },
+  { value: "urgent", label: "Срочно" },
+];
+
 const taskFormSchema = z.object({
   title: z.string().min(3, "Минимум 3 символа"),
   type: z.enum(["climate_off", "climate_on", "trash_prep", "meters", "cleaning", "call_guest", "other"]),
   date: z.date(),
   unitCode: z.string().optional(),
+  priority: z.enum(["normal", "urgent"]).default("normal"),
+  notifyAt: z.string().optional(),
+  assignedTo: z.string().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -141,6 +150,9 @@ export default function TasksPage() {
       type: "other",
       date: new Date(),
       unitCode: "",
+      priority: "normal",
+      notifyAt: "",
+      assignedTo: "",
     },
   });
 
@@ -150,6 +162,9 @@ export default function TasksPage() {
         ...data,
         date: format(data.date, "yyyy-MM-dd"),
         unitCode: data.unitCode || undefined,
+        priority: data.priority || "normal",
+        notifyAt: data.notifyAt || undefined,
+        assignedTo: data.assignedTo || undefined,
       });
       return response.json();
     },
@@ -269,6 +284,12 @@ export default function TasksPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {task.priority === "urgent" && (
+                  <Badge variant="destructive" className="text-xs">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Срочно
+                  </Badge>
+                )}
                 {task.unitCode && (
                   <Badge variant="outline" className="text-xs">
                     {task.unitCode}
@@ -280,6 +301,12 @@ export default function TasksPage() {
                 {task.createdBySystem && (
                   <Badge variant="secondary" className="text-xs">
                     Авто
+                  </Badge>
+                )}
+                {task.notifyAt && !task.notified && (
+                  <Badge variant="outline" className="text-xs">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {task.notifyAt}
                   </Badge>
                 )}
               </div>
@@ -418,6 +445,51 @@ export default function TasksPage() {
                             />
                           </PopoverContent>
                         </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Срочность</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-task-priority">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {PRIORITIES.map((p) => (
+                              <SelectItem key={p.value} value={p.value}>
+                                {p.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="notifyAt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Напомнить в</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="time" 
+                            placeholder="Сразу"
+                            {...field}
+                            data-testid="input-task-notify-at"
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">Оставьте пустым для немедленного уведомления</p>
                         <FormMessage />
                       </FormItem>
                     )}
