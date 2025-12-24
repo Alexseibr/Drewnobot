@@ -8,6 +8,7 @@ import {
   Bike,
   Thermometer,
   Zap,
+  CheckCircle2,
   ChevronRight
 } from "lucide-react";
 import { Link } from "wouter";
@@ -121,6 +122,19 @@ export default function OwnerSettingsPage() {
                     <div>
                       <span className="font-medium">Коммунальные</span>
                       <p className="text-xs text-muted-foreground">Учёт электроэнергии</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </Link>
+              
+              <Link href="/owner/completed-tasks">
+                <div className="flex items-center justify-between p-3 -mx-3 rounded-md hover-elevate cursor-pointer mt-2 border" data-testid="link-completed-tasks">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <div>
+                      <span className="font-medium">Выполненные задачи</span>
+                      <p className="text-xs text-muted-foreground">История работы персонала</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
