@@ -103,6 +103,38 @@ export default function BookingsPage() {
     },
   });
 
+  // Mark guest as arrived - creates/links guest profile
+  const arriveBathMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const response = await apiRequest("POST", `/api/admin/bath-bookings/${bookingId}/arrive`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
+      toast({ title: "Гость отмечен как прибывший" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка отметки прибытия", variant: "destructive" });
+    },
+  });
+
+  // Mark booking as no-show
+  const noShowBathMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const response = await apiRequest("POST", `/api/admin/bath-bookings/${bookingId}/no-show`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings/upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
+      toast({ title: "Бронирование отмечено как неявка" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка отметки неявки", variant: "destructive" });
+    },
+  });
+
   const acceptSpaMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       const response = await apiRequest("POST", `/api/admin/spa-bookings/${bookingId}/accept`);
@@ -374,35 +406,37 @@ export default function BookingsPage() {
                           </div>
                           
                           {booking.status === "confirmed" && (
-                            <div className="flex gap-2 mt-3 pt-3 border-t">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => closeSpaPaymentMutation.mutate({ 
-                                  bookingId: booking.id, 
-                                  method: "erip" 
-                                })}
-                                disabled={closeSpaPaymentMutation.isPending}
-                                data-testid={`button-erip-spa-${booking.id}`}
-                              >
-                                <CreditCard className="h-4 w-4 mr-1" />
-                                ЕРИП
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => closeSpaPaymentMutation.mutate({ 
-                                  bookingId: booking.id, 
-                                  method: "cash" 
-                                })}
-                                disabled={closeSpaPaymentMutation.isPending}
-                                data-testid={`button-cash-spa-${booking.id}`}
-                              >
-                                <Banknote className="h-4 w-4 mr-1" />
-                                Наличные
-                              </Button>
+                            <div className="mt-3 pt-3 border-t space-y-2">
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => closeSpaPaymentMutation.mutate({ 
+                                    bookingId: booking.id, 
+                                    method: "erip" 
+                                  })}
+                                  disabled={closeSpaPaymentMutation.isPending}
+                                  data-testid={`button-erip-spa-${booking.id}`}
+                                >
+                                  <CreditCard className="h-4 w-4 mr-1" />
+                                  ЕРИП
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => closeSpaPaymentMutation.mutate({ 
+                                    bookingId: booking.id, 
+                                    method: "cash" 
+                                  })}
+                                  disabled={closeSpaPaymentMutation.isPending}
+                                  data-testid={`button-cash-spa-${booking.id}`}
+                                >
+                                  <Banknote className="h-4 w-4 mr-1" />
+                                  Наличные
+                                </Button>
+                              </div>
                             </div>
                           )}
                         </CardContent>
