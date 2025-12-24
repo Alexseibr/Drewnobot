@@ -48,6 +48,8 @@ import type {
   ThermostatHouse, InsertThermostatHouse,
   ThermostatDailyPlan, InsertThermostatDailyPlan,
   ThermostatActionLog, InsertThermostatActionLog,
+  ElectricityMeter, InsertElectricityMeter,
+  ElectricityReading, InsertElectricityReading,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -322,6 +324,24 @@ export interface IStorage {
   
   getThermostatActionLogs(houseId?: number, date?: string, limit?: number): Promise<ThermostatActionLog[]>;
   createThermostatActionLog(log: InsertThermostatActionLog): Promise<ThermostatActionLog>;
+  
+  // Electricity Meters
+  getElectricityMeters(): Promise<ElectricityMeter[]>;
+  getElectricityMeter(id: string): Promise<ElectricityMeter | undefined>;
+  createElectricityMeter(meter: InsertElectricityMeter): Promise<ElectricityMeter>;
+  
+  getElectricityReadings(meterId?: string, limit?: number): Promise<ElectricityReading[]>;
+  getLatestElectricityReading(meterId: string): Promise<ElectricityReading | undefined>;
+  createElectricityReading(reading: InsertElectricityReading, userId?: string): Promise<ElectricityReading>;
+  getElectricityStatistics(meterId: string, periodDays?: number): Promise<{
+    meterId: string;
+    totalConsumption: number;
+    avgDailyConsumption: number;
+    readings: ElectricityReading[];
+  }>;
+  
+  // Completed Tasks for Owner
+  getCompletedTasks(fromDate?: string, toDate?: string): Promise<Task[]>;
 }
 
 const PRICES: Record<string, number> = {
@@ -372,6 +392,8 @@ export class MemStorage implements IStorage {
   private staffAuthorizations: Map<string, StaffAuthorization> = new Map();
   private laundryBatches: Map<string, LaundryBatch> = new Map();
   private textileAudits: Map<string, TextileAudit> = new Map();
+  private electricityMeters: Map<string, ElectricityMeter> = new Map();
+  private electricityReadings: Map<string, ElectricityReading> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -1925,6 +1947,94 @@ export class MemStorage implements IStorage {
   async getThermostatActionLogs(_houseId?: number, _date?: string, _limit?: number): Promise<ThermostatActionLog[]> { return []; }
   async createThermostatActionLog(log: InsertThermostatActionLog): Promise<ThermostatActionLog> {
     return { id: randomUUID(), ...log };
+  }
+  
+  // Electricity Meters
+  async getElectricityMeters(): Promise<ElectricityMeter[]> {
+    return Array.from(this.electricityMeters.values());
+  }
+  
+  async getElectricityMeter(id: string): Promise<ElectricityMeter | undefined> {
+    return this.electricityMeters.get(id);
+  }
+  
+  async createElectricityMeter(meter: InsertElectricityMeter): Promise<ElectricityMeter> {
+    const created: ElectricityMeter = {
+      id: randomUUID(),
+      ...meter,
+      createdAt: new Date().toISOString(),
+    };
+    this.electricityMeters.set(created.id, created);
+    return created;
+  }
+  
+  async getElectricityReadings(meterId?: string, limit?: number): Promise<ElectricityReading[]> {
+    let readings = Array.from(this.electricityReadings.values());
+    if (meterId) {
+      readings = readings.filter(r => r.meterId === meterId);
+    }
+    readings.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+    if (limit) {
+      readings = readings.slice(0, limit);
+    }
+    return readings;
+  }
+  
+  async getLatestElectricityReading(meterId: string): Promise<ElectricityReading | undefined> {
+    const readings = await this.getElectricityReadings(meterId, 1);
+    return readings[0];
+  }
+  
+  async createElectricityReading(reading: InsertElectricityReading, userId?: string): Promise<ElectricityReading> {
+    const latest = await this.getLatestElectricityReading(reading.meterId);
+    const consumption = latest ? reading.reading - latest.reading : undefined;
+    
+    const created: ElectricityReading = {
+      id: randomUUID(),
+      ...reading,
+      previousReading: latest?.reading,
+      consumption,
+      recordedByUserId: userId,
+    };
+    this.electricityReadings.set(created.id, created);
+    return created;
+  }
+  
+  async getElectricityStatistics(meterId: string, periodDays: number = 30): Promise<{
+    meterId: string;
+    totalConsumption: number;
+    avgDailyConsumption: number;
+    readings: ElectricityReading[];
+  }> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+    
+    const readings = (await this.getElectricityReadings(meterId))
+      .filter(r => new Date(r.recordedAt) >= cutoffDate);
+    
+    const totalConsumption = readings.reduce((sum, r) => sum + (r.consumption || 0), 0);
+    const avgDailyConsumption = periodDays > 0 ? totalConsumption / periodDays : 0;
+    
+    return {
+      meterId,
+      totalConsumption,
+      avgDailyConsumption,
+      readings,
+    };
+  }
+  
+  // Completed Tasks for Owner
+  async getCompletedTasks(fromDate?: string, toDate?: string): Promise<Task[]> {
+    let tasks = Array.from(this.tasks.values()).filter(t => t.status === "done");
+    
+    if (fromDate) {
+      tasks = tasks.filter(t => t.date >= fromDate);
+    }
+    if (toDate) {
+      tasks = tasks.filter(t => t.date <= toDate);
+    }
+    
+    return tasks.sort((a, b) => b.date.localeCompare(a.date));
   }
 }
 
