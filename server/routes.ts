@@ -2108,6 +2108,82 @@ export async function registerRoutes(
     }
   });
 
+  // ============ ELECTRICITY METERS - OWNER ============
+  app.get("/api/owner/electricity-meters", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const meters = await storage.getElectricityMeters();
+      res.json(meters);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить счетчики" });
+    }
+  });
+
+  app.post("/api/owner/electricity-meters", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { name, code, description } = req.body;
+      if (!name || !code) {
+        return res.status(400).json({ error: "Требуется название и код счетчика" });
+      }
+      const meter = await storage.createElectricityMeter({ name, code, description });
+      res.json(meter);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось создать счетчик" });
+    }
+  });
+
+  app.get("/api/owner/electricity-meters/:meterId/readings", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const readings = await storage.getElectricityReadings(req.params.meterId, limit);
+      res.json(readings);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить показания" });
+    }
+  });
+
+  app.post("/api/owner/electricity-meters/:meterId/readings", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { reading, note } = req.body;
+      if (typeof reading !== "number") {
+        return res.status(400).json({ error: "Требуется показание счетчика" });
+      }
+      const userId = (req as any).user?.id;
+      const created = await storage.createElectricityReading({
+        meterId: req.params.meterId,
+        reading,
+        recordedAt: new Date().toISOString(),
+        note,
+      }, userId);
+      res.json(created);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось сохранить показание" });
+    }
+  });
+
+  app.get("/api/owner/electricity-meters/:meterId/statistics", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const periodDays = req.query.days ? parseInt(req.query.days as string) : 30;
+      const stats = await storage.getElectricityStatistics(req.params.meterId, periodDays);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить статистику" });
+    }
+  });
+
+  // ============ COMPLETED TASKS - OWNER ============
+  app.get("/api/owner/tasks/completed", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { fromDate, toDate } = req.query;
+      const tasks = await storage.getCompletedTasks(
+        fromDate as string | undefined,
+        toDate as string | undefined
+      );
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить выполненные задачи" });
+    }
+  });
+
   // ============ BLOCKED DATES - INSTRUCTOR ============
   app.get("/api/instructor/blocked-dates", async (req, res) => {
     try {

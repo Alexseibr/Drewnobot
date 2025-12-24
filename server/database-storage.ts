@@ -51,6 +51,8 @@ import type {
   ThermostatHouse, InsertThermostatHouse,
   ThermostatDailyPlan, InsertThermostatDailyPlan,
   ThermostatActionLog, InsertThermostatActionLog,
+  ElectricityMeter, InsertElectricityMeter,
+  ElectricityReading, InsertElectricityReading,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
@@ -3291,5 +3293,120 @@ export class DatabaseStorage implements IStorage {
     });
     const rows = await db.select().from(thermostatActionLogsTable).where(eq(thermostatActionLogsTable.id, id));
     return rows[0] as ThermostatActionLog;
+  }
+  
+  // ============ ELECTRICITY METERS ============
+  // In-memory storage for electricity meters (will be migrated to DB later)
+  private electricityMeters: Map<string, ElectricityMeter> = new Map();
+  private electricityReadings: Map<string, ElectricityReading> = new Map();
+  
+  async getElectricityMeters(): Promise<ElectricityMeter[]> {
+    // Initialize default meters if empty
+    if (this.electricityMeters.size === 0) {
+      const meter1: ElectricityMeter = {
+        id: "meter1",
+        name: "Счетчик 1",
+        code: "METER1",
+        description: "Основной счетчик",
+        createdAt: new Date().toISOString(),
+      };
+      const meter2: ElectricityMeter = {
+        id: "meter2",
+        name: "Счетчик 2",
+        code: "METER2",
+        description: "Дополнительный счетчик",
+        createdAt: new Date().toISOString(),
+      };
+      this.electricityMeters.set(meter1.id, meter1);
+      this.electricityMeters.set(meter2.id, meter2);
+    }
+    return Array.from(this.electricityMeters.values());
+  }
+  
+  async getElectricityMeter(id: string): Promise<ElectricityMeter | undefined> {
+    await this.getElectricityMeters(); // ensure initialized
+    return this.electricityMeters.get(id);
+  }
+  
+  async createElectricityMeter(meter: InsertElectricityMeter): Promise<ElectricityMeter> {
+    const created: ElectricityMeter = {
+      id: randomUUID(),
+      ...meter,
+      createdAt: new Date().toISOString(),
+    };
+    this.electricityMeters.set(created.id, created);
+    return created;
+  }
+  
+  async getElectricityReadings(meterId?: string, limit?: number): Promise<ElectricityReading[]> {
+    let readings = Array.from(this.electricityReadings.values());
+    if (meterId) {
+      readings = readings.filter(r => r.meterId === meterId);
+    }
+    readings.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+    if (limit) {
+      readings = readings.slice(0, limit);
+    }
+    return readings;
+  }
+  
+  async getLatestElectricityReading(meterId: string): Promise<ElectricityReading | undefined> {
+    const readings = await this.getElectricityReadings(meterId, 1);
+    return readings[0];
+  }
+  
+  async createElectricityReading(reading: InsertElectricityReading, userId?: string): Promise<ElectricityReading> {
+    const latest = await this.getLatestElectricityReading(reading.meterId);
+    const consumption = latest ? reading.reading - latest.reading : undefined;
+    
+    const created: ElectricityReading = {
+      id: randomUUID(),
+      ...reading,
+      previousReading: latest?.reading,
+      consumption,
+      recordedByUserId: userId,
+    };
+    this.electricityReadings.set(created.id, created);
+    return created;
+  }
+  
+  async getElectricityStatistics(meterId: string, periodDays: number = 30): Promise<{
+    meterId: string;
+    totalConsumption: number;
+    avgDailyConsumption: number;
+    readings: ElectricityReading[];
+  }> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+    
+    const readings = (await this.getElectricityReadings(meterId))
+      .filter(r => new Date(r.recordedAt) >= cutoffDate);
+    
+    const totalConsumption = readings.reduce((sum, r) => sum + (r.consumption || 0), 0);
+    const avgDailyConsumption = periodDays > 0 ? totalConsumption / periodDays : 0;
+    
+    return {
+      meterId,
+      totalConsumption,
+      avgDailyConsumption,
+      readings,
+    };
+  }
+  
+  // ============ COMPLETED TASKS ============
+  async getCompletedTasks(fromDate?: string, toDate?: string): Promise<Task[]> {
+    let query = db.select().from(tasksTable).where(eq(tasksTable.status, "done"));
+    
+    const rows = await query.orderBy(desc(tasksTable.date));
+    let tasks = rows as Task[];
+    
+    if (fromDate) {
+      tasks = tasks.filter(t => t.date >= fromDate);
+    }
+    if (toDate) {
+      tasks = tasks.filter(t => t.date <= toDate);
+    }
+    
+    return tasks;
   }
 }
