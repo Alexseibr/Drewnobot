@@ -537,26 +537,40 @@ export function initScheduler(): void {
   
   initThermostatHouses().then(() => {
     log("[ThermostatScheduler] Houses initialized", "scheduler");
+  }).catch((error) => {
+    console.error("[ThermostatScheduler] Failed to initialize houses (table may not exist yet):", error.message);
   });
 
   cron.schedule(THERMOSTAT_PROMPT_CRON, async () => {
-    log("[ThermostatScheduler] Daily prompt (12:00)", "scheduler");
-    await thermostatRefreshAllStatuses();
-    await thermostatSendDailyPrompt();
+    try {
+      log("[ThermostatScheduler] Daily prompt (12:00)", "scheduler");
+      await thermostatRefreshAllStatuses();
+      await thermostatSendDailyPrompt();
+    } catch (error: any) {
+      console.error("[ThermostatScheduler] Error in daily prompt:", error.message);
+    }
   }, {
     timezone: "Europe/Minsk"
   });
 
   cron.schedule(THERMOSTAT_BASE_TEMP_CRON, async () => {
-    log("[ThermostatScheduler] Applying base temperatures (12:05)", "scheduler");
-    await thermostatApplyBaseTemps();
+    try {
+      log("[ThermostatScheduler] Applying base temperatures (12:05)", "scheduler");
+      await thermostatApplyBaseTemps();
+    } catch (error: any) {
+      console.error("[ThermostatScheduler] Error applying base temps:", error.message);
+    }
   }, {
     timezone: "Europe/Minsk"
   });
 
   cron.schedule(THERMOSTAT_HEAT_CRON, async () => {
-    log("[ThermostatScheduler] Starting check-in heating (14:30)", "scheduler");
-    await thermostatStartHeating();
+    try {
+      log("[ThermostatScheduler] Starting check-in heating (14:30)", "scheduler");
+      await thermostatStartHeating();
+    } catch (error: any) {
+      console.error("[ThermostatScheduler] Error starting heating:", error.message);
+    }
   }, {
     timezone: "Europe/Minsk"
   });
