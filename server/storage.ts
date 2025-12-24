@@ -45,6 +45,9 @@ import type {
   Incident, InsertIncident,
   StaffShift, InsertStaffShift,
   UnitInfo, InsertUnitInfo,
+  ThermostatHouse, InsertThermostatHouse,
+  ThermostatDailyPlan, InsertThermostatDailyPlan,
+  ThermostatActionLog, InsertThermostatActionLog,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -298,6 +301,21 @@ export interface IStorage {
   getUnitInfos(): Promise<UnitInfo[]>;
   getUnitInfo(unitCode: string): Promise<UnitInfo | undefined>;
   upsertUnitInfo(info: InsertUnitInfo): Promise<UnitInfo>;
+  
+  // Smart Thermostat
+  getThermostatHouses(): Promise<ThermostatHouse[]>;
+  getThermostatHouse(houseId: number): Promise<ThermostatHouse | undefined>;
+  createThermostatHouse(house: InsertThermostatHouse): Promise<ThermostatHouse>;
+  updateThermostatHouseStatus(houseId: number, updates: Partial<ThermostatHouse>): Promise<ThermostatHouse | undefined>;
+  
+  getThermostatDailyPlans(date: string): Promise<ThermostatDailyPlan[]>;
+  getThermostatDailyPlan(date: string, houseId: number): Promise<ThermostatDailyPlan | undefined>;
+  upsertThermostatDailyPlan(plan: InsertThermostatDailyPlan): Promise<ThermostatDailyPlan>;
+  markThermostatPlanApplied(date: string, houseId: number): Promise<void>;
+  markThermostatHeatStarted(date: string, houseId: number): Promise<void>;
+  
+  getThermostatActionLogs(houseId?: number, date?: string, limit?: number): Promise<ThermostatActionLog[]>;
+  createThermostatActionLog(log: InsertThermostatActionLog): Promise<ThermostatActionLog>;
 }
 
 const PRICES: Record<string, number> = {
@@ -1858,6 +1876,25 @@ export class MemStorage implements IStorage {
   async markGuestNoShow(_guestId: string): Promise<Guest | undefined> { return undefined; }
   async markBathBookingArrived(_bookingId: string): Promise<BathBooking | undefined> { return undefined; }
   async markBathBookingNoShow(_bookingId: string): Promise<BathBooking | undefined> { return undefined; }
+  
+  // Thermostat (stub methods - use DatabaseStorage for production)
+  async getThermostatHouses(): Promise<ThermostatHouse[]> { return []; }
+  async getThermostatHouse(_houseId: number): Promise<ThermostatHouse | undefined> { return undefined; }
+  async createThermostatHouse(house: InsertThermostatHouse): Promise<ThermostatHouse> {
+    return { id: randomUUID(), ...house };
+  }
+  async updateThermostatHouseStatus(_houseId: number, _updates: Partial<ThermostatHouse>): Promise<ThermostatHouse | undefined> { return undefined; }
+  async getThermostatDailyPlans(_date: string): Promise<ThermostatDailyPlan[]> { return []; }
+  async getThermostatDailyPlan(_date: string, _houseId: number): Promise<ThermostatDailyPlan | undefined> { return undefined; }
+  async upsertThermostatDailyPlan(plan: InsertThermostatDailyPlan): Promise<ThermostatDailyPlan> {
+    return { id: randomUUID(), ...plan };
+  }
+  async markThermostatPlanApplied(_date: string, _houseId: number): Promise<void> {}
+  async markThermostatHeatStarted(_date: string, _houseId: number): Promise<void> {}
+  async getThermostatActionLogs(_houseId?: number, _date?: string, _limit?: number): Promise<ThermostatActionLog[]> { return []; }
+  async createThermostatActionLog(log: InsertThermostatActionLog): Promise<ThermostatActionLog> {
+    return { id: randomUUID(), ...log };
+  }
 }
 
 import { DatabaseStorage } from "./database-storage";

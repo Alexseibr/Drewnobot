@@ -500,6 +500,46 @@ export async function sendLaundryCheckInReminder() {
   }
 }
 
+export async function sendThermostatPrompt(housesWithoutPlans: number[]) {
+  try {
+    if (housesWithoutPlans.length === 0) {
+      return;
+    }
+    
+    const houseList = housesWithoutPlans.map(h => `Д${h}`).join(", ");
+    
+    let message = `<b>[!] Термостаты: Заполните план</b>\n\n`;
+    message += `Ещё не выбран план на сегодня:\n${houseList}\n\n`;
+    message += `В 12:05 начнётся автоматическая установка базовых температур.\n`;
+    message += `Откройте раздел "Термостаты" для настройки.`;
+    
+    await notifyAdmins(message, { deepLink: "/owner/thermostats" });
+    
+    console.log("[Telegram Bot] Sent thermostat prompt for houses:", housesWithoutPlans);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send thermostat prompt:", error);
+  }
+}
+
+export async function sendThermostatAlert(houseId: number, failureType: "base_temp" | "heating") {
+  try {
+    const actionText = failureType === "base_temp" 
+      ? "установить базовую температуру" 
+      : "начать прогрев";
+    
+    let message = `<b>[!] ВНИМАНИЕ: Ошибка термостата</b>\n\n`;
+    message += `Не удалось ${actionText} для домика ${houseId}.\n`;
+    message += `Проверьте устройство и интернет-соединение.\n\n`;
+    message += `Возможно, потребуется ручная настройка.`;
+    
+    await notifyAdmins(message, { deepLink: "/owner/thermostats" });
+    
+    console.log(`[Telegram Bot] Sent thermostat failure alert for house ${houseId}`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send thermostat alert:", error);
+  }
+}
+
 export async function notifyNewQuadBooking(booking: {
   date: string;
   startTime: string;

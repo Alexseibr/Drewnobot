@@ -48,6 +48,9 @@ import type {
   Incident, InsertIncident,
   StaffShift, InsertStaffShift,
   UnitInfo, InsertUnitInfo,
+  ThermostatHouse, InsertThermostatHouse,
+  ThermostatDailyPlan, InsertThermostatDailyPlan,
+  ThermostatActionLog, InsertThermostatActionLog,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
@@ -59,6 +62,7 @@ import {
   blockedDatesTable, reviewsTable, laundryBatchesTable, textileAuditsTable,
   textileStockTable, textileCheckInsTable, textileEventsTable, guestsTable,
   suppliesTable, supplyTransactionsTable, incidentsTable, staffShiftsTable, unitInfoTable,
+  thermostatHousesTable, thermostatDailyPlansTable, thermostatActionLogsTable,
 } from "@shared/schema";
 
 const PRICES: Record<string, number> = {
@@ -3143,5 +3147,123 @@ export class DatabaseStorage implements IStorage {
     }
     
     return this.getUnitInfo(info.unitCode) as Promise<UnitInfo>;
+  }
+
+  // ======= Smart Thermostat =======
+  
+  async getThermostatHouses(): Promise<ThermostatHouse[]> {
+    const rows = await db.select().from(thermostatHousesTable).orderBy(asc(thermostatHousesTable.houseId));
+    return rows as ThermostatHouse[];
+  }
+  
+  async getThermostatHouse(houseId: number): Promise<ThermostatHouse | undefined> {
+    const rows = await db.select().from(thermostatHousesTable).where(eq(thermostatHousesTable.houseId, houseId));
+    return rows[0] as ThermostatHouse | undefined;
+  }
+  
+  async createThermostatHouse(house: InsertThermostatHouse): Promise<ThermostatHouse> {
+    const id = randomUUID();
+    await db.insert(thermostatHousesTable).values({
+      id,
+      ...house,
+    });
+    const rows = await db.select().from(thermostatHousesTable).where(eq(thermostatHousesTable.id, id));
+    return rows[0] as ThermostatHouse;
+  }
+  
+  async updateThermostatHouseStatus(houseId: number, updates: Partial<ThermostatHouse>): Promise<ThermostatHouse | undefined> {
+    const existing = await this.getThermostatHouse(houseId);
+    if (!existing) return undefined;
+    await db.update(thermostatHousesTable).set(updates).where(eq(thermostatHousesTable.houseId, houseId));
+    return this.getThermostatHouse(houseId);
+  }
+  
+  async getThermostatDailyPlans(date: string): Promise<ThermostatDailyPlan[]> {
+    const rows = await db.select().from(thermostatDailyPlansTable)
+      .where(eq(thermostatDailyPlansTable.date, date))
+      .orderBy(asc(thermostatDailyPlansTable.houseId));
+    return rows as ThermostatDailyPlan[];
+  }
+  
+  async getThermostatDailyPlan(date: string, houseId: number): Promise<ThermostatDailyPlan | undefined> {
+    const rows = await db.select().from(thermostatDailyPlansTable)
+      .where(and(
+        eq(thermostatDailyPlansTable.date, date),
+        eq(thermostatDailyPlansTable.houseId, houseId)
+      ));
+    return rows[0] as ThermostatDailyPlan | undefined;
+  }
+  
+  async upsertThermostatDailyPlan(plan: InsertThermostatDailyPlan): Promise<ThermostatDailyPlan> {
+    const existing = await this.getThermostatDailyPlan(plan.date, plan.houseId);
+    
+    if (existing) {
+      await db.update(thermostatDailyPlansTable).set({
+        planType: plan.planType,
+        setByAdminUserId: plan.setByAdminUserId,
+        setAt: plan.setAt,
+      }).where(eq(thermostatDailyPlansTable.id, existing.id));
+      return this.getThermostatDailyPlan(plan.date, plan.houseId) as Promise<ThermostatDailyPlan>;
+    } else {
+      const id = randomUUID();
+      await db.insert(thermostatDailyPlansTable).values({
+        id,
+        ...plan,
+      });
+      const rows = await db.select().from(thermostatDailyPlansTable).where(eq(thermostatDailyPlansTable.id, id));
+      return rows[0] as ThermostatDailyPlan;
+    }
+  }
+  
+  async markThermostatPlanApplied(date: string, houseId: number): Promise<void> {
+    const plan = await this.getThermostatDailyPlan(date, houseId);
+    if (plan) {
+      await db.update(thermostatDailyPlansTable).set({
+        appliedAt: new Date().toISOString(),
+      }).where(eq(thermostatDailyPlansTable.id, plan.id));
+    }
+  }
+  
+  async markThermostatHeatStarted(date: string, houseId: number): Promise<void> {
+    const plan = await this.getThermostatDailyPlan(date, houseId);
+    if (plan) {
+      await db.update(thermostatDailyPlansTable).set({
+        heatStartedAt: new Date().toISOString(),
+      }).where(eq(thermostatDailyPlansTable.id, plan.id));
+    }
+  }
+  
+  async getThermostatActionLogs(houseId?: number, date?: string, limit?: number): Promise<ThermostatActionLog[]> {
+    let query = db.select().from(thermostatActionLogsTable);
+    
+    if (houseId !== undefined && date) {
+      query = query.where(and(
+        eq(thermostatActionLogsTable.houseId, houseId),
+        sql`DATE(${thermostatActionLogsTable.ts}) = ${date}`
+      )) as typeof query;
+    } else if (houseId !== undefined) {
+      query = query.where(eq(thermostatActionLogsTable.houseId, houseId)) as typeof query;
+    } else if (date) {
+      query = query.where(sql`DATE(${thermostatActionLogsTable.ts}) = ${date}`) as typeof query;
+    }
+    
+    query = query.orderBy(desc(thermostatActionLogsTable.ts)) as typeof query;
+    
+    if (limit) {
+      query = query.limit(limit) as typeof query;
+    }
+    
+    const rows = await query;
+    return rows as ThermostatActionLog[];
+  }
+  
+  async createThermostatActionLog(log: InsertThermostatActionLog): Promise<ThermostatActionLog> {
+    const id = randomUUID();
+    await db.insert(thermostatActionLogsTable).values({
+      id,
+      ...log,
+    });
+    const rows = await db.select().from(thermostatActionLogsTable).where(eq(thermostatActionLogsTable.id, id));
+    return rows[0] as ThermostatActionLog;
   }
 }

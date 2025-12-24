@@ -82,6 +82,14 @@ Five user roles with hierarchical permissions:
 - **Unit Info / QR Codes** (`/owner/unit-info`)
   - Set WiFi credentials, house rules, contact info per unit
   - Generate QR codes for guests to scan
+- **Smart Thermostat Control** (`/owner/thermostats`)
+  - 4 cottages with IoT thermostats (Tuya/SmartLife compatible)
+  - Daily plan types: CHECKIN_TODAY (16°C base), NO_CHECKIN (15°C base), GUESTS_STAYING (no auto changes)
+  - Scheduler: 12:00 daily prompt, 12:05 apply base temps, 14:30 start heating to 22°C for check-ins
+  - Manual overrides: heat-now (22°C) and custom temperature setting (5-35°C)
+  - Action logs with correlation IDs and trigger types (SCHEDULED, MANUAL)
+  - Provider interface: Mock (dev) and Tuya (production, placeholder)
+  - API: `/api/admin/thermostats/houses`, `/api/admin/thermostats/plan/today`, `/api/admin/thermostats/houses/:id/heat-now`, `/api/admin/thermostats/houses/:id/set-temp`, `/api/admin/thermostats/logs`
 
 ### Project Structure
 ```

@@ -7,8 +7,12 @@ import {
   sendClimateControlReminder,
   sendWeatherAlert,
   sendLaundryCheckInReminder,
-  sendTaskNotification
+  sendTaskNotification,
+  sendThermostatPrompt,
+  sendThermostatAlert
 } from "./telegram-bot";
+import { setThermostatTemp, refreshThermostatStatus } from "./thermostat-provider";
+import type { ThermostatPlanType } from "@shared/schema";
 
 const SHIFT_CLOSURE_CRON = "0 23 * * *";
 const DAILY_TASKS_CRON = "0 6 * * *";
@@ -24,6 +28,11 @@ const CLIMATE_OFF_CRON = "0 14 * * *";          // 14:00 - Climate control OFF
 const LAUNDRY_REMINDER_CRON = "0 15 * * *";     // 15:00 - Laundry check-in reminder
 const WEATHER_CHECK_CRON = "0 18 * * *";        // 18:00 - Weather forecast check
 const SCHEDULED_TASK_CHECK_CRON = "* * * * *";  // Every minute - Check for scheduled task notifications
+
+// Thermostat schedules (Minsk time)
+const THERMOSTAT_PROMPT_CRON = "0 12 * * *";    // 12:00 - Daily prompt for thermostat plans
+const THERMOSTAT_BASE_TEMP_CRON = "5 12 * * *"; // 12:05 - Apply base temperatures
+const THERMOSTAT_HEAT_CRON = "30 14 * * *";     // 14:30 - Start heating for check-ins
 
 // Village Drewno coordinates (Polesie region)
 const LOCATION_LAT = 51.87728;
@@ -285,6 +294,162 @@ async function checkScheduledTaskNotifications(): Promise<void> {
   }
 }
 
+// ============ THERMOSTAT SCHEDULER JOBS ============
+
+function getTodayDateMinsk(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Minsk",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+async function initThermostatHouses(): Promise<void> {
+  const houses = await storage.getThermostatHouses();
+  if (houses.length === 0) {
+    log("[ThermostatScheduler] Initializing houses 1-4 in database", "scheduler");
+    for (let i = 1; i <= 4; i++) {
+      await storage.createThermostatHouse({
+        houseId: i,
+        name: `Домик ${i}`,
+        online: false,
+      });
+    }
+  }
+}
+
+async function thermostatSendDailyPrompt(): Promise<void> {
+  const today = getTodayDateMinsk();
+  log(`[ThermostatScheduler] Sending daily prompt for ${today}`, "scheduler");
+  
+  const plans = await storage.getThermostatDailyPlans(today);
+  const housesWithPlans = new Set(plans.map(p => p.houseId));
+  const housesWithoutPlans: number[] = [];
+  
+  for (let houseId = 1; houseId <= 4; houseId++) {
+    if (!housesWithPlans.has(houseId)) {
+      housesWithoutPlans.push(houseId);
+    }
+  }
+  
+  if (housesWithoutPlans.length > 0) {
+    await sendThermostatPrompt(housesWithoutPlans);
+    log(`[ThermostatScheduler] Sent prompt for houses: ${housesWithoutPlans.join(", ")}`, "scheduler");
+  } else {
+    log("[ThermostatScheduler] All houses have plans for today", "scheduler");
+  }
+}
+
+async function thermostatApplyBaseTemps(): Promise<void> {
+  const today = getTodayDateMinsk();
+  log(`[ThermostatScheduler] Applying base temperatures for ${today}`, "scheduler");
+  
+  const plans = await storage.getThermostatDailyPlans(today);
+  
+  for (let houseId = 1; houseId <= 4; houseId++) {
+    const plan = plans.find(p => p.houseId === houseId);
+    
+    if (!plan) {
+      log(`[ThermostatScheduler] No plan for house ${houseId} - skipping`, "scheduler");
+      continue;
+    }
+    
+    if (plan.appliedAt) {
+      log(`[ThermostatScheduler] Base temp already applied for house ${houseId} - skipping`, "scheduler");
+      continue;
+    }
+    
+    let targetTemp: number | null = null;
+    
+    switch (plan.planType as ThermostatPlanType) {
+      case "CHECKIN_TODAY":
+        targetTemp = 16;
+        break;
+      case "NO_CHECKIN":
+        targetTemp = 15;
+        break;
+      case "GUESTS_STAYING":
+        log(`[ThermostatScheduler] House ${houseId} has guests staying - no changes`, "scheduler");
+        break;
+    }
+    
+    if (targetTemp !== null) {
+      let success = false;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (!success && attempts < maxAttempts) {
+        attempts++;
+        try {
+          success = await setThermostatTemp(houseId, targetTemp, `Base temp for ${plan.planType}`, "SCHEDULED");
+          if (!success && attempts < maxAttempts) {
+            log(`[ThermostatScheduler] Retry ${attempts}/${maxAttempts} for house ${houseId}`, "scheduler");
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        } catch (error) {
+          log(`[ThermostatScheduler] Error attempt ${attempts} for house ${houseId}: ${error}`, "scheduler");
+        }
+      }
+      
+      if (success) {
+        await storage.markThermostatPlanApplied(today, houseId);
+        log(`[ThermostatScheduler] Set house ${houseId} to ${targetTemp}°C (${plan.planType})`, "scheduler");
+      } else {
+        log(`[ThermostatScheduler] FAILED to set house ${houseId} after ${maxAttempts} attempts`, "scheduler");
+        await sendThermostatAlert(houseId, "base_temp");
+      }
+    }
+  }
+}
+
+async function thermostatStartHeating(): Promise<void> {
+  const today = getTodayDateMinsk();
+  log(`[ThermostatScheduler] Starting heating for check-ins (14:30) - ${today}`, "scheduler");
+  
+  const plans = await storage.getThermostatDailyPlans(today);
+  
+  for (const plan of plans) {
+    if (plan.planType !== "CHECKIN_TODAY") continue;
+    if (plan.heatStartedAt) {
+      log(`[ThermostatScheduler] Heating already started for house ${plan.houseId} - skipping`, "scheduler");
+      continue;
+    }
+    
+    let success = false;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (!success && attempts < maxAttempts) {
+      attempts++;
+      try {
+        success = await setThermostatTemp(plan.houseId, 22, "Check-in heating at 14:30", "SCHEDULED");
+        if (!success && attempts < maxAttempts) {
+          log(`[ThermostatScheduler] Heating retry ${attempts}/${maxAttempts} for house ${plan.houseId}`, "scheduler");
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      } catch (error) {
+        log(`[ThermostatScheduler] Heating error attempt ${attempts} for house ${plan.houseId}: ${error}`, "scheduler");
+      }
+    }
+    
+    if (success) {
+      await storage.markThermostatHeatStarted(today, plan.houseId);
+      log(`[ThermostatScheduler] Started heating house ${plan.houseId} to 22°C for check-in`, "scheduler");
+    } else {
+      log(`[ThermostatScheduler] FAILED to start heating for house ${plan.houseId} after ${maxAttempts} attempts`, "scheduler");
+      await sendThermostatAlert(plan.houseId, "heating");
+    }
+  }
+}
+
+async function thermostatRefreshAllStatuses(): Promise<void> {
+  const houses = await storage.getThermostatHouses();
+  for (const house of houses) {
+    await refreshThermostatStatus(house.houseId);
+  }
+}
+
 export function initScheduler(): void {
   checkMissedClosure().then(() => {
     log("Checked for missed shift closures on startup", "scheduler");
@@ -368,6 +533,34 @@ export function initScheduler(): void {
     timezone: "Europe/Minsk"
   });
 
+  // ============ THERMOSTAT SCHEDULER ============
+  
+  initThermostatHouses().then(() => {
+    log("[ThermostatScheduler] Houses initialized", "scheduler");
+  });
+
+  cron.schedule(THERMOSTAT_PROMPT_CRON, async () => {
+    log("[ThermostatScheduler] Daily prompt (12:00)", "scheduler");
+    await thermostatRefreshAllStatuses();
+    await thermostatSendDailyPrompt();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
+  cron.schedule(THERMOSTAT_BASE_TEMP_CRON, async () => {
+    log("[ThermostatScheduler] Applying base temperatures (12:05)", "scheduler");
+    await thermostatApplyBaseTemps();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
+  cron.schedule(THERMOSTAT_HEAT_CRON, async () => {
+    log("[ThermostatScheduler] Starting check-in heating (14:30)", "scheduler");
+    await thermostatStartHeating();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
   log("Scheduler initialized:", "scheduler");
   log("  - Shift auto-closure: 23:00 daily", "scheduler");
   log("  - Daily tasks: 06:00 daily", "scheduler");
@@ -381,6 +574,10 @@ export function initScheduler(): void {
   log("    - Climate ON: 12:00 daily", "scheduler");
   log("    - Climate OFF: 14:00 daily", "scheduler");
   log("    - Laundry check-in: 15:00 daily", "scheduler");
+  log("  - Thermostat:", "scheduler");
+  log("    - Prompt: 12:00 daily", "scheduler");
+  log("    - Base temps: 12:05 daily", "scheduler");
+  log("    - Heating: 14:30 daily", "scheduler");
 }
 
 export { createDailyTasks, createWeeklyTasks, createMonthlyTasks };

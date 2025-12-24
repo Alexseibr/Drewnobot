@@ -1593,3 +1593,97 @@ export const unitInfoTable = pgTable("unit_info", {
   checkOutTime: text("check_out_time"),
   updatedAt: text("updated_at").notNull(),
 });
+
+// ============ SMART THERMOSTAT ============
+export const ThermostatPlanType = z.enum(["CHECKIN_TODAY", "NO_CHECKIN", "GUESTS_STAYING"]);
+export type ThermostatPlanType = z.infer<typeof ThermostatPlanType>;
+
+export const ThermostatActionTrigger = z.enum(["SCHEDULED", "MANUAL", "SYSTEM"]);
+export type ThermostatActionTrigger = z.infer<typeof ThermostatActionTrigger>;
+
+export const thermostatHouseSchema = z.object({
+  id: z.string(),
+  houseId: z.number().min(1).max(4), // 1-4
+  name: z.string(),
+  thermostatDeviceId: z.string().optional(),
+  providerConfig: z.record(z.any()).optional(),
+  currentTemp: z.number().optional(),
+  targetTemp: z.number().optional(),
+  mode: z.string().optional(),
+  online: z.boolean().default(false),
+  lastUpdated: z.string().optional(),
+});
+export type ThermostatHouse = z.infer<typeof thermostatHouseSchema>;
+
+export const insertThermostatHouseSchema = thermostatHouseSchema.omit({ id: true });
+export type InsertThermostatHouse = z.infer<typeof insertThermostatHouseSchema>;
+
+export const thermostatDailyPlanSchema = z.object({
+  id: z.string(),
+  date: z.string(), // YYYY-MM-DD
+  houseId: z.number().min(1).max(4),
+  planType: ThermostatPlanType,
+  setByAdminUserId: z.string().optional(),
+  setAt: z.string(),
+  appliedAt: z.string().optional(),
+  heatStartedAt: z.string().optional(),
+});
+export type ThermostatDailyPlan = z.infer<typeof thermostatDailyPlanSchema>;
+
+export const insertThermostatDailyPlanSchema = thermostatDailyPlanSchema.omit({ id: true });
+export type InsertThermostatDailyPlan = z.infer<typeof insertThermostatDailyPlanSchema>;
+
+export const thermostatActionLogSchema = z.object({
+  id: z.string(),
+  ts: z.string(),
+  houseId: z.number().min(1).max(4),
+  actionType: z.string(), // set_temp, get_status, etc.
+  targetTemp: z.number().optional(),
+  result: z.string().optional(), // success, failure
+  error: z.string().optional(),
+  correlationId: z.string().optional(),
+  triggeredBy: ThermostatActionTrigger,
+  userId: z.string().optional(),
+});
+export type ThermostatActionLog = z.infer<typeof thermostatActionLogSchema>;
+
+export const insertThermostatActionLogSchema = thermostatActionLogSchema.omit({ id: true });
+export type InsertThermostatActionLog = z.infer<typeof insertThermostatActionLogSchema>;
+
+// ============ THERMOSTAT TABLES ============
+export const thermostatHousesTable = pgTable("thermostat_houses", {
+  id: text("id").primaryKey(),
+  houseId: integer("house_id").notNull(), // 1-4
+  name: text("name").notNull(),
+  thermostatDeviceId: text("thermostat_device_id"),
+  providerConfig: jsonb("provider_config"),
+  currentTemp: real("current_temp"),
+  targetTemp: real("target_temp"),
+  mode: text("mode"),
+  online: boolean("online").default(false),
+  lastUpdated: text("last_updated"),
+});
+
+export const thermostatDailyPlansTable = pgTable("thermostat_daily_plans", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  houseId: integer("house_id").notNull(),
+  planType: text("plan_type").notNull(), // CHECKIN_TODAY, NO_CHECKIN, GUESTS_STAYING
+  setByAdminUserId: text("set_by_admin_user_id"),
+  setAt: text("set_at").notNull(),
+  appliedAt: text("applied_at"),
+  heatStartedAt: text("heat_started_at"),
+});
+
+export const thermostatActionLogsTable = pgTable("thermostat_action_logs", {
+  id: text("id").primaryKey(),
+  ts: text("ts").notNull(),
+  houseId: integer("house_id").notNull(),
+  actionType: text("action_type").notNull(),
+  targetTemp: real("target_temp"),
+  result: text("result"),
+  error: text("error"),
+  correlationId: text("correlation_id"),
+  triggeredBy: text("triggered_by").notNull(), // SCHEDULED, MANUAL, SYSTEM
+  userId: text("user_id"),
+});

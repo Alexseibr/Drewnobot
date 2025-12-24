@@ -5,8 +5,11 @@ import {
   Clock, 
   Building2,
   Bath,
-  Bike
+  Bike,
+  Thermometer,
+  ChevronRight
 } from "lucide-react";
+import { Link } from "wouter";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
@@ -96,6 +99,19 @@ export default function OwnerSettingsPage() {
                   data-testid="switch-auto-tasks"
                 />
               </div>
+              
+              <Link href="/owner/thermostats">
+                <div className="flex items-center justify-between p-3 -mx-3 rounded-md hover-elevate cursor-pointer mt-2 border" data-testid="link-thermostats">
+                  <div className="flex items-center gap-2">
+                    <Thermometer className="h-5 w-5 text-orange-500" />
+                    <div>
+                      <span className="font-medium">Умные термостаты</span>
+                      <p className="text-xs text-muted-foreground">Управление температурой в домиках</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </Link>
             </CardContent>
           </Card>
 

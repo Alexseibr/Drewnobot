@@ -3100,6 +3100,150 @@ export async function registerRoutes(
     }
   });
 
+  // ============ SMART THERMOSTAT ============
+  
+  const thermostatPlanSchema = z.object({
+    houseId: z.number().min(1).max(4),
+    planType: z.enum(["CHECKIN_TODAY", "NO_CHECKIN", "GUESTS_STAYING"]),
+  });
+
+  app.get("/api/admin/thermostats/houses", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const houses = await storage.getThermostatHouses();
+      const today = new Date().toISOString().split("T")[0];
+      const plans = await storage.getThermostatDailyPlans(today);
+      
+      const { refreshThermostatStatus } = await import("./thermostat-provider");
+      
+      const result = await Promise.all(houses.map(async house => {
+        try {
+          const status = await refreshThermostatStatus(house.houseId);
+          return {
+            ...house,
+            currentTemp: status?.currentTemp ?? house.currentTemp,
+            targetTemp: status?.targetTemp ?? house.targetTemp,
+            mode: status?.mode ?? house.mode,
+            online: status?.online ?? house.online,
+            lastUpdated: status ? new Date().toISOString() : house.lastUpdated,
+            todayPlan: plans.find(p => p.houseId === house.houseId) || null,
+          };
+        } catch {
+          return {
+            ...house,
+            todayPlan: plans.find(p => p.houseId === house.houseId) || null,
+          };
+        }
+      }));
+      
+      res.json(result);
+    } catch (error) {
+      console.error("[Thermostat] Get houses error:", error);
+      res.status(500).json({ error: "Ошибка загрузки термостатов" });
+    }
+  });
+
+  app.post("/api/admin/thermostats/plan/today", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const plans = z.array(thermostatPlanSchema).safeParse(req.body);
+      if (!plans.success) {
+        return res.status(400).json({ error: "Invalid request body", details: plans.error.format() });
+      }
+      
+      const today = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
+      const userId = (req as any).user?.id;
+      
+      const results = [];
+      for (const plan of plans.data) {
+        const result = await storage.upsertThermostatDailyPlan({
+          date: today,
+          houseId: plan.houseId,
+          planType: plan.planType,
+          setByAdminUserId: userId,
+          setAt: now,
+        });
+        results.push(result);
+      }
+      
+      res.json(results);
+    } catch (error) {
+      console.error("[Thermostat] Set plan error:", error);
+      res.status(500).json({ error: "Ошибка сохранения плана" });
+    }
+  });
+
+  app.post("/api/admin/thermostats/houses/:houseId/heat-now", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const houseId = parseInt(req.params.houseId, 10);
+      if (isNaN(houseId) || houseId < 1 || houseId > 4) {
+        return res.status(400).json({ error: "Invalid houseId (must be 1-4)" });
+      }
+      
+      const { setThermostatTemp } = await import("./thermostat-provider");
+      const userId = (req as any).user?.id;
+      
+      const success = await setThermostatTemp(houseId, 22, "Manual heat-now request", "MANUAL", userId);
+      
+      if (success) {
+        res.json({ ok: true, message: `Домик ${houseId} начинает прогрев до 22°C` });
+      } else {
+        res.status(500).json({ error: "Не удалось установить температуру" });
+      }
+    } catch (error) {
+      console.error("[Thermostat] Heat-now error:", error);
+      res.status(500).json({ error: "Ошибка прогрева" });
+    }
+  });
+
+  app.post("/api/admin/thermostats/houses/:houseId/set-temp", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const houseId = parseInt(req.params.houseId, 10);
+      if (isNaN(houseId) || houseId < 1 || houseId > 4) {
+        return res.status(400).json({ error: "Invalid houseId (must be 1-4)" });
+      }
+      
+      const tempSchema = z.object({ temp: z.number().min(5).max(35) });
+      const parsed = tempSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid temperature (must be 5-35)" });
+      }
+      
+      const { setThermostatTemp } = await import("./thermostat-provider");
+      const userId = (req as any).user?.id;
+      
+      const success = await setThermostatTemp(houseId, parsed.data.temp, "Manual temp set", "MANUAL", userId);
+      
+      if (success) {
+        res.json({ ok: true, message: `Установлено ${parsed.data.temp}°C для домика ${houseId}` });
+      } else {
+        res.status(500).json({ error: "Не удалось установить температуру" });
+      }
+    } catch (error) {
+      console.error("[Thermostat] Set-temp error:", error);
+      res.status(500).json({ error: "Ошибка установки температуры" });
+    }
+  });
+
+  app.get("/api/admin/thermostats/logs", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const houseId = req.query.houseId && req.query.houseId !== "null" 
+        ? parseInt(req.query.houseId as string, 10) 
+        : undefined;
+      const date = req.query.date as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+      
+      const logs = await storage.getThermostatActionLogs(
+        !isNaN(houseId as number) ? houseId : undefined, 
+        date, 
+        limit
+      );
+      res.json(logs);
+    } catch (error) {
+      console.error("[Thermostat] Get logs error:", error);
+      res.status(500).json({ error: "Ошибка загрузки логов" });
+    }
+  });
+
   // ============ TELEGRAM BOT WEBHOOK ============
   app.post("/api/telegram/webhook", async (req, res) => {
     try {
