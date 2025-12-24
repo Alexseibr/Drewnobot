@@ -1127,7 +1127,7 @@ export class DatabaseStorage implements IStorage {
     for (const tx of transactions) {
       if (tx.type === "cash_in") {
         cashRevenue += tx.amount;
-      } else if (tx.type === "cash_out") {
+      } else if (tx.type === "cash_out" || tx.type === "expense") {
         totalExpenses += tx.amount;
         const cat = tx.category || "Прочее";
         expensesByCategory[cat] = (expensesByCategory[cat] || 0) + tx.amount;
