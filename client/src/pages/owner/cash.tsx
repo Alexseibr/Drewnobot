@@ -28,6 +28,13 @@ import { CashCardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Incasation } from "@shared/schema";
 
+interface DailyBreakdown {
+  date: string;
+  cashIn: number;
+  expenses: number;
+  balance: number;
+}
+
 interface IncasationPreview {
   periodStart: string;
   periodEnd: string;
@@ -38,6 +45,7 @@ interface IncasationPreview {
   cashOnHand: number;
   expensesByCategory: Record<string, number>;
   shiftsCount: number;
+  dailyBreakdown: DailyBreakdown[];
 }
 
 const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
@@ -170,6 +178,29 @@ export default function OwnerCashPage() {
                           <div key={cat} className="flex items-center justify-between text-sm">
                             <span className="opacity-80">{EXPENSE_CATEGORY_LABELS[cat] || cat}</span>
                             <span className="font-mono">{(amount as number).toFixed(2)} BYN</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {preview.dailyBreakdown && preview.dailyBreakdown.length > 0 && (
+                    <>
+                      <Separator className="bg-primary-foreground/20" />
+                      <div className="space-y-2">
+                        <p className="text-sm opacity-80">По дням:</p>
+                        {preview.dailyBreakdown.map((day) => (
+                          <div key={day.date} className="flex items-center justify-between text-sm">
+                            <span className="opacity-80">
+                              {format(new Date(day.date), "d MMM", { locale: ru })}
+                            </span>
+                            <div className="flex items-center gap-3 font-mono">
+                              <span className="text-status-confirmed">+{day.cashIn.toFixed(0)}</span>
+                              {day.expenses > 0 && (
+                                <span className="text-destructive">-{day.expenses.toFixed(0)}</span>
+                              )}
+                              <span className="font-semibold">= {day.balance.toFixed(0)}</span>
+                            </div>
                           </div>
                         ))}
                       </div>

@@ -1115,6 +1115,12 @@ export class DatabaseStorage implements IStorage {
     cashOnHand: number;
     expensesByCategory: Record<string, number>;
     shiftsCount: number;
+    dailyBreakdown: Array<{
+      date: string;
+      cashIn: number;
+      expenses: number;
+      balance: number;
+    }>;
   }> {
     const transactions = await this.getCashTransactionsSinceLastIncasation();
     const lastIncasation = await this.getLastIncasation();
@@ -1123,16 +1129,35 @@ export class DatabaseStorage implements IStorage {
     let eripRevenue = 0;
     let totalExpenses = 0;
     const expensesByCategory: Record<string, number> = {};
+    const dailyData: Record<string, { cashIn: number; expenses: number }> = {};
     
     for (const tx of transactions) {
+      // Get date part only (YYYY-MM-DD)
+      const dateKey = tx.createdAt.split('T')[0];
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = { cashIn: 0, expenses: 0 };
+      }
+      
       if (tx.type === "cash_in") {
         cashRevenue += tx.amount;
+        dailyData[dateKey].cashIn += tx.amount;
       } else if (tx.type === "cash_out" || tx.type === "expense") {
         totalExpenses += tx.amount;
+        dailyData[dateKey].expenses += tx.amount;
         const cat = tx.category || "Прочее";
         expensesByCategory[cat] = (expensesByCategory[cat] || 0) + tx.amount;
       }
     }
+    
+    // Convert daily data to sorted array
+    const dailyBreakdown = Object.entries(dailyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, data]) => ({
+        date,
+        cashIn: data.cashIn,
+        expenses: data.expenses,
+        balance: data.cashIn - data.expenses,
+      }));
     
     const shifts = await this.getCashShifts();
     const closedShiftsSinceIncasation = shifts.filter(s => 
@@ -1150,6 +1175,7 @@ export class DatabaseStorage implements IStorage {
       cashOnHand: cashRevenue - totalExpenses,
       expensesByCategory,
       shiftsCount: closedShiftsSinceIncasation.length,
+      dailyBreakdown,
     };
   }
 
