@@ -734,6 +734,59 @@ export async function registerRoutes(
     }
   });
 
+  // Mark bath booking as arrived - automatically links/creates guest profile
+  app.post("/api/admin/bath-bookings/:id/arrive", async (req, res) => {
+    try {
+      const booking = await storage.markBathBookingArrived(req.params.id);
+      if (!booking) return res.status(404).json({ error: "Booking not found" });
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark arrival" });
+    }
+  });
+
+  // Mark bath booking as no-show - updates guest no-show count
+  app.post("/api/admin/bath-bookings/:id/no-show", async (req, res) => {
+    try {
+      const booking = await storage.markBathBookingNoShow(req.params.id);
+      if (!booking) return res.status(404).json({ error: "Booking not found" });
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark no-show" });
+    }
+  });
+
+  // ============ GUESTS ============
+  app.get("/api/guests", async (req, res) => {
+    try {
+      const guests = await storage.getGuests();
+      res.json(guests);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get guests" });
+    }
+  });
+
+  app.get("/api/guests/:id", async (req, res) => {
+    try {
+      const guest = await storage.getGuest(req.params.id);
+      if (!guest) return res.status(404).json({ error: "Guest not found" });
+      res.json(guest);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get guest" });
+    }
+  });
+
+  app.get("/api/guests/by-phone/:phone", async (req, res) => {
+    try {
+      const phone = req.params.phone.replace(/\D/g, "");
+      const guest = await storage.getGuestByPhone(phone);
+      if (!guest) return res.status(404).json({ error: "Guest not found" });
+      res.json(guest);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get guest" });
+    }
+  });
+
   // ============ QUADS - GUEST ============
   // Get available slots for a date with route type pricing info
   // Support both /api/guest/quads/availability/:date and /api/guest/quads/availability?date=...

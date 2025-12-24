@@ -414,7 +414,19 @@ export async function sendBathBookingsSummary() {
     
     for (const booking of sortedBookings) {
       const statusIcon = booking.status === "confirmed" ? "[OK]" : "[?]";
-      message += `${statusIcon} ${booking.startTime}-${booking.endTime} ${booking.bathCode}\n`;
+      
+      // Build service details string
+      const services: string[] = [];
+      if (booking.options) {
+        if (booking.options.tub === "small") services.push("Купель М");
+        if (booking.options.tub === "large") services.push("Купель Б");
+        if (booking.options.terrace) services.push("Терраса");
+        if (booking.options.grill) services.push("Мангал");
+        if (booking.options.charcoal) services.push("+уголь");
+      }
+      const servicesStr = services.length > 0 ? ` (${services.join(", ")})` : "";
+      
+      message += `${statusIcon} ${booking.startTime}-${booking.endTime} ${booking.bathCode}${servicesStr}\n`;
     }
     
     await notifyAdmins(message, { deepLink: "/ops/spa" });
