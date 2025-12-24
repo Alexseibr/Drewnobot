@@ -382,7 +382,7 @@ export default function BookingsPage() {
                           </div>
                           <p className="font-medium">{booking.customer.fullName}</p>
                           <p className="text-sm text-muted-foreground">{booking.customer.phone}</p>
-                          <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center justify-between mt-2 gap-2">
                             <div>
                               <span className="font-semibold">
                                 {booking.pricing.total} BYN
@@ -393,16 +393,29 @@ export default function BookingsPage() {
                                 </span>
                               )}
                             </div>
-                            {isOwner && booking.status !== "completed" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenDiscountDialog(booking)}
-                                data-testid={`button-discount-today-spa-${booking.id}`}
-                              >
-                                <Percent className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <div className="flex gap-2">
+                              {isOwner && booking.status !== "completed" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenDiscountDialog(booking)}
+                                  data-testid={`button-discount-today-spa-${booking.id}`}
+                                >
+                                  <Percent className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {booking.status !== "completed" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => cancelSpaMutation.mutate(booking.id)}
+                                  disabled={cancelSpaMutation.isPending}
+                                  data-testid={`button-cancel-today-spa-${booking.id}`}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           
                           {booking.status === "confirmed" && (
