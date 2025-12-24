@@ -33,6 +33,7 @@ import TextileAuditPage from "@/pages/owner/textile-audit";
 import ShiftsPage from "@/pages/owner/shifts";
 import UnitInfoPage from "@/pages/owner/unit-info";
 import ThermostatsPage from "@/pages/owner/thermostats";
+import UtilitiesPage from "@/pages/owner/utilities";
 import StaffManagementPage from "@/pages/admin/staff";
 import ClaimRolePage from "@/pages/claim-role";
 import NotFound from "@/pages/not-found";
@@ -72,6 +73,7 @@ function Router() {
       <Route path="/owner/shifts" component={ShiftsPage} />
       <Route path="/owner/unit-info" component={UnitInfoPage} />
       <Route path="/owner/thermostats" component={ThermostatsPage} />
+      <Route path="/owner/utilities" component={UtilitiesPage} />
       
       <Route path="/admin/staff" component={StaffManagementPage} />
       

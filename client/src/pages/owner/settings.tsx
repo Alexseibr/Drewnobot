@@ -7,6 +7,7 @@ import {
   Bath,
   Bike,
   Thermometer,
+  Zap,
   ChevronRight
 } from "lucide-react";
 import { Link } from "wouter";
@@ -107,6 +108,19 @@ export default function OwnerSettingsPage() {
                     <div>
                       <span className="font-medium">Умные термостаты</span>
                       <p className="text-xs text-muted-foreground">Управление температурой в домиках</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </Link>
+              
+              <Link href="/owner/utilities">
+                <div className="flex items-center justify-between p-3 -mx-3 rounded-md hover-elevate cursor-pointer mt-2 border" data-testid="link-utilities">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-yellow-500" />
+                    <div>
+                      <span className="font-medium">Коммунальные</span>
+                      <p className="text-xs text-muted-foreground">Учёт электроэнергии</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
