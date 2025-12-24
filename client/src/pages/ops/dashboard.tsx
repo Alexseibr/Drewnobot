@@ -44,12 +44,21 @@ interface OpsData {
   };
 }
 
+interface CashData {
+  currentShift: CashShift | null;
+  balance: number;
+}
+
 export default function OpsDashboard() {
   const { toast } = useToast();
   const today = format(new Date(), "EEEE, d MMMM", { locale: ru });
 
   const { data: opsData, isLoading } = useQuery<OpsData>({
     queryKey: ["/api/ops/today"],
+  });
+
+  const { data: cashData } = useQuery<CashData>({
+    queryKey: ["/api/cash/shift/current"],
   });
 
   const completeTaskMutation = useMutation({
@@ -149,7 +158,7 @@ export default function OpsDashboard() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold font-mono" data-testid="stat-cash">
-                        {stats?.cashBalance || 0}
+                        {cashData?.balance || 0}
                       </p>
                       <p className="text-xs text-muted-foreground">Касса BYN</p>
                     </div>
