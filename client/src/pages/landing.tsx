@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Bath, Bike, Briefcase, ChevronRight, Droplets, Users, Shield, BarChart3, MapPin } from "lucide-react";
+import { Bath, Bike, Briefcase, ChevronRight, Droplets, Users, Shield, BarChart3 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -95,27 +95,6 @@ export default function LandingPage() {
                     <h3 className="font-semibold">Квадроциклы</h3>
                     <p className="text-sm text-muted-foreground">
                       Захватывающее приключение с нашим инструктором
-                    </p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="hover-elevate cursor-pointer"
-              onClick={() => setLocation("/guest/map")}
-              data-testid="card-map"
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-full bg-muted p-3">
-                    <MapPin className="h-6 w-6 text-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">Карта территории</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Расположение домиков и услуг
                     </p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
