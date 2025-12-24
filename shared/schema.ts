@@ -1687,3 +1687,50 @@ export const thermostatActionLogsTable = pgTable("thermostat_action_logs", {
   triggeredBy: text("triggered_by").notNull(), // SCHEDULED, MANUAL, SYSTEM
   userId: text("user_id"),
 });
+
+
+// ============ ELECTRICITY METERS ============
+export const electricityMetersTable = pgTable("electricity_meters", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(), // "Счетчик 1", "Счетчик 2"
+  code: text("code").notNull().unique(), // "METER1", "METER2"
+  description: text("description"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const electricityReadingsTable = pgTable("electricity_readings", {
+  id: text("id").primaryKey(),
+  meterId: text("meter_id").notNull(),
+  reading: real("reading").notNull(),
+  previousReading: real("previous_reading"),
+  consumption: real("consumption"), // reading - previousReading
+  recordedAt: text("recorded_at").notNull(),
+  recordedByUserId: text("recorded_by_user_id"),
+  note: text("note"),
+});
+
+// Electricity Meter Types
+export const electricityMeterSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  code: z.string(),
+  description: z.string().optional(),
+  createdAt: z.string(),
+});
+export type ElectricityMeter = z.infer<typeof electricityMeterSchema>;
+export const insertElectricityMeterSchema = electricityMeterSchema.omit({ id: true, createdAt: true });
+export type InsertElectricityMeter = z.infer<typeof insertElectricityMeterSchema>;
+
+export const electricityReadingSchema = z.object({
+  id: z.string(),
+  meterId: z.string(),
+  reading: z.number(),
+  previousReading: z.number().optional(),
+  consumption: z.number().optional(),
+  recordedAt: z.string(),
+  recordedByUserId: z.string().optional(),
+  note: z.string().optional(),
+});
+export type ElectricityReading = z.infer<typeof electricityReadingSchema>;
+export const insertElectricityReadingSchema = electricityReadingSchema.omit({ id: true, consumption: true });
+export type InsertElectricityReading = z.infer<typeof insertElectricityReadingSchema>;
