@@ -335,7 +335,142 @@ export async function removeTelegramWebhook() {
   console.log("[Telegram Bot] Webhook removed");
 }
 
+// ============ QUIET HOURS ============
+// No notifications before 08:00 Minsk time
+
+const QUIET_HOURS_START = 23; // 23:00
+const QUIET_HOURS_END = 8;   // 08:00
+
+function isQuietHours(): boolean {
+  const now = new Date();
+  // Convert to Minsk time (UTC+3)
+  const minskOffset = 3 * 60; // minutes
+  const localOffset = now.getTimezoneOffset();
+  const minskTime = new Date(now.getTime() + (minskOffset + localOffset) * 60 * 1000);
+  const hour = minskTime.getHours();
+  return hour >= QUIET_HOURS_START || hour < QUIET_HOURS_END;
+}
+
 // ============ NOTIFICATION FUNCTIONS ============
+
+export async function notifyAdmins(message: string, options: { deepLink?: string } = {}) {
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(u => 
+      (u.role === "ADMIN" || u.role === "OWNER" || u.role === "SUPER_ADMIN") && 
+      u.isActive && 
+      u.telegramId
+    );
+    
+    let finalMessage = message;
+    const keyboard = options.deepLink ? {
+      inline_keyboard: [[{
+        text: "Открыть",
+        web_app: { url: `${getWebAppUrl()}${options.deepLink}` }
+      }]]
+    } : undefined;
+    
+    for (const admin of admins) {
+      await sendMessage(parseInt(admin.telegramId!), finalMessage, keyboard ? { reply_markup: keyboard } : {});
+    }
+    
+    console.log(`[Telegram Bot] Notified ${admins.length} admins`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to notify admins:", error);
+  }
+}
+
+export async function sendShiftReminder() {
+  try {
+    // Check if shift is already open
+    const currentShift = await storage.getCurrentShift("main");
+    if (currentShift) {
+      return; // Shift already open
+    }
+    
+    const message = `<b>Напоминание: Открытие смены</b>\n\nСмена ещё не открыта. Не забудьте открыть кассу!`;
+    await notifyAdmins(message, { deepLink: "/ops/cash" });
+    
+    console.log("[Telegram Bot] Sent shift reminder");
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send shift reminder:", error);
+  }
+}
+
+export async function sendBathBookingsSummary() {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const bookings = await storage.getBathBookingsForDate(today);
+    const activeBookings = bookings.filter(b => b.status !== "cancelled");
+    
+    if (activeBookings.length === 0) {
+      return; // No bookings
+    }
+    
+    let message = `<b>Бани на сегодня (${today})</b>\n\n`;
+    message += `Всего бронирований: ${activeBookings.length}\n\n`;
+    
+    const sortedBookings = activeBookings.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    
+    for (const booking of sortedBookings) {
+      const statusIcon = booking.status === "confirmed" ? "[OK]" : "[?]";
+      message += `${statusIcon} ${booking.startTime}-${booking.endTime} ${booking.bathCode}\n`;
+    }
+    
+    await notifyAdmins(message, { deepLink: "/ops/spa" });
+    
+    console.log("[Telegram Bot] Sent bath bookings summary");
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send bath summary:", error);
+  }
+}
+
+export async function sendClimateControlReminder(action: "on" | "off") {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const bookings = await storage.getBathBookingsForDate(today);
+    const activeBookings = bookings.filter(b => b.status !== "cancelled");
+    
+    if (activeBookings.length === 0) {
+      return; // No need for climate reminders
+    }
+    
+    const actionText = action === "on" ? "Включить отопление" : "Выключить отопление";
+    const actionEmoji = action === "on" ? "[+]" : "[-]";
+    
+    let message = `<b>${actionEmoji} ${actionText}</b>\n\n`;
+    message += `Сегодня есть бронирования бань.\nПроверьте климат-контроль!`;
+    
+    await notifyAdmins(message, { deepLink: "/ops/tasks" });
+    
+    console.log(`[Telegram Bot] Sent climate control reminder (${action})`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send climate reminder:", error);
+  }
+}
+
+export async function sendWeatherAlert(alertType: "frost" | "storm", details: string[]) {
+  try {
+    let message = "";
+    
+    if (alertType === "frost") {
+      message = `<b>[!] ВНИМАНИЕ: Заморозки!</b>\n\n`;
+      message += `В ближайшие дни ожидаются низкие температуры:\n\n`;
+      message += details.join("\n");
+      message += `\n\nПроверьте отопление во всех домиках!`;
+    } else if (alertType === "storm") {
+      message = `<b>[!] ВНИМАНИЕ: Штормовое предупреждение!</b>\n\n`;
+      message += details.join("\n");
+    }
+    
+    // Send to owners and admins
+    await notifyAdmins(message, { deepLink: "/ops/tasks" });
+    
+    console.log(`[Telegram Bot] Sent weather alert (${alertType})`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send weather alert:", error);
+  }
+}
 
 export async function notifyNewQuadBooking(booking: {
   date: string;

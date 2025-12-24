@@ -43,6 +43,23 @@ export type SpaResource = z.infer<typeof SpaResource>;
 export const TaskType = z.enum(["climate_off", "climate_on", "trash_prep", "meters", "cleaning", "call_guest", "other"]);
 export type TaskType = z.infer<typeof TaskType>;
 
+// Meter reading data for "meters" task type
+export const meterReadingSchema = z.object({
+  unit: z.string(), // D1, D2, D3, D4, B1, B2, SPA
+  meterType: z.enum(["electricity", "water", "gas"]),
+  value: z.number(),
+  previousValue: z.number().optional(),
+  date: z.string(),
+  photo: z.string().optional(), // URL to photo
+});
+export type MeterReading = z.infer<typeof meterReadingSchema>;
+
+export const meterReadingsMetaSchema = z.object({
+  readings: z.array(meterReadingSchema),
+  period: z.string(), // YYYY-MM
+});
+export type MeterReadingsMeta = z.infer<typeof meterReadingsMetaSchema>;
+
 export const TaskStatus = z.enum(["open", "done"]);
 export type TaskStatus = z.infer<typeof TaskStatus>;
 
@@ -61,6 +78,16 @@ export type IncomeSource = z.infer<typeof IncomeSource>;
 
 export const PaymentMethod = z.enum(["erip", "cash"]);
 export type PaymentMethod = z.infer<typeof PaymentMethod>;
+
+// ============ LAUNDRY ============
+export const LaundryBatchStatus = z.enum(["pending", "washing", "drying", "ready", "delivered"]);
+export type LaundryBatchStatus = z.infer<typeof LaundryBatchStatus>;
+
+export const TextileColor = z.enum(["white", "beige", "green", "grey"]);
+export type TextileColor = z.infer<typeof TextileColor>;
+
+export const TextileType = z.enum(["sheets", "pillowcases", "towels_large", "towels_small", "robes", "mattress_covers"]);
+export type TextileType = z.infer<typeof TextileType>;
 
 // ============ USER ============
 export const userSchema = z.object({
@@ -307,6 +334,67 @@ export const insertWorkLogSchema = z.object({
   location: locationSchema.optional(),
 });
 export type InsertWorkLog = z.infer<typeof insertWorkLogSchema>;
+
+// ============ LAUNDRY BATCH ============
+export const laundryItemSchema = z.object({
+  type: TextileType,
+  color: TextileColor,
+  count: z.number().min(1),
+});
+export type LaundryItem = z.infer<typeof laundryItemSchema>;
+
+export const laundryBatchSchema = z.object({
+  id: z.string(),
+  unitCode: z.string().optional(), // D1, D2, D3, D4 - where textile came from
+  items: z.array(laundryItemSchema),
+  status: LaundryBatchStatus.default("pending"),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  washStartedAt: z.string().optional(),
+  dryStartedAt: z.string().optional(),
+  readyAt: z.string().optional(),
+  deliveredAt: z.string().optional(),
+  deliveredTo: z.string().optional(), // Unit code where delivered
+  notes: z.string().optional(),
+});
+export type LaundryBatch = z.infer<typeof laundryBatchSchema>;
+
+export const insertLaundryBatchSchema = z.object({
+  unitCode: z.string().optional(),
+  items: z.array(laundryItemSchema),
+  notes: z.string().optional(),
+});
+export type InsertLaundryBatch = z.infer<typeof insertLaundryBatchSchema>;
+
+// ============ TEXTILE AUDIT ============
+export const textileAuditSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  location: z.string(), // D1, D2, D3, D4, Склад, Прачечная
+  items: z.array(z.object({
+    type: TextileType,
+    color: TextileColor,
+    count: z.number(),
+    condition: z.enum(["good", "worn", "damaged"]).default("good"),
+  })),
+  auditedBy: z.string(),
+  notes: z.string().optional(),
+  createdAt: z.string(),
+});
+export type TextileAudit = z.infer<typeof textileAuditSchema>;
+
+export const insertTextileAuditSchema = z.object({
+  date: z.string(),
+  location: z.string(),
+  items: z.array(z.object({
+    type: TextileType,
+    color: TextileColor,
+    count: z.number(),
+    condition: z.enum(["good", "worn", "damaged"]).default("good"),
+  })),
+  notes: z.string().optional(),
+});
+export type InsertTextileAudit = z.infer<typeof insertTextileAuditSchema>;
 
 // ============ QUAD ROUTE TYPE ============
 export const QuadRouteType = z.enum(["short", "long"]); // short = 30min/50 BYN, long = 60min/80 BYN
@@ -1115,5 +1203,32 @@ export const reviewsTable = pgTable("reviews", {
   isPublished: boolean("is_published").notNull().default(false),
   publishedAt: text("published_at"),
   publishedBy: text("published_by"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ LAUNDRY BATCHES TABLE ============
+export const laundryBatchesTable = pgTable("laundry_batches", {
+  id: text("id").primaryKey(),
+  unitCode: text("unit_code"),
+  items: jsonb("items").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  washStartedAt: text("wash_started_at"),
+  dryStartedAt: text("dry_started_at"),
+  readyAt: text("ready_at"),
+  deliveredAt: text("delivered_at"),
+  deliveredTo: text("delivered_to"),
+  notes: text("notes"),
+});
+
+// ============ TEXTILE AUDITS TABLE ============
+export const textileAuditsTable = pgTable("textile_audits", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  location: text("location").notNull(),
+  items: jsonb("items").notNull(),
+  auditedBy: text("audited_by").notNull(),
+  notes: text("notes"),
   createdAt: text("created_at").notNull(),
 });

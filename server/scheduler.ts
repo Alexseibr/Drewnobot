@@ -1,12 +1,30 @@
 import cron from "node-cron";
 import { storage } from "./storage";
 import { log } from "./index";
+import { 
+  sendShiftReminder, 
+  sendBathBookingsSummary, 
+  sendClimateControlReminder,
+  sendWeatherAlert 
+} from "./telegram-bot";
 
 const SHIFT_CLOSURE_CRON = "0 23 * * *";
 const DAILY_TASKS_CRON = "0 6 * * *";
 const WEEKLY_TASKS_CRON = "0 6 * * 1";
 const MONTHLY_TASKS_CRON = "0 6 1 * *";
 const CLOSURE_HOUR = 23;
+
+// Notification schedules (Minsk time)
+const SHIFT_REMINDER_CRON = "30 8 * * *";       // 08:30 - Shift reminder
+const BATH_SUMMARY_CRON = "0 9 * * *";          // 09:00 - Bath bookings
+const CLIMATE_ON_CRON = "0 12 * * *";           // 12:00 - Climate control ON
+const CLIMATE_OFF_CRON = "0 14 * * *";          // 14:00 - Climate control OFF
+const WEATHER_CHECK_CRON = "0 18 * * *";        // 18:00 - Weather forecast check
+
+// Village Drewno coordinates (near Minsk)
+const LOCATION_LAT = 53.9;
+const LOCATION_LON = 27.567;
+const FROST_THRESHOLD = 2; // Alert when min temp is below this (Celsius)
 
 interface ScheduledTask {
   title: string;
@@ -35,6 +53,55 @@ const MONTHLY_TASKS: ScheduledTask[] = [
   { title: "Инвентаризация расходников", type: "other", checklist: ["Дрова", "Уголь", "Моющие средства", "Бумага"] },
   { title: "Профилактика оборудования", type: "other", checklist: ["Насосы", "Фильтры", "Котлы"] },
 ];
+
+interface WeatherForecast {
+  daily: {
+    time: string[];
+    temperature_2m_min: number[];
+    temperature_2m_max: number[];
+    precipitation_sum: number[];
+  };
+}
+
+async function checkWeatherAndAlert(): Promise<void> {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LOCATION_LAT}&longitude=${LOCATION_LON}&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&timezone=Europe%2FMinsk&forecast_days=3`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      log(`Weather API error: ${response.status}`, "scheduler");
+      return;
+    }
+    
+    const data: WeatherForecast = await response.json();
+    
+    if (!data.daily || !data.daily.temperature_2m_min) {
+      log("Invalid weather data received", "scheduler");
+      return;
+    }
+    
+    // Check for frost in next 3 days
+    const frostAlerts: string[] = [];
+    for (let i = 0; i < data.daily.time.length; i++) {
+      const minTemp = data.daily.temperature_2m_min[i];
+      const maxTemp = data.daily.temperature_2m_max[i];
+      const date = data.daily.time[i];
+      
+      if (minTemp < FROST_THRESHOLD) {
+        frostAlerts.push(`${date}: мин ${minTemp}°C, макс ${maxTemp}°C`);
+      }
+    }
+    
+    if (frostAlerts.length > 0) {
+      log(`Frost warning detected! Sending alert.`, "scheduler");
+      await sendWeatherAlert("frost", frostAlerts);
+    } else {
+      log("No frost warning needed", "scheduler");
+    }
+  } catch (error) {
+    console.error("[Scheduler] Weather check failed:", error);
+  }
+}
 
 async function closeAllOpenShifts(): Promise<void> {
   try {
@@ -188,11 +255,54 @@ export function initScheduler(): void {
     timezone: "Europe/Minsk"
   });
 
+  // ============ STAFF NOTIFICATIONS ============
+  
+  cron.schedule(SHIFT_REMINDER_CRON, async () => {
+    log("Sending shift reminder (08:30)", "scheduler");
+    await sendShiftReminder();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
+  cron.schedule(BATH_SUMMARY_CRON, async () => {
+    log("Sending bath bookings summary (09:00)", "scheduler");
+    await sendBathBookingsSummary();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
+  cron.schedule(CLIMATE_ON_CRON, async () => {
+    log("Sending climate control reminder - ON (12:00)", "scheduler");
+    await sendClimateControlReminder("on");
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
+  cron.schedule(CLIMATE_OFF_CRON, async () => {
+    log("Sending climate control reminder - OFF (14:00)", "scheduler");
+    await sendClimateControlReminder("off");
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
+  cron.schedule(WEATHER_CHECK_CRON, async () => {
+    log("Checking weather forecast (18:00)", "scheduler");
+    await checkWeatherAndAlert();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
   log("Scheduler initialized:", "scheduler");
   log("  - Shift auto-closure: 23:00 daily", "scheduler");
   log("  - Daily tasks: 06:00 daily", "scheduler");
   log("  - Weekly tasks: 06:00 Monday", "scheduler");
   log("  - Monthly tasks: 06:00 1st of month", "scheduler");
+  log("  - Weather check: 18:00 daily", "scheduler");
+  log("  - Notifications:", "scheduler");
+  log("    - Shift reminder: 08:30 daily", "scheduler");
+  log("    - Bath summary: 09:00 daily", "scheduler");
+  log("    - Climate ON: 12:00 daily", "scheduler");
+  log("    - Climate OFF: 14:00 daily", "scheduler");
 }
 
 export { createDailyTasks, createWeeklyTasks, createMonthlyTasks };

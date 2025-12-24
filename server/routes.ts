@@ -509,7 +509,15 @@ export async function registerRoutes(
 
   app.post("/api/tasks/:id/complete", async (req, res) => {
     try {
-      const task = await storage.updateTask(req.params.id, { status: "done" });
+      const { meta } = req.body || {};
+      const updateData: { status: "done"; meta?: any } = { status: "done" };
+      
+      // If meta data provided (e.g., meter readings), include it
+      if (meta) {
+        updateData.meta = meta;
+      }
+      
+      const task = await storage.updateTask(req.params.id, updateData);
       if (!task) return res.status(404).json({ error: "Task not found" });
       res.json(task);
     } catch (error) {
@@ -2517,6 +2525,89 @@ export async function registerRoutes(
     };
     
     res.json({ token: `dev-token-${role.toLowerCase()}`, user });
+  });
+
+  // ============ LAUNDRY BATCHES ============
+  // Get all laundry batches (ADMIN, OWNER, SUPER_ADMIN)
+  app.get("/api/laundry/batches", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const batches = await storage.getLaundryBatches();
+      res.json(batches);
+    } catch (error) {
+      console.error("[Laundry] Get batches error:", error);
+      res.status(500).json({ error: "Ошибка загрузки партий" });
+    }
+  });
+
+  // Create laundry batch
+  app.post("/api/laundry/batches", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { unitCode, items, notes } = req.body;
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: "Необходимо добавить предметы" });
+      }
+      const batch = await storage.createLaundryBatch({ unitCode, items, notes }, req.user!.id);
+      res.json(batch);
+    } catch (error) {
+      console.error("[Laundry] Create batch error:", error);
+      res.status(500).json({ error: "Ошибка создания партии" });
+    }
+  });
+
+  // Update laundry batch status
+  app.patch("/api/laundry/batches/:id", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // Add timestamp when status changes
+      const now = new Date().toISOString();
+      if (updates.status === "washing" && !updates.washStartedAt) {
+        updates.washStartedAt = now;
+      } else if (updates.status === "drying" && !updates.dryStartedAt) {
+        updates.dryStartedAt = now;
+      } else if (updates.status === "ready" && !updates.readyAt) {
+        updates.readyAt = now;
+      } else if (updates.status === "delivered" && !updates.deliveredAt) {
+        updates.deliveredAt = now;
+      }
+      
+      const batch = await storage.updateLaundryBatch(id, updates);
+      if (!batch) {
+        return res.status(404).json({ error: "Партия не найдена" });
+      }
+      res.json(batch);
+    } catch (error) {
+      console.error("[Laundry] Update batch error:", error);
+      res.status(500).json({ error: "Ошибка обновления партии" });
+    }
+  });
+
+  // ============ TEXTILE AUDITS ============
+  // Get all textile audits (OWNER, SUPER_ADMIN only)
+  app.get("/api/textile/audits", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const audits = await storage.getTextileAudits();
+      res.json(audits);
+    } catch (error) {
+      console.error("[Textile] Get audits error:", error);
+      res.status(500).json({ error: "Ошибка загрузки аудитов" });
+    }
+  });
+
+  // Create textile audit (ADMIN, OWNER, SUPER_ADMIN)
+  app.post("/api/textile/audits", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { date, location, items, notes } = req.body;
+      if (!date || !location || !items || !Array.isArray(items)) {
+        return res.status(400).json({ error: "Необходимо заполнить все поля" });
+      }
+      const audit = await storage.createTextileAudit({ date, location, items, notes }, req.user!.id);
+      res.json(audit);
+    } catch (error) {
+      console.error("[Textile] Create audit error:", error);
+      res.status(500).json({ error: "Ошибка создания аудита" });
+    }
   });
 
   // ============ TELEGRAM BOT WEBHOOK ============

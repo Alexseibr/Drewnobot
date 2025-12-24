@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { TaskCardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { Task, TaskType } from "@shared/schema";
+import type { Task, TaskType, MeterReading } from "@shared/schema";
 
 const taskIcons: Record<TaskType, React.ElementType> = {
   climate_off: ThermometerSnowflake,
@@ -81,6 +81,19 @@ const UNITS = [
   { value: "СПА2", label: "СПА 2" },
 ];
 
+const METER_UNITS = [
+  { value: "Д1", label: "Домик 1" },
+  { value: "Д2", label: "Домик 2" },
+  { value: "Д3", label: "Домик 3" },
+  { value: "Д4", label: "Домик 4" },
+];
+
+const METER_TYPES: { value: MeterReading["meterType"]; label: string }[] = [
+  { value: "electricity", label: "Электричество" },
+  { value: "water", label: "Вода" },
+  { value: "gas", label: "Газ" },
+];
+
 const taskFormSchema = z.object({
   title: z.string().min(3, "Минимум 3 символа"),
   type: z.enum(["climate_off", "climate_on", "trash_prep", "meters", "cleaning", "call_guest", "other"]),
@@ -95,6 +108,8 @@ export default function TasksPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const taskRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [meterDialogTask, setMeterDialogTask] = useState<Task | null>(null);
+  const [meterReadings, setMeterReadings] = useState<Record<string, number>>({});
   const searchString = useSearch();
 
   const { data: tasks, isLoading } = useQuery<Task[]>({
@@ -151,19 +166,63 @@ export default function TasksPage() {
   });
 
   const completeTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      const response = await apiRequest("POST", `/api/tasks/${taskId}/complete`);
+    mutationFn: async ({ taskId, meta }: { taskId: string; meta?: any }) => {
+      const response = await apiRequest("POST", `/api/tasks/${taskId}/complete`, meta ? { meta } : undefined);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
       toast({ title: "Задача выполнена" });
+      setMeterDialogTask(null);
+      setMeterReadings({});
     },
     onError: () => {
       toast({ title: "Ошибка выполнения задачи", variant: "destructive" });
     },
   });
+
+  const handleCompleteTask = (task: Task) => {
+    if (task.type === "meters") {
+      setMeterDialogTask(task);
+      setMeterReadings({});
+    } else {
+      completeTaskMutation.mutate({ taskId: task.id });
+    }
+  };
+
+  const handleSubmitMeterReadings = () => {
+    if (!meterDialogTask) return;
+    
+    const readings: MeterReading[] = [];
+    const today = format(new Date(), "yyyy-MM-dd");
+    
+    for (const unit of METER_UNITS) {
+      for (const meterType of METER_TYPES) {
+        const key = `${unit.value}_${meterType.value}`;
+        const value = meterReadings[key];
+        if (value !== undefined && value > 0) {
+          readings.push({
+            unit: unit.value,
+            meterType: meterType.value,
+            value,
+            date: today,
+          });
+        }
+      }
+    }
+    
+    if (readings.length === 0) {
+      toast({ title: "Введите хотя бы одно показание", variant: "destructive" });
+      return;
+    }
+    
+    const period = format(new Date(), "yyyy-MM");
+    completeTaskMutation.mutate({
+      taskId: meterDialogTask.id,
+      meta: { readings, period },
+    });
+  };
 
   const today = format(new Date(), "yyyy-MM-dd");
   const todayTasks = tasks?.filter(t => t.date === today) || [];
@@ -186,7 +245,7 @@ export default function TasksPage() {
           <div className="flex items-start gap-3">
             <Checkbox
               checked={isCompleted}
-              onCheckedChange={() => !isCompleted && completeTaskMutation.mutate(task.id)}
+              onCheckedChange={() => !isCompleted && handleCompleteTask(task)}
               disabled={isCompleted || completeTaskMutation.isPending}
               className="mt-0.5"
               data-testid={`checkbox-task-${task.id}`}
@@ -443,6 +502,57 @@ export default function TasksPage() {
           </TabsContent>
         </Tabs>
       </PageContainer>
+
+      {/* Meter Readings Dialog */}
+      <Dialog open={!!meterDialogTask} onOpenChange={(open) => !open && setMeterDialogTask(null)}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gauge className="h-5 w-5" />
+              Показания счётчиков
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {METER_UNITS.map((unit) => (
+              <div key={unit.value} className="space-y-3">
+                <h4 className="font-medium text-sm border-b pb-1">{unit.label}</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {METER_TYPES.map((meterType) => {
+                    const key = `${unit.value}_${meterType.value}`;
+                    return (
+                      <div key={key}>
+                        <label className="text-xs text-muted-foreground block mb-1">
+                          {meterType.label}
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={meterReadings[key] || ""}
+                          onChange={(e) => setMeterReadings(prev => ({
+                            ...prev,
+                            [key]: e.target.value ? Number(e.target.value) : 0,
+                          }))}
+                          data-testid={`input-meter-${key}`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <Button 
+            onClick={handleSubmitMeterReadings}
+            className="w-full mt-4"
+            disabled={completeTaskMutation.isPending}
+            data-testid="button-submit-meters"
+          >
+            {completeTaskMutation.isPending ? "Сохранение..." : "Сохранить показания"}
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

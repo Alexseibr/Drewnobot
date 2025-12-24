@@ -36,6 +36,8 @@ import type {
   QuadMaintenanceStatus,
   StaffInvitation, InsertStaffInvitation,
   StaffAuthorization, InsertStaffAuthorization,
+  LaundryBatch, InsertLaundryBatch,
+  TextileAudit, InsertTextileAudit,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
@@ -44,7 +46,7 @@ import {
   workLogsTable, quadPricingTable, instructorBlockedTimesTable, instructorExpensesTable,
   authSessionsTable, staffInvitationsTable, staffAuthorizationsTable, quadMachinesTable, quadMileageLogsTable,
   quadMaintenanceRulesTable, quadMaintenanceEventsTable, siteSettingsTable,
-  blockedDatesTable, reviewsTable,
+  blockedDatesTable, reviewsTable, laundryBatchesTable, textileAuditsTable,
 } from "@shared/schema";
 
 const PRICES: Record<string, number> = {
@@ -2117,5 +2119,135 @@ export class DatabaseStorage implements IStorage {
   async deleteStaffAuthorization(id: string): Promise<boolean> {
     await db.delete(staffAuthorizationsTable).where(eq(staffAuthorizationsTable.id, id));
     return true;
+  }
+
+  // Laundry Batches
+  async getLaundryBatches(): Promise<LaundryBatch[]> {
+    const rows = await db.select().from(laundryBatchesTable).orderBy(desc(laundryBatchesTable.createdAt));
+    return rows.map(row => ({
+      id: row.id,
+      unitCode: row.unitCode || undefined,
+      items: row.items as any,
+      status: row.status as any,
+      createdBy: row.createdBy,
+      createdAt: row.createdAt,
+      washStartedAt: row.washStartedAt || undefined,
+      dryStartedAt: row.dryStartedAt || undefined,
+      readyAt: row.readyAt || undefined,
+      deliveredAt: row.deliveredAt || undefined,
+      deliveredTo: row.deliveredTo || undefined,
+      notes: row.notes || undefined,
+    }));
+  }
+
+  async getLaundryBatch(id: string): Promise<LaundryBatch | undefined> {
+    const rows = await db.select().from(laundryBatchesTable).where(eq(laundryBatchesTable.id, id));
+    if (!rows[0]) return undefined;
+    const row = rows[0];
+    return {
+      id: row.id,
+      unitCode: row.unitCode || undefined,
+      items: row.items as any,
+      status: row.status as any,
+      createdBy: row.createdBy,
+      createdAt: row.createdAt,
+      washStartedAt: row.washStartedAt || undefined,
+      dryStartedAt: row.dryStartedAt || undefined,
+      readyAt: row.readyAt || undefined,
+      deliveredAt: row.deliveredAt || undefined,
+      deliveredTo: row.deliveredTo || undefined,
+      notes: row.notes || undefined,
+    };
+  }
+
+  async createLaundryBatch(batch: InsertLaundryBatch, createdBy: string): Promise<LaundryBatch> {
+    const id = randomUUID();
+    const newBatch: LaundryBatch = {
+      id,
+      unitCode: batch.unitCode,
+      items: batch.items,
+      status: "pending",
+      createdBy,
+      createdAt: new Date().toISOString(),
+      notes: batch.notes,
+    };
+    await db.insert(laundryBatchesTable).values({
+      id: newBatch.id,
+      unitCode: newBatch.unitCode || null,
+      items: newBatch.items,
+      status: newBatch.status,
+      createdBy: newBatch.createdBy,
+      createdAt: newBatch.createdAt,
+      notes: newBatch.notes || null,
+    });
+    return newBatch;
+  }
+
+  async updateLaundryBatch(id: string, updates: Partial<LaundryBatch>): Promise<LaundryBatch | undefined> {
+    const setValues: Record<string, any> = {};
+    if (updates.status !== undefined) setValues.status = updates.status;
+    if (updates.washStartedAt !== undefined) setValues.washStartedAt = updates.washStartedAt;
+    if (updates.dryStartedAt !== undefined) setValues.dryStartedAt = updates.dryStartedAt;
+    if (updates.readyAt !== undefined) setValues.readyAt = updates.readyAt;
+    if (updates.deliveredAt !== undefined) setValues.deliveredAt = updates.deliveredAt;
+    if (updates.deliveredTo !== undefined) setValues.deliveredTo = updates.deliveredTo;
+    if (updates.notes !== undefined) setValues.notes = updates.notes;
+    
+    if (Object.keys(setValues).length > 0) {
+      await db.update(laundryBatchesTable).set(setValues).where(eq(laundryBatchesTable.id, id));
+    }
+    return this.getLaundryBatch(id);
+  }
+
+  // Textile Audits
+  async getTextileAudits(): Promise<TextileAudit[]> {
+    const rows = await db.select().from(textileAuditsTable).orderBy(desc(textileAuditsTable.createdAt));
+    return rows.map(row => ({
+      id: row.id,
+      date: row.date,
+      location: row.location,
+      items: row.items as any,
+      auditedBy: row.auditedBy,
+      notes: row.notes || undefined,
+      createdAt: row.createdAt,
+    }));
+  }
+
+  async getTextileAudit(id: string): Promise<TextileAudit | undefined> {
+    const rows = await db.select().from(textileAuditsTable).where(eq(textileAuditsTable.id, id));
+    if (!rows[0]) return undefined;
+    const row = rows[0];
+    return {
+      id: row.id,
+      date: row.date,
+      location: row.location,
+      items: row.items as any,
+      auditedBy: row.auditedBy,
+      notes: row.notes || undefined,
+      createdAt: row.createdAt,
+    };
+  }
+
+  async createTextileAudit(audit: InsertTextileAudit, auditedBy: string): Promise<TextileAudit> {
+    const id = randomUUID();
+    const newAudit: TextileAudit = {
+      id,
+      date: audit.date,
+      location: audit.location,
+      items: audit.items,
+      auditedBy,
+      notes: audit.notes,
+      createdAt: new Date().toISOString(),
+    };
+    await db.insert(textileAuditsTable).values({
+      id: newAudit.id,
+      date: newAudit.date,
+      location: newAudit.location,
+      items: newAudit.items,
+      auditedBy: newAudit.auditedBy,
+      notes: newAudit.notes || null,
+      createdAt: newAudit.createdAt,
+    });
+    return newAudit;
   }
 }

@@ -33,6 +33,8 @@ import type {
   QuadMaintenanceStatus,
   StaffInvitation, InsertStaffInvitation,
   StaffAuthorization, InsertStaffAuthorization,
+  LaundryBatch, InsertLaundryBatch,
+  TextileAudit, InsertTextileAudit,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -210,6 +212,17 @@ export interface IStorage {
   createStaffAuthorization(auth: InsertStaffAuthorization): Promise<StaffAuthorization>;
   updateStaffAuthorization(id: string, updates: Partial<StaffAuthorization>): Promise<StaffAuthorization | undefined>;
   deleteStaffAuthorization(id: string): Promise<boolean>;
+  
+  // Laundry Batches
+  getLaundryBatches(): Promise<LaundryBatch[]>;
+  getLaundryBatch(id: string): Promise<LaundryBatch | undefined>;
+  createLaundryBatch(batch: InsertLaundryBatch, createdBy: string): Promise<LaundryBatch>;
+  updateLaundryBatch(id: string, updates: Partial<LaundryBatch>): Promise<LaundryBatch | undefined>;
+  
+  // Textile Audits
+  getTextileAudits(): Promise<TextileAudit[]>;
+  getTextileAudit(id: string): Promise<TextileAudit | undefined>;
+  createTextileAudit(audit: InsertTextileAudit, auditedBy: string): Promise<TextileAudit>;
 }
 
 const PRICES: Record<string, number> = {
@@ -258,6 +271,8 @@ export class MemStorage implements IStorage {
   private quadMaintenanceEvents: Map<string, QuadMaintenanceEvent> = new Map();
   private staffInvitations: Map<string, StaffInvitation> = new Map();
   private staffAuthorizations: Map<string, StaffAuthorization> = new Map();
+  private laundryBatches: Map<string, LaundryBatch> = new Map();
+  private textileAudits: Map<string, TextileAudit> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -1667,6 +1682,64 @@ export class MemStorage implements IStorage {
 
   async deleteStaffAuthorization(id: string): Promise<boolean> {
     return this.staffAuthorizations.delete(id);
+  }
+
+  // Laundry Batches
+  async getLaundryBatches(): Promise<LaundryBatch[]> {
+    return Array.from(this.laundryBatches.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getLaundryBatch(id: string): Promise<LaundryBatch | undefined> {
+    return this.laundryBatches.get(id);
+  }
+
+  async createLaundryBatch(batch: InsertLaundryBatch, createdBy: string): Promise<LaundryBatch> {
+    const id = randomUUID();
+    const newBatch: LaundryBatch = {
+      id,
+      unitCode: batch.unitCode,
+      items: batch.items,
+      status: "pending",
+      createdBy,
+      createdAt: new Date().toISOString(),
+      notes: batch.notes,
+    };
+    this.laundryBatches.set(id, newBatch);
+    return newBatch;
+  }
+
+  async updateLaundryBatch(id: string, updates: Partial<LaundryBatch>): Promise<LaundryBatch | undefined> {
+    const batch = this.laundryBatches.get(id);
+    if (!batch) return undefined;
+    const updated = { ...batch, ...updates };
+    this.laundryBatches.set(id, updated);
+    return updated;
+  }
+
+  // Textile Audits
+  async getTextileAudits(): Promise<TextileAudit[]> {
+    return Array.from(this.textileAudits.values())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getTextileAudit(id: string): Promise<TextileAudit | undefined> {
+    return this.textileAudits.get(id);
+  }
+
+  async createTextileAudit(audit: InsertTextileAudit, auditedBy: string): Promise<TextileAudit> {
+    const id = randomUUID();
+    const newAudit: TextileAudit = {
+      id,
+      date: audit.date,
+      location: audit.location,
+      items: audit.items,
+      auditedBy,
+      notes: audit.notes,
+      createdAt: new Date().toISOString(),
+    };
+    this.textileAudits.set(id, newAudit);
+    return newAudit;
   }
 }
 

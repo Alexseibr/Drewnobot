@@ -16,6 +16,7 @@ import NewBookingPage from "@/pages/ops/new-booking";
 import CashPage from "@/pages/ops/cash";
 import TasksPage from "@/pages/ops/tasks";
 import WorkLogsPage from "@/pages/ops/worklogs";
+import LaundryPage from "@/pages/ops/laundry";
 import InstructorSchedulePage from "@/pages/instructor/schedule";
 import InstructorManagePage from "@/pages/instructor/manage";
 import InstructorFinancesPage from "@/pages/instructor/finances";
@@ -25,6 +26,7 @@ import OwnerAnalyticsPage from "@/pages/owner/analytics";
 import OwnerCashPage from "@/pages/owner/cash";
 import OwnerSettingsPage from "@/pages/owner/settings";
 import OwnerStaffPage from "@/pages/owner/staff";
+import TextileAuditPage from "@/pages/owner/textile-audit";
 import StaffManagementPage from "@/pages/admin/staff";
 import ClaimRolePage from "@/pages/claim-role";
 import NotFound from "@/pages/not-found";
@@ -44,6 +46,7 @@ function Router() {
       <Route path="/ops/cash" component={CashPage} />
       <Route path="/ops/tasks" component={TasksPage} />
       <Route path="/ops/worklogs" component={WorkLogsPage} />
+      <Route path="/ops/laundry" component={LaundryPage} />
       
       <Route path="/instructor" component={InstructorSchedulePage} />
       <Route path="/instructor/sessions" component={InstructorSchedulePage} />
@@ -56,6 +59,7 @@ function Router() {
       <Route path="/owner/cash" component={OwnerCashPage} />
       <Route path="/owner/settings" component={OwnerSettingsPage} />
       <Route path="/owner/staff" component={OwnerStaffPage} />
+      <Route path="/owner/textile-audit" component={TextileAuditPage} />
       
       <Route path="/admin/staff" component={StaffManagementPage} />
       
