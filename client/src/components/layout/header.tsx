@@ -9,16 +9,25 @@ import drewnoLogo from "@assets/drewno-logo.svg";
 interface HeaderProps {
   title?: string;
   showBack?: boolean;
+  backPath?: string;
   onMenuClick?: () => void;
 }
 
-export function Header({ title = "Village Drewno", showBack, onMenuClick }: HeaderProps) {
+export function Header({ title = "Village Drewno", showBack, backPath, onMenuClick }: HeaderProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
+
+  const handleBack = () => {
+    if (backPath) {
+      setLocation(backPath);
+    } else {
+      setLocation("/");
+    }
   };
 
   const getRoleBadgeColor = () => {
@@ -41,7 +50,7 @@ export function Header({ title = "Village Drewno", showBack, onMenuClick }: Head
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => window.history.back()}
+            onClick={handleBack}
             data-testid="button-back"
           >
             <ChevronLeft className="h-5 w-5" />

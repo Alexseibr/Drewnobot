@@ -9,6 +9,7 @@ import { ru } from "date-fns/locale";
 import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus, MessageCircle, Phone, Flame } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -303,7 +304,7 @@ export default function SpaBookingPage() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header
         title="Забронировать СПА"
-        showBack={step !== "select"}
+        showBack
       />
       <PageContainer>
         {step === "select" && (
@@ -798,6 +799,7 @@ export default function SpaBookingPage() {
           </Form>
         )}
       </PageContainer>
+      <BottomNav />
     </div>
   );
 }

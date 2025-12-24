@@ -9,6 +9,7 @@ import { ru } from "date-fns/locale";
 import { CalendarIcon, Clock, Bath, Flame, Package, Phone, User, Check } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -213,7 +214,7 @@ export default function BathBookingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header title="Забронировать СПА" showBack={step !== "select"} />
+      <Header title="Забронировать СПА" showBack />
       <PageContainer>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -679,6 +680,7 @@ export default function BathBookingPage() {
           </form>
         </Form>
       </PageContainer>
+      <BottomNav />
     </div>
   );
 }

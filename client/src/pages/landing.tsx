@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { Bath, Bike, Briefcase, ChevronRight, Droplets, Users, Shield, BarChart3 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -201,6 +202,7 @@ export default function LandingPage() {
           )}
         </div>
       </PageContainer>
+      <BottomNav />
     </div>
   );
 }
