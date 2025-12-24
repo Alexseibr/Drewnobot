@@ -591,6 +591,7 @@ export class DatabaseStorage implements IStorage {
     const updateData: Record<string, any> = {};
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.payments !== undefined) updateData.payments = updates.payments;
+    if (updates.pricing !== undefined) updateData.pricing = updates.pricing;
     if (updates.holdUntil !== undefined) updateData.holdUntil = updates.holdUntil;
     if (updates.assignedAdmin !== undefined) updateData.assignedAdmin = updates.assignedAdmin;
     
