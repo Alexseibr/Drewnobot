@@ -251,6 +251,9 @@ export const insertBathBookingSchema = z.object({
 export type InsertBathBooking = z.infer<typeof insertBathBookingSchema>;
 
 // ============ TASK ============
+export const TaskPriority = z.enum(["normal", "urgent"]);
+export type TaskPriority = z.infer<typeof TaskPriority>;
+
 export const taskSchema = z.object({
   id: z.string(),
   date: z.string(),
@@ -260,13 +263,16 @@ export const taskSchema = z.object({
   checklist: z.array(z.string()).optional(),
   status: TaskStatus.default("open"),
   assignedTo: z.string().optional(),
+  priority: TaskPriority.default("normal"),
+  notifyAt: z.string().optional(),
+  notified: z.boolean().default(false),
   createdBySystem: z.boolean().default(false),
   meta: z.any().optional(),
   createdAt: z.string(),
 });
 export type Task = z.infer<typeof taskSchema>;
 
-export const insertTaskSchema = taskSchema.omit({ id: true, createdAt: true });
+export const insertTaskSchema = taskSchema.omit({ id: true, createdAt: true, notified: true });
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 // ============ CASH SHIFT ============
@@ -1142,6 +1148,9 @@ export const tasksTable = pgTable("tasks", {
   checklist: jsonb("checklist"),
   status: text("status").notNull().default("open"),
   assignedTo: text("assigned_to"),
+  priority: text("priority").notNull().default("normal"),
+  notifyAt: text("notify_at"),
+  notified: boolean("notified").notNull().default(false),
   createdBySystem: boolean("created_by_system").notNull().default(false),
   meta: jsonb("meta"),
   createdAt: text("created_at").notNull(),

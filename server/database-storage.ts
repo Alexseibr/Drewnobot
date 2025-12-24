@@ -852,6 +852,9 @@ export class DatabaseStorage implements IStorage {
       checklist: task.checklist,
       status: task.status || "open",
       assignedTo: task.assignedTo,
+      priority: task.priority || "normal",
+      notifyAt: task.notifyAt,
+      notified: false,
       createdBySystem: task.createdBySystem || false,
       meta: task.meta,
       createdAt: now,
@@ -865,6 +868,9 @@ export class DatabaseStorage implements IStorage {
       checklist: newTask.checklist || null,
       status: newTask.status,
       assignedTo: newTask.assignedTo || null,
+      priority: newTask.priority,
+      notifyAt: newTask.notifyAt || null,
+      notified: newTask.notified,
       createdBySystem: newTask.createdBySystem,
       meta: newTask.meta || null,
       createdAt: newTask.createdAt,
@@ -880,6 +886,9 @@ export class DatabaseStorage implements IStorage {
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.assignedTo !== undefined) updateData.assignedTo = updates.assignedTo;
     if (updates.checklist !== undefined) updateData.checklist = updates.checklist;
+    if (updates.priority !== undefined) updateData.priority = updates.priority;
+    if (updates.notifyAt !== undefined) updateData.notifyAt = updates.notifyAt;
+    if (updates.notified !== undefined) updateData.notified = updates.notified;
     
     if (Object.keys(updateData).length > 0) {
       await db.update(tasksTable).set(updateData).where(eq(tasksTable.id, id));
@@ -897,6 +906,9 @@ export class DatabaseStorage implements IStorage {
       checklist: row.checklist as any,
       status: row.status as any,
       assignedTo: row.assignedTo || undefined,
+      priority: row.priority || "normal",
+      notifyAt: row.notifyAt || undefined,
+      notified: row.notified || false,
       createdBySystem: row.createdBySystem,
       meta: row.meta as any,
       createdAt: row.createdAt,
