@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import { storage } from "./storage";
 import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole, SpaBooking } from "@shared/schema";
 import { validateInitData, generateSessionToken, getSessionExpiresAt } from "./telegram-auth";
-import { handleTelegramUpdate, setupTelegramWebhook } from "./telegram-bot";
+import { handleTelegramUpdate, setupTelegramWebhook, sendTaskNotification } from "./telegram-bot";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -490,6 +490,15 @@ export async function registerRoutes(
         status: "open",
         createdBySystem: false,
       });
+      
+      // Send Telegram notification to admins (async, don't wait)
+      sendTaskNotification({
+        id: task.id,
+        title: task.title,
+        type: task.type,
+        date: task.date,
+        unitCode: task.unitCode,
+      }).catch(err => console.error("[Tasks] Notification error:", err));
       
       res.json(task);
     } catch (error) {

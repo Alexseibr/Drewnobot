@@ -531,6 +531,64 @@ export async function sendMaintenanceAlerts() {
   }
 }
 
+// ============ TASK NOTIFICATIONS ============
+
+export async function sendTaskNotification(task: { id: string; title: string; type: string; date: string; unitCode?: string }) {
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(u => 
+      (u.role === "ADMIN" || u.role === "OWNER" || u.role === "SUPER_ADMIN") && u.isActive
+    );
+    
+    if (admins.length === 0) {
+      console.log("[Telegram Bot] No active admins to notify about task");
+      return;
+    }
+    
+    const webAppUrl = getWebAppUrl();
+    const taskUrl = `${webAppUrl}/ops/tasks?taskId=${task.id}`;
+    
+    const typeLabels: Record<string, string> = {
+      cleaning: "Уборка",
+      climate_on: "Вкл. климат",
+      climate_off: "Выкл. климат",
+      trash_prep: "Мусор",
+      meters: "Счетчики",
+      call_guest: "Звонок гостю",
+      other: "Другое",
+    };
+    
+    const typeLabel = typeLabels[task.type] || task.type;
+    const unitInfo = task.unitCode ? ` (${task.unitCode})` : "";
+    
+    const message = `<b>Новая задача</b>\n\n` +
+      `${task.title}${unitInfo}\n` +
+      `Тип: ${typeLabel}\n` +
+      `Дата: ${task.date}`;
+    
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: "Открыть задачу",
+            web_app: { url: taskUrl }
+          }
+        ]
+      ]
+    };
+    
+    for (const admin of admins) {
+      if (admin.telegramId) {
+        await sendMessage(parseInt(admin.telegramId), message, { reply_markup: keyboard });
+      }
+    }
+    
+    console.log(`[Telegram Bot] Sent task notification to ${admins.length} admins`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send task notification:", error);
+  }
+}
+
 // ============ AUTO-INITIALIZATION ============
 
 export async function initTelegramBot() {

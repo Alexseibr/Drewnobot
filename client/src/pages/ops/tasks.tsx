@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -92,10 +93,31 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 export default function TasksPage() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
+  const taskRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const searchString = useSearch();
 
   const { data: tasks, isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
+
+  // Handle deep link - scroll to and highlight specific task
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const taskId = params.get("taskId");
+    if (taskId && tasks) {
+      setHighlightedTaskId(taskId);
+      // Scroll to task after a short delay to ensure render
+      setTimeout(() => {
+        const taskElement = taskRefs.current[taskId];
+        if (taskElement) {
+          taskElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+      // Remove highlight after 3 seconds
+      setTimeout(() => setHighlightedTaskId(null), 3000);
+    }
+  }, [searchString, tasks]);
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
@@ -151,9 +173,15 @@ export default function TasksPage() {
   const TaskCard = ({ task }: { task: Task }) => {
     const Icon = taskIcons[task.type] || HelpCircle;
     const isCompleted = task.status === "done";
+    const isHighlighted = highlightedTaskId === task.id;
 
     return (
-      <Card className={cn("hover-elevate", isCompleted && "opacity-60")}>
+      <div ref={(el) => { taskRefs.current[task.id] = el; }}>
+        <Card className={cn(
+          "hover-elevate transition-all duration-300",
+          isCompleted && "opacity-60",
+          isHighlighted && "ring-2 ring-primary ring-offset-2"
+        )}>
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <Checkbox
@@ -209,7 +237,8 @@ export default function TasksPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     );
   };
 

@@ -55,6 +55,10 @@ export type ExpenseCategory = z.infer<typeof ExpenseCategory>;
 export const CashBoxType = z.enum(["main", "quads"]);
 export type CashBoxType = z.infer<typeof CashBoxType>;
 
+// Income source for cash_in transactions
+export const IncomeSource = z.enum(["bath", "cottage_1", "cottage_2", "cottage_3", "cottage_4", "quads", "spa", "other"]);
+export type IncomeSource = z.infer<typeof IncomeSource>;
+
 export const PaymentMethod = z.enum(["erip", "cash"]);
 export type PaymentMethod = z.infer<typeof PaymentMethod>;
 
@@ -241,6 +245,8 @@ export const cashTransactionSchema = z.object({
   type: CashTransactionType,
   amount: z.number(),
   category: ExpenseCategory.optional(),
+  incomeSource: IncomeSource.optional(),
+  cashBox: CashBoxType.optional(),
   comment: z.string().optional(),
   createdAt: z.string(),
   createdBy: z.string(),
