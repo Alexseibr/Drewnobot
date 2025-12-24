@@ -1436,18 +1436,41 @@ export async function registerRoutes(
   app.get("/api/cash/shift/current", async (req, res) => {
     try {
       const currentShift = await storage.getCurrentShift();
-      if (!currentShift) {
-        return res.json({ currentShift: null, transactions: [], balance: 0 });
-      }
       
-      const transactions = await storage.getCashTransactions(currentShift.id);
-      const balance = transactions.reduce((sum, tx) => {
+      // Get all transactions since last incasation (not just current shift)
+      const allTransactionsSinceIncasation = await storage.getCashTransactionsSinceLastIncasation();
+      
+      // Calculate total balance since last incasation
+      const totalBalance = allTransactionsSinceIncasation.reduce((sum, tx) => {
         if (tx.type === "cash_in") return sum + tx.amount;
         if (tx.type === "expense" || tx.type === "cash_out") return sum - tx.amount;
         return sum;
       }, 0);
       
-      res.json({ currentShift, transactions, balance });
+      // If no current shift, return total balance from previous shifts
+      if (!currentShift) {
+        return res.json({ 
+          currentShift: null, 
+          transactions: allTransactionsSinceIncasation, 
+          balance: totalBalance,
+          balanceSinceIncasation: totalBalance
+        });
+      }
+      
+      // Get current shift transactions for display
+      const currentShiftTransactions = await storage.getCashTransactions(currentShift.id);
+      const currentShiftBalance = currentShiftTransactions.reduce((sum, tx) => {
+        if (tx.type === "cash_in") return sum + tx.amount;
+        if (tx.type === "expense" || tx.type === "cash_out") return sum - tx.amount;
+        return sum;
+      }, 0);
+      
+      res.json({ 
+        currentShift, 
+        transactions: currentShiftTransactions, 
+        balance: currentShiftBalance,
+        balanceSinceIncasation: totalBalance
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch shift" });
     }

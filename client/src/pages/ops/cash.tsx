@@ -66,6 +66,7 @@ interface CashData {
   currentShift: CashShift | null;
   transactions: CashTransaction[];
   balance: number;
+  balanceSinceIncasation: number;
 }
 
 export default function CashPage() {
@@ -150,6 +151,7 @@ export default function CashPage() {
   const currentShift = cashData?.currentShift;
   const transactions: CashTransaction[] = cashData?.transactions || [];
   const balance = cashData?.balance || 0;
+  const balanceSinceIncasation = cashData?.balanceSinceIncasation || 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -158,25 +160,43 @@ export default function CashPage() {
       <PageContainer>
         <div className="space-y-6">
           {!currentShift ? (
-            <Card>
-              <CardContent className="p-6">
-                <EmptyState
-                  icon={Wallet}
-                  title="Нет активной смены"
-                  description="Откройте смену для начала работы с кассой"
-                  action={
-                    <Button
-                      onClick={() => openShiftMutation.mutate()}
-                      disabled={openShiftMutation.isPending}
-                      data-testid="button-open-shift"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      {openShiftMutation.isPending ? "Открытие..." : "Открыть смену"}
-                    </Button>
-                  }
-                />
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              {balanceSinceIncasation > 0 && (
+                <Card className="bg-accent">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Wallet className="h-5 w-5" />
+                      <span className="text-sm">На руках (с последней инкасации)</span>
+                    </div>
+                    <p className="text-3xl font-bold font-mono" data-testid="text-balance-closed">
+                      {balanceSinceIncasation.toFixed(2)} <span className="text-lg opacity-80">BYN</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Смена закрыта. Деньги остаются на руках до инкасации.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              <Card>
+                <CardContent className="p-6">
+                  <EmptyState
+                    icon={Wallet}
+                    title="Нет активной смены"
+                    description="Откройте смену для начала работы с кассой"
+                    action={
+                      <Button
+                        onClick={() => openShiftMutation.mutate()}
+                        disabled={openShiftMutation.isPending}
+                        data-testid="button-open-shift"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        {openShiftMutation.isPending ? "Открытие..." : "Открыть смену"}
+                      </Button>
+                    }
+                  />
+                </CardContent>
+              </Card>
+            </div>
           ) : (
             <>
               <Card className="bg-primary text-primary-foreground">
@@ -184,18 +204,26 @@ export default function CashPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <Wallet className="h-5 w-5" />
-                      <span className="text-sm opacity-90">Текущий баланс</span>
+                      <span className="text-sm opacity-90">На руках (с последней инкасации)</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       Смена активна
                     </Badge>
                   </div>
-                  <p className="text-4xl font-bold font-mono" data-testid="text-balance">
-                    {balance.toFixed(2)} <span className="text-lg opacity-80">BYN</span>
+                  <p className="text-4xl font-bold font-mono" data-testid="text-balance-since-incasation">
+                    {balanceSinceIncasation.toFixed(2)} <span className="text-lg opacity-80">BYN</span>
                   </p>
-                  <p className="text-sm opacity-80 mt-2">
-                    Открыта {currentShift.openedAt && format(new Date(currentShift.openedAt), "d MMM, HH:mm", { locale: ru })}
-                  </p>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-primary-foreground/20">
+                    <div>
+                      <p className="text-xs opacity-70">За эту смену</p>
+                      <p className="font-mono text-lg" data-testid="text-balance">
+                        {balance >= 0 ? "+" : ""}{balance.toFixed(2)} BYN
+                      </p>
+                    </div>
+                    <p className="text-xs opacity-80">
+                      Открыта {currentShift.openedAt && format(new Date(currentShift.openedAt), "d MMM, HH:mm", { locale: ru })}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
