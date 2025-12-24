@@ -90,6 +90,12 @@ Five user roles with hierarchical permissions:
   - Action logs with correlation IDs and trigger types (SCHEDULED, MANUAL)
   - Provider interface: Mock (dev) and Tuya (production, placeholder)
   - API: `/api/admin/thermostats/houses`, `/api/admin/thermostats/plan/today`, `/api/admin/thermostats/houses/:id/heat-now`, `/api/admin/thermostats/houses/:id/set-temp`, `/api/admin/thermostats/logs`
+- **Interactive Map** (`/guest/map`)
+  - Leaflet-based interactive map of Village Drewno territory
+  - Markers for all facilities: 4 cottages, 2 baths, quad station, spa/hot tub
+  - Custom icons per facility type with popup information
+  - Legend and list view of all locations
+  - Accessible from landing page via "Карта территории" card
 
 ### Project Structure
 ```
