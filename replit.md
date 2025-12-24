@@ -60,6 +60,29 @@ Five user roles with hierarchical permissions:
   - Instructor API: `/api/instructor/quads/pricing` (authenticated)
   - Instructor UI: `/instructor/pricing` for managing all pricing
 
+### Administrative Features (New)
+- **Guest Rating System** (`/ops/guests`)
+  - 5-level rating: excellent, good, neutral, problematic, blacklisted
+  - Searchable guest list with filtering by status
+  - Edit dialog for rating guests and adding notes
+- **Supplies/Consumables Tracking** (`/ops/supplies`)
+  - Categorized inventory: fuel, cleaning, food, equipment, other
+  - Stock transactions history with add/remove operations
+  - Low stock alerts when current stock <= minimum stock
+- **Incidents/Repairs Journal** (`/ops/incidents`)
+  - Track issues by unit with priority levels (low/medium/high/critical)
+  - Status workflow: open -> in_progress -> resolved/cancelled
+  - History of all incidents per unit
+- **Staff Shifts Scheduling** (`/owner/shifts`)
+  - Weekly calendar view with shift types (morning/evening/full_day/night)
+  - Assign staff to shifts, delete shifts
+- **Work Hours Logging** (`/ops/worklogs`)
+  - Log hours worked with hourly rate calculation
+  - Monthly salary estimation
+- **Unit Info / QR Codes** (`/owner/unit-info`)
+  - Set WiFi credentials, house rules, contact info per unit
+  - Generate QR codes for guests to scan
+
 ### Project Structure
 ```
 /client          - React frontend application

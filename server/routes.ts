@@ -1,8 +1,9 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { createHash } from "crypto";
+import { z } from "zod";
 import { storage } from "./storage";
-import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole, SpaBooking } from "@shared/schema";
+import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole, SpaBooking, GuestRating, insertUnitInfoSchema } from "@shared/schema";
 import { validateInitData, generateSessionToken, getSessionExpiresAt } from "./telegram-auth";
 import { handleTelegramUpdate, setupTelegramWebhook, sendTaskNotification } from "./telegram-bot";
 
@@ -794,6 +795,31 @@ export async function registerRoutes(
       res.json(guest);
     } catch (error) {
       res.status(500).json({ error: "Failed to get guest" });
+    }
+  });
+
+  const updateGuestSchema = z.object({
+    notes: z.string().optional(),
+    rating: GuestRating.optional(),
+    isBlacklisted: z.boolean().optional(),
+  });
+
+  app.patch("/api/guests/:id", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const parsed = updateGuestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request body", details: parsed.error.format() });
+      }
+      const { notes, rating, isBlacklisted } = parsed.data;
+      const guest = await storage.updateGuest(req.params.id, { 
+        notes, 
+        rating, 
+        isBlacklisted 
+      });
+      if (!guest) return res.status(404).json({ error: "Guest not found" });
+      res.json(guest);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update guest" });
     }
   });
 
@@ -2859,6 +2885,218 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[Textile] Get events error:", error);
       res.status(500).json({ error: "Ошибка загрузки истории" });
+    }
+  });
+
+  // ============ SUPPLIES/CONSUMABLES ============
+  
+  app.get("/api/supplies", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const supplies = await storage.getSupplies();
+      res.json(supplies);
+    } catch (error) {
+      console.error("[Supplies] Get error:", error);
+      res.status(500).json({ error: "Ошибка загрузки расходников" });
+    }
+  });
+  
+  app.get("/api/supplies/low-stock", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const supplies = await storage.getLowStockSupplies();
+      res.json(supplies);
+    } catch (error) {
+      console.error("[Supplies] Get low stock error:", error);
+      res.status(500).json({ error: "Ошибка загрузки расходников с низким запасом" });
+    }
+  });
+  
+  app.post("/api/supplies", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const supply = await storage.createSupply(req.body);
+      res.status(201).json(supply);
+    } catch (error) {
+      console.error("[Supplies] Create error:", error);
+      res.status(500).json({ error: "Ошибка создания расходника" });
+    }
+  });
+  
+  app.patch("/api/supplies/:id", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const supply = await storage.updateSupply(req.params.id, req.body);
+      if (!supply) return res.status(404).json({ error: "Расходник не найден" });
+      res.json(supply);
+    } catch (error) {
+      console.error("[Supplies] Update error:", error);
+      res.status(500).json({ error: "Ошибка обновления расходника" });
+    }
+  });
+  
+  app.delete("/api/supplies/:id", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      await storage.deleteSupply(req.params.id);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("[Supplies] Delete error:", error);
+      res.status(500).json({ error: "Ошибка удаления расходника" });
+    }
+  });
+  
+  app.get("/api/supplies/:id/transactions", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const transactions = await storage.getSupplyTransactions(req.params.id);
+      res.json(transactions);
+    } catch (error) {
+      console.error("[Supplies] Get transactions error:", error);
+      res.status(500).json({ error: "Ошибка загрузки транзакций" });
+    }
+  });
+  
+  app.post("/api/supplies/:id/transactions", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { quantity, type, note } = req.body;
+      const transaction = await storage.createSupplyTransaction({
+        supplyId: req.params.id,
+        quantity,
+        type,
+        note,
+      }, req.user!.id);
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("[Supplies] Create transaction error:", error);
+      res.status(500).json({ error: "Ошибка создания транзакции" });
+    }
+  });
+
+  // ============ INCIDENTS/REPAIRS ============
+  
+  app.get("/api/incidents", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const incidents = await storage.getIncidents();
+      res.json(incidents);
+    } catch (error) {
+      console.error("[Incidents] Get error:", error);
+      res.status(500).json({ error: "Ошибка загрузки инцидентов" });
+    }
+  });
+  
+  app.get("/api/incidents/unit/:unitCode", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const incidents = await storage.getIncidentsByUnit(req.params.unitCode);
+      res.json(incidents);
+    } catch (error) {
+      console.error("[Incidents] Get by unit error:", error);
+      res.status(500).json({ error: "Ошибка загрузки инцидентов" });
+    }
+  });
+  
+  app.post("/api/incidents", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const incident = await storage.createIncident(req.body, req.user!.id);
+      res.status(201).json(incident);
+    } catch (error) {
+      console.error("[Incidents] Create error:", error);
+      res.status(500).json({ error: "Ошибка создания инцидента" });
+    }
+  });
+  
+  app.patch("/api/incidents/:id", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const incident = await storage.updateIncident(req.params.id, req.body);
+      if (!incident) return res.status(404).json({ error: "Инцидент не найден" });
+      res.json(incident);
+    } catch (error) {
+      console.error("[Incidents] Update error:", error);
+      res.status(500).json({ error: "Ошибка обновления инцидента" });
+    }
+  });
+
+  // ============ STAFF SHIFTS ============
+  
+  app.get("/api/staff-shifts", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { date, userId } = req.query;
+      let shifts;
+      if (date) {
+        shifts = await storage.getStaffShiftsForDate(date as string);
+      } else if (userId) {
+        shifts = await storage.getStaffShiftsForUser(userId as string);
+      } else {
+        shifts = await storage.getStaffShifts();
+      }
+      res.json(shifts);
+    } catch (error) {
+      console.error("[StaffShifts] Get error:", error);
+      res.status(500).json({ error: "Ошибка загрузки смен" });
+    }
+  });
+  
+  app.post("/api/staff-shifts", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const shift = await storage.createStaffShift(req.body, req.user!.id);
+      res.status(201).json(shift);
+    } catch (error) {
+      console.error("[StaffShifts] Create error:", error);
+      res.status(500).json({ error: "Ошибка создания смены" });
+    }
+  });
+  
+  app.delete("/api/staff-shifts/:id", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      await storage.deleteStaffShift(req.params.id);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("[StaffShifts] Delete error:", error);
+      res.status(500).json({ error: "Ошибка удаления смены" });
+    }
+  });
+
+  // ============ UNIT INFO (QR CODES) ============
+  
+  app.get("/api/unit-info", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const unitInfos = await storage.getUnitInfos();
+      res.json(unitInfos);
+    } catch (error) {
+      console.error("[UnitInfo] Get error:", error);
+      res.status(500).json({ error: "Ошибка загрузки информации о юнитах" });
+    }
+  });
+  
+  app.get("/api/unit-info/:unitCode", async (req, res) => {
+    try {
+      const unitInfo = await storage.getUnitInfo(req.params.unitCode);
+      if (!unitInfo) return res.status(404).json({ error: "Информация не найдена" });
+      res.json(unitInfo);
+    } catch (error) {
+      console.error("[UnitInfo] Get by code error:", error);
+      res.status(500).json({ error: "Ошибка загрузки информации" });
+    }
+  });
+  
+  const updateUnitInfoSchema = z.object({
+    wifiName: z.string().optional(),
+    wifiPassword: z.string().optional(),
+    rules: z.string().max(2000).optional(), // Limit rules length for QR code safety
+    contactPhone: z.string().optional(),
+    contactTelegram: z.string().optional(),
+    checkInTime: z.string().optional(),
+    checkOutTime: z.string().optional(),
+  });
+
+  app.put("/api/unit-info/:unitCode", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const parsed = updateUnitInfoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request body", details: parsed.error.format() });
+      }
+      const unitInfo = await storage.upsertUnitInfo({
+        unitCode: req.params.unitCode,
+        ...parsed.data,
+      });
+      res.json(unitInfo);
+    } catch (error) {
+      console.error("[UnitInfo] Upsert error:", error);
+      res.status(500).json({ error: "Ошибка сохранения информации" });
     }
   });
 

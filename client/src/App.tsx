@@ -17,6 +17,9 @@ import CashPage from "@/pages/ops/cash";
 import TasksPage from "@/pages/ops/tasks";
 import WorkLogsPage from "@/pages/ops/worklogs";
 import LaundryPage from "@/pages/ops/laundry";
+import GuestsPage from "@/pages/ops/guests";
+import SuppliesPage from "@/pages/ops/supplies";
+import IncidentsPage from "@/pages/ops/incidents";
 import InstructorSchedulePage from "@/pages/instructor/schedule";
 import InstructorManagePage from "@/pages/instructor/manage";
 import InstructorFinancesPage from "@/pages/instructor/finances";
@@ -27,6 +30,8 @@ import OwnerCashPage from "@/pages/owner/cash";
 import OwnerSettingsPage from "@/pages/owner/settings";
 import OwnerStaffPage from "@/pages/owner/staff";
 import TextileAuditPage from "@/pages/owner/textile-audit";
+import ShiftsPage from "@/pages/owner/shifts";
+import UnitInfoPage from "@/pages/owner/unit-info";
 import StaffManagementPage from "@/pages/admin/staff";
 import ClaimRolePage from "@/pages/claim-role";
 import NotFound from "@/pages/not-found";
@@ -47,6 +52,9 @@ function Router() {
       <Route path="/ops/tasks" component={TasksPage} />
       <Route path="/ops/worklogs" component={WorkLogsPage} />
       <Route path="/ops/laundry" component={LaundryPage} />
+      <Route path="/ops/guests" component={GuestsPage} />
+      <Route path="/ops/supplies" component={SuppliesPage} />
+      <Route path="/ops/incidents" component={IncidentsPage} />
       
       <Route path="/instructor" component={InstructorSchedulePage} />
       <Route path="/instructor/sessions" component={InstructorSchedulePage} />
@@ -60,6 +68,8 @@ function Router() {
       <Route path="/owner/settings" component={OwnerSettingsPage} />
       <Route path="/owner/staff" component={OwnerStaffPage} />
       <Route path="/owner/textile-audit" component={TextileAuditPage} />
+      <Route path="/owner/shifts" component={ShiftsPage} />
+      <Route path="/owner/unit-info" component={UnitInfoPage} />
       
       <Route path="/admin/staff" component={StaffManagementPage} />
       

@@ -40,6 +40,11 @@ import type {
   TextileEvent, InsertTextileEvent,
   TextileLocation, TextileType, TextileColor,
   Guest, InsertGuest,
+  Supply, InsertSupply,
+  SupplyTransaction, InsertSupplyTransaction,
+  Incident, InsertIncident,
+  StaffShift, InsertStaffShift,
+  UnitInfo, InsertUnitInfo,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -264,6 +269,35 @@ export interface IStorage {
   // Bath booking arrival tracking
   markBathBookingArrived(bookingId: string): Promise<BathBooking | undefined>;
   markBathBookingNoShow(bookingId: string): Promise<BathBooking | undefined>;
+  
+  // Supplies/Consumables
+  getSupplies(): Promise<Supply[]>;
+  getSupply(id: string): Promise<Supply | undefined>;
+  createSupply(supply: InsertSupply): Promise<Supply>;
+  updateSupply(id: string, updates: Partial<Supply>): Promise<Supply | undefined>;
+  deleteSupply(id: string): Promise<boolean>;
+  getSupplyTransactions(supplyId?: string): Promise<SupplyTransaction[]>;
+  createSupplyTransaction(tx: InsertSupplyTransaction, createdBy: string): Promise<SupplyTransaction>;
+  getLowStockSupplies(): Promise<Supply[]>;
+  
+  // Incidents/Repairs
+  getIncidents(): Promise<Incident[]>;
+  getIncident(id: string): Promise<Incident | undefined>;
+  getIncidentsByUnit(unitCode: string): Promise<Incident[]>;
+  createIncident(incident: InsertIncident, reportedBy: string): Promise<Incident>;
+  updateIncident(id: string, updates: Partial<Incident>): Promise<Incident | undefined>;
+  
+  // Staff Shifts (scheduling)
+  getStaffShifts(): Promise<StaffShift[]>;
+  getStaffShiftsForDate(date: string): Promise<StaffShift[]>;
+  getStaffShiftsForUser(userId: string): Promise<StaffShift[]>;
+  createStaffShift(shift: InsertStaffShift, createdBy: string): Promise<StaffShift>;
+  deleteStaffShift(id: string): Promise<boolean>;
+  
+  // Unit Info (for QR codes)
+  getUnitInfos(): Promise<UnitInfo[]>;
+  getUnitInfo(unitCode: string): Promise<UnitInfo | undefined>;
+  upsertUnitInfo(info: InsertUnitInfo): Promise<UnitInfo>;
 }
 
 const PRICES: Record<string, number> = {

@@ -43,6 +43,11 @@ import type {
   TextileEvent, InsertTextileEvent,
   TextileLocation, TextileType, TextileColor,
   Guest, InsertGuest,
+  Supply, InsertSupply,
+  SupplyTransaction, InsertSupplyTransaction,
+  Incident, InsertIncident,
+  StaffShift, InsertStaffShift,
+  UnitInfo, InsertUnitInfo,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
@@ -53,6 +58,7 @@ import {
   quadMaintenanceRulesTable, quadMaintenanceEventsTable, siteSettingsTable,
   blockedDatesTable, reviewsTable, laundryBatchesTable, textileAuditsTable,
   textileStockTable, textileCheckInsTable, textileEventsTable, guestsTable,
+  suppliesTable, supplyTransactionsTable, incidentsTable, staffShiftsTable, unitInfoTable,
 } from "@shared/schema";
 
 const PRICES: Record<string, number> = {
@@ -2760,6 +2766,8 @@ export class DatabaseStorage implements IStorage {
       noShowCount: row.noShowCount,
       lastVisitAt: row.lastVisitAt || undefined,
       notes: row.notes || undefined,
+      rating: row.rating as Guest["rating"],
+      isBlacklisted: row.isBlacklisted,
       createdAt: row.createdAt,
     }));
   }
@@ -2777,6 +2785,8 @@ export class DatabaseStorage implements IStorage {
       noShowCount: row.noShowCount,
       lastVisitAt: row.lastVisitAt || undefined,
       notes: row.notes || undefined,
+      rating: row.rating as Guest["rating"],
+      isBlacklisted: row.isBlacklisted,
       createdAt: row.createdAt,
     };
   }
@@ -2797,6 +2807,8 @@ export class DatabaseStorage implements IStorage {
       noShowCount: row.noShowCount,
       lastVisitAt: row.lastVisitAt || undefined,
       notes: row.notes || undefined,
+      rating: row.rating as Guest["rating"],
+      isBlacklisted: row.isBlacklisted,
       createdAt: row.createdAt,
     };
   }
@@ -2816,6 +2828,8 @@ export class DatabaseStorage implements IStorage {
       noShowCount: 0,
       lastVisitAt: guest.lastVisitAt,
       notes: guest.notes,
+      rating: guest.rating,
+      isBlacklisted: guest.isBlacklisted ?? false,
       createdAt: now,
     };
     
@@ -2829,6 +2843,8 @@ export class DatabaseStorage implements IStorage {
       noShowCount: newGuest.noShowCount,
       lastVisitAt: newGuest.lastVisitAt || null,
       notes: newGuest.notes || null,
+      rating: newGuest.rating || null,
+      isBlacklisted: newGuest.isBlacklisted,
       createdAt: newGuest.createdAt,
     });
     
@@ -2845,6 +2861,8 @@ export class DatabaseStorage implements IStorage {
         noShowCount: updates.noShowCount,
         lastVisitAt: updates.lastVisitAt,
         notes: updates.notes,
+        rating: updates.rating,
+        isBlacklisted: updates.isBlacklisted,
       })
       .where(eq(guestsTable.id, id));
     return this.getGuest(id);
@@ -2934,5 +2952,196 @@ export class DatabaseStorage implements IStorage {
     }
     
     return this.getBathBooking(bookingId);
+  }
+
+  // ======= Supplies/Consumables =======
+  
+  async getSupplies(): Promise<Supply[]> {
+    const rows = await db.select().from(suppliesTable).orderBy(asc(suppliesTable.name));
+    return rows as Supply[];
+  }
+  
+  async getSupply(id: string): Promise<Supply | undefined> {
+    const rows = await db.select().from(suppliesTable).where(eq(suppliesTable.id, id));
+    return rows[0] as Supply | undefined;
+  }
+  
+  async createSupply(supply: InsertSupply): Promise<Supply> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await db.insert(suppliesTable).values({
+      id,
+      ...supply,
+      createdAt: now,
+    });
+    return this.getSupply(id) as Promise<Supply>;
+  }
+  
+  async updateSupply(id: string, updates: Partial<Supply>): Promise<Supply | undefined> {
+    const existing = await this.getSupply(id);
+    if (!existing) return undefined;
+    await db.update(suppliesTable).set(updates).where(eq(suppliesTable.id, id));
+    return this.getSupply(id);
+  }
+  
+  async deleteSupply(id: string): Promise<boolean> {
+    const result = await db.delete(suppliesTable).where(eq(suppliesTable.id, id));
+    return true;
+  }
+  
+  async getSupplyTransactions(supplyId?: string): Promise<SupplyTransaction[]> {
+    if (supplyId) {
+      const rows = await db.select().from(supplyTransactionsTable)
+        .where(eq(supplyTransactionsTable.supplyId, supplyId))
+        .orderBy(desc(supplyTransactionsTable.createdAt));
+      return rows as SupplyTransaction[];
+    }
+    const rows = await db.select().from(supplyTransactionsTable)
+      .orderBy(desc(supplyTransactionsTable.createdAt));
+    return rows as SupplyTransaction[];
+  }
+  
+  async createSupplyTransaction(tx: InsertSupplyTransaction, createdBy: string): Promise<SupplyTransaction> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    
+    // Insert transaction
+    await db.insert(supplyTransactionsTable).values({
+      id,
+      ...tx,
+      createdBy,
+      createdAt: now,
+    });
+    
+    // Update supply current stock
+    const supply = await this.getSupply(tx.supplyId);
+    if (supply) {
+      const delta = tx.type === "restock" ? tx.quantity : -tx.quantity;
+      await db.update(suppliesTable).set({
+        currentStock: supply.currentStock + delta,
+      }).where(eq(suppliesTable.id, tx.supplyId));
+    }
+    
+    const rows = await db.select().from(supplyTransactionsTable).where(eq(supplyTransactionsTable.id, id));
+    return rows[0] as SupplyTransaction;
+  }
+  
+  async getLowStockSupplies(): Promise<Supply[]> {
+    const rows = await db.select().from(suppliesTable)
+      .where(sql`${suppliesTable.currentStock} <= ${suppliesTable.minStock}`);
+    return rows as Supply[];
+  }
+
+  // ======= Incidents/Repairs =======
+  
+  async getIncidents(): Promise<Incident[]> {
+    const rows = await db.select().from(incidentsTable).orderBy(desc(incidentsTable.reportedAt));
+    return rows as Incident[];
+  }
+  
+  async getIncident(id: string): Promise<Incident | undefined> {
+    const rows = await db.select().from(incidentsTable).where(eq(incidentsTable.id, id));
+    return rows[0] as Incident | undefined;
+  }
+  
+  async getIncidentsByUnit(unitCode: string): Promise<Incident[]> {
+    const rows = await db.select().from(incidentsTable)
+      .where(eq(incidentsTable.unitCode, unitCode))
+      .orderBy(desc(incidentsTable.reportedAt));
+    return rows as Incident[];
+  }
+  
+  async createIncident(incident: InsertIncident, reportedBy: string): Promise<Incident> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await db.insert(incidentsTable).values({
+      id,
+      ...incident,
+      reportedBy,
+      reportedAt: now,
+    });
+    return this.getIncident(id) as Promise<Incident>;
+  }
+  
+  async updateIncident(id: string, updates: Partial<Incident>): Promise<Incident | undefined> {
+    const existing = await this.getIncident(id);
+    if (!existing) return undefined;
+    
+    // If being resolved, set resolved timestamp
+    if (updates.status === 'resolved' && !existing.resolvedAt) {
+      updates.resolvedAt = new Date().toISOString();
+    }
+    
+    await db.update(incidentsTable).set(updates).where(eq(incidentsTable.id, id));
+    return this.getIncident(id);
+  }
+
+  // ======= Staff Shifts =======
+  
+  async getStaffShifts(): Promise<StaffShift[]> {
+    const rows = await db.select().from(staffShiftsTable).orderBy(desc(staffShiftsTable.date));
+    return rows as StaffShift[];
+  }
+  
+  async getStaffShiftsForDate(date: string): Promise<StaffShift[]> {
+    const rows = await db.select().from(staffShiftsTable)
+      .where(eq(staffShiftsTable.date, date))
+      .orderBy(asc(staffShiftsTable.shiftType));
+    return rows as StaffShift[];
+  }
+  
+  async getStaffShiftsForUser(userId: string): Promise<StaffShift[]> {
+    const rows = await db.select().from(staffShiftsTable)
+      .where(eq(staffShiftsTable.userId, userId))
+      .orderBy(desc(staffShiftsTable.date));
+    return rows as StaffShift[];
+  }
+  
+  async createStaffShift(shift: InsertStaffShift, createdBy: string): Promise<StaffShift> {
+    const id = randomUUID();
+    await db.insert(staffShiftsTable).values({
+      id,
+      ...shift,
+      createdBy,
+    });
+    const rows = await db.select().from(staffShiftsTable).where(eq(staffShiftsTable.id, id));
+    return rows[0] as StaffShift;
+  }
+  
+  async deleteStaffShift(id: string): Promise<boolean> {
+    await db.delete(staffShiftsTable).where(eq(staffShiftsTable.id, id));
+    return true;
+  }
+
+  // ======= Unit Info (QR codes) =======
+  
+  async getUnitInfos(): Promise<UnitInfo[]> {
+    const rows = await db.select().from(unitInfoTable).orderBy(asc(unitInfoTable.unitCode));
+    return rows as UnitInfo[];
+  }
+  
+  async getUnitInfo(unitCode: string): Promise<UnitInfo | undefined> {
+    const rows = await db.select().from(unitInfoTable).where(eq(unitInfoTable.unitCode, unitCode));
+    return rows[0] as UnitInfo | undefined;
+  }
+  
+  async upsertUnitInfo(info: InsertUnitInfo): Promise<UnitInfo> {
+    const existing = await this.getUnitInfo(info.unitCode);
+    const now = new Date().toISOString();
+    
+    if (existing) {
+      await db.update(unitInfoTable).set({
+        ...info,
+        updatedAt: now,
+      }).where(eq(unitInfoTable.unitCode, info.unitCode));
+    } else {
+      await db.insert(unitInfoTable).values({
+        ...info,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    
+    return this.getUnitInfo(info.unitCode) as Promise<UnitInfo>;
   }
 }

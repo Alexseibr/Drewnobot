@@ -159,6 +159,10 @@ export const prepaymentSchema = z.object({
 });
 export type Prepayment = z.infer<typeof prepaymentSchema>;
 
+// Guest rating enum (1-5 stars or flags)
+export const GuestRating = z.enum(["excellent", "good", "neutral", "problematic", "blacklisted"]);
+export type GuestRating = z.infer<typeof GuestRating>;
+
 // ============ GUEST PROFILE ============
 export const guestSchema = z.object({
   id: z.string(),
@@ -170,6 +174,8 @@ export const guestSchema = z.object({
   noShowCount: z.number().default(0),
   lastVisitAt: z.string().optional(),
   notes: z.string().optional(),
+  rating: GuestRating.optional(), // staff rating of guest
+  isBlacklisted: z.boolean().default(false), // quick flag for problematic guests
   createdAt: z.string(),
 });
 export type Guest = z.infer<typeof guestSchema>;
@@ -1077,6 +1083,8 @@ export const guestsTable = pgTable("guests", {
   noShowCount: integer("no_show_count").notNull().default(0),
   lastVisitAt: text("last_visit_at"),
   notes: text("notes"),
+  rating: text("rating"), // excellent, good, neutral, problematic, blacklisted
+  isBlacklisted: boolean("is_blacklisted").notNull().default(false),
   createdAt: text("created_at").notNull(),
 });
 
@@ -1420,4 +1428,168 @@ export const textileEventsTable = pgTable("textile_events", {
   createdBy: text("created_by").notNull(),
   createdAt: text("created_at").notNull(),
   notes: text("notes"),
+});
+
+// ============ CONSUMABLES/SUPPLIES ============
+export const SupplyCategory = z.enum(["fuel", "cleaning", "food", "equipment", "other"]);
+export type SupplyCategory = z.infer<typeof SupplyCategory>;
+
+export const supplySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: SupplyCategory,
+  unit: z.string(), // kg, pcs, liters, bags
+  currentStock: z.number().default(0),
+  minStock: z.number().default(0), // alert threshold
+  lastRestocked: z.string().optional(),
+  notes: z.string().optional(),
+});
+export type Supply = z.infer<typeof supplySchema>;
+
+export const insertSupplySchema = supplySchema.omit({ id: true });
+export type InsertSupply = z.infer<typeof insertSupplySchema>;
+
+export const supplyTransactionSchema = z.object({
+  id: z.string(),
+  supplyId: z.string(),
+  type: z.enum(["restock", "usage"]),
+  quantity: z.number(),
+  note: z.string().optional(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type SupplyTransaction = z.infer<typeof supplyTransactionSchema>;
+
+export const insertSupplyTransactionSchema = supplyTransactionSchema.omit({ id: true, createdAt: true });
+export type InsertSupplyTransaction = z.infer<typeof insertSupplyTransactionSchema>;
+
+// ============ SUPPLIES TABLE ============
+export const suppliesTable = pgTable("supplies", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // fuel, cleaning, food, equipment, other
+  unit: text("unit").notNull(), // kg, pcs, liters, bags
+  currentStock: real("current_stock").notNull().default(0),
+  minStock: real("min_stock").notNull().default(0),
+  lastRestocked: text("last_restocked"),
+  notes: text("notes"),
+});
+
+export const supplyTransactionsTable = pgTable("supply_transactions", {
+  id: text("id").primaryKey(),
+  supplyId: text("supply_id").notNull(),
+  type: text("type").notNull(), // restock, usage
+  quantity: real("quantity").notNull(),
+  note: text("note"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ INCIDENTS/REPAIRS ============
+export const IncidentStatus = z.enum(["open", "in_progress", "resolved", "cancelled"]);
+export type IncidentStatus = z.infer<typeof IncidentStatus>;
+
+export const IncidentPriority = z.enum(["low", "medium", "high", "critical"]);
+export type IncidentPriority = z.infer<typeof IncidentPriority>;
+
+export const incidentSchema = z.object({
+  id: z.string(),
+  unitCode: z.string().optional(), // D1, D2, D3, D4, B1, B2, SPA, or null for general
+  title: z.string(),
+  description: z.string().optional(),
+  priority: IncidentPriority.default("medium"),
+  status: IncidentStatus.default("open"),
+  reportedBy: z.string(),
+  reportedAt: z.string(),
+  assignedTo: z.string().optional(),
+  resolvedAt: z.string().optional(),
+  resolvedBy: z.string().optional(),
+  resolution: z.string().optional(),
+  photos: z.array(z.string()).default([]),
+});
+export type Incident = z.infer<typeof incidentSchema>;
+
+export const insertIncidentSchema = incidentSchema.omit({ id: true, reportedAt: true });
+export type InsertIncident = z.infer<typeof insertIncidentSchema>;
+
+// ============ INCIDENTS TABLE ============
+export const incidentsTable = pgTable("incidents", {
+  id: text("id").primaryKey(),
+  unitCode: text("unit_code"),
+  title: text("title").notNull(),
+  description: text("description"),
+  priority: text("priority").notNull().default("medium"),
+  status: text("status").notNull().default("open"),
+  reportedBy: text("reported_by").notNull(),
+  reportedAt: text("reported_at").notNull(),
+  assignedTo: text("assigned_to"),
+  resolvedAt: text("resolved_at"),
+  resolvedBy: text("resolved_by"),
+  resolution: text("resolution"),
+  photos: jsonb("photos").default([]),
+});
+
+// ============ STAFF SHIFTS ============
+export const ShiftType = z.enum(["morning", "evening", "full_day", "night"]);
+export type ShiftType = z.infer<typeof ShiftType>;
+
+export const staffShiftSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  date: z.string(),
+  shiftType: ShiftType,
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  notes: z.string().optional(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type StaffShift = z.infer<typeof staffShiftSchema>;
+
+export const insertStaffShiftSchema = staffShiftSchema.omit({ id: true, createdAt: true });
+export type InsertStaffShift = z.infer<typeof insertStaffShiftSchema>;
+
+// ============ STAFF SHIFTS TABLE ============
+export const staffShiftsTable = pgTable("staff_shifts", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  date: text("date").notNull(),
+  shiftType: text("shift_type").notNull(), // morning, evening, full_day, night
+  startTime: text("start_time"),
+  endTime: text("end_time"),
+  notes: text("notes"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ UNIT INFO (QR codes, rules, wifi) ============
+export const unitInfoSchema = z.object({
+  id: z.string(),
+  unitCode: z.string(), // D1, D2, D3, D4, B1, B2, SPA
+  wifiName: z.string().optional(),
+  wifiPassword: z.string().optional(),
+  rules: z.string().optional(), // markdown or text
+  contactPhone: z.string().optional(),
+  contactTelegram: z.string().optional(),
+  checkInTime: z.string().optional(),
+  checkOutTime: z.string().optional(),
+  updatedAt: z.string(),
+});
+export type UnitInfo = z.infer<typeof unitInfoSchema>;
+
+export const insertUnitInfoSchema = unitInfoSchema.omit({ id: true, updatedAt: true });
+export type InsertUnitInfo = z.infer<typeof insertUnitInfoSchema>;
+
+// ============ UNIT INFO TABLE ============
+export const unitInfoTable = pgTable("unit_info", {
+  id: text("id").primaryKey(),
+  unitCode: text("unit_code").notNull(),
+  wifiName: text("wifi_name"),
+  wifiPassword: text("wifi_password"),
+  rules: text("rules"),
+  contactPhone: text("contact_phone"),
+  contactTelegram: text("contact_telegram"),
+  checkInTime: text("check_in_time"),
+  checkOutTime: text("check_out_time"),
+  updatedAt: text("updated_at").notNull(),
 });
