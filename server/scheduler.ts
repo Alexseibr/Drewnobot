@@ -477,7 +477,6 @@ export function initScheduler(): void {
   });
 
   log("Scheduler initialized:", "scheduler");
-  log("  - Shift auto-closure: 23:00 daily", "scheduler");
   log("  - Daily tasks: 06:00 daily", "scheduler");
   log("  - Weekly tasks: 06:00 Monday", "scheduler");
   log("  - Monthly tasks: 06:00 1st of month", "scheduler");

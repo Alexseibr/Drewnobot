@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { eq, and, gte, lt, desc, asc, or, isNull, sql } from "drizzle-orm";
+import { eq, and, gte, gt, lt, desc, asc, or, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import type { IStorage } from "./storage";
 import type {
@@ -1006,12 +1006,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCashTransactionsSinceLastIncasation(): Promise<CashTransaction[]> {
-    const lastIncasation = await this.getLastIncasation();
-    if (!lastIncasation) {
+    // Find last incasation cash_out transaction as boundary
+    const lastIncasationTx = await db.select().from(cashTransactionsTable)
+      .where(and(
+        eq(cashTransactionsTable.type, "cash_out"),
+        eq(cashTransactionsTable.comment, "Инкассация")
+      ))
+      .orderBy(desc(cashTransactionsTable.createdAt))
+      .limit(1);
+    
+    if (lastIncasationTx.length === 0) {
+      // No incasation ever done - return all transactions
       return this.getCashTransactions();
     }
+    
+    // Get transactions created AFTER the last incasation (strict >)
     const rows = await db.select().from(cashTransactionsTable)
-      .where(gte(cashTransactionsTable.createdAt, lastIncasation.performedAt))
+      .where(gt(cashTransactionsTable.createdAt, lastIncasationTx[0].createdAt))
       .orderBy(desc(cashTransactionsTable.createdAt));
     return rows.map(r => this.mapRowToCashTransaction(r));
   }

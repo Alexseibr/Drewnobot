@@ -1449,21 +1449,20 @@ export async function registerRoutes(
       // Auto-create permanent shift if none exists
       const currentShift = await ensurePermanentShift();
       
-      // Get all transactions since last incasation
-      const allTransactionsSinceIncasation = await storage.getCashTransactionsSinceLastIncasation();
+      // Get transactions since last incasation (storage already excludes incasation cash_outs)
+      const transactions = await storage.getCashTransactionsSinceLastIncasation();
       
-      // Calculate total balance since last incasation
-      const totalBalance = allTransactionsSinceIncasation.reduce((sum, tx) => {
+      // Calculate balance: cash_in adds, expense subtracts
+      const balance = transactions.reduce((sum, tx) => {
         if (tx.type === "cash_in") return sum + tx.amount;
-        if (tx.type === "expense" || tx.type === "cash_out") return sum - tx.amount;
+        if (tx.type === "expense") return sum - tx.amount;
         return sum;
       }, 0);
       
       res.json({ 
         currentShift, 
-        transactions: allTransactionsSinceIncasation, 
-        balance: totalBalance,
-        balanceSinceIncasation: totalBalance
+        transactions, 
+        balance,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch shift" });
@@ -1490,11 +1489,11 @@ export async function registerRoutes(
     try {
       const currentShift = await ensurePermanentShift();
       
-      // Get balance since last incasation
-      const transactionsSinceIncasation = await storage.getCashTransactionsSinceLastIncasation();
-      const balance = transactionsSinceIncasation.reduce((sum, tx) => {
+      // Get balance since last incasation (storage already excludes incasation cash_outs)
+      const transactions = await storage.getCashTransactionsSinceLastIncasation();
+      const balance = transactions.reduce((sum, tx) => {
         if (tx.type === "cash_in") return sum + tx.amount;
-        if (tx.type === "expense" || tx.type === "cash_out") return sum - tx.amount;
+        if (tx.type === "expense") return sum - tx.amount;
         return sum;
       }, 0);
       

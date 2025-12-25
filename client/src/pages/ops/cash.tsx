@@ -7,8 +7,6 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   Wallet, 
-  Plus, 
-  Minus, 
   ArrowDownLeft, 
   ArrowUpRight,
   LockKeyhole,
@@ -20,14 +18,13 @@ import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -63,10 +60,9 @@ const INCOME_SOURCES = [
 ];
 
 interface CashData {
-  currentShift: CashShift | null;
+  currentShift: CashShift;
   transactions: CashTransaction[];
   balance: number;
-  balanceSinceIncasation: number;
 }
 
 export default function CashPage() {
@@ -89,20 +85,6 @@ export default function CashPage() {
 
   const { data: cashData, isLoading } = useQuery<CashData>({
     queryKey: ["/api/cash/shift/current"],
-  });
-
-  const openShiftMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/cash/shift/open");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/cash/shift/current"] });
-      toast({ title: "Смена открыта" });
-    },
-    onError: () => {
-      toast({ title: "Ошибка открытия смены", variant: "destructive" });
-    },
   });
 
   const addTransactionMutation = useMutation({
@@ -129,12 +111,12 @@ export default function CashPage() {
       const response = await apiRequest("POST", "/api/cash/shift/incasation");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/cash/shift/current"] });
-      toast({ title: "Смена закрыта успешно" });
+      toast({ title: `Инкассация выполнена: ${data.amount?.toFixed(2) || 0} BYN` });
     },
     onError: () => {
-      toast({ title: "Ошибка закрытия смены", variant: "destructive" });
+      toast({ title: "Ошибка инкассации", variant: "destructive" });
     },
   });
 
@@ -148,10 +130,8 @@ export default function CashPage() {
     addTransactionMutation.mutate(data);
   };
 
-  const currentShift = cashData?.currentShift;
   const transactions: CashTransaction[] = cashData?.transactions || [];
   const balance = cashData?.balance || 0;
-  const balanceSinceIncasation = cashData?.balanceSinceIncasation || 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -159,213 +139,159 @@ export default function CashPage() {
       
       <PageContainer>
         <div className="space-y-6">
-          {!currentShift ? (
-            <div className="space-y-4">
-              {balanceSinceIncasation > 0 && (
-                <Card className="bg-accent">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Wallet className="h-5 w-5" />
-                      <span className="text-sm">На руках (с последней инкасации)</span>
-                    </div>
-                    <p className="text-3xl font-bold font-mono" data-testid="text-balance-closed">
-                      {balanceSinceIncasation.toFixed(2)} <span className="text-lg opacity-80">BYN</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Смена закрыта. Деньги остаются на руках до инкасации.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+          <Card className="bg-primary text-primary-foreground">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="h-5 w-5" />
+                <span className="text-sm opacity-90">На руках</span>
+              </div>
+              <p className="text-4xl font-bold font-mono" data-testid="text-balance">
+                {balance.toFixed(2)} <span className="text-lg opacity-80">BYN</span>
+              </p>
+              <p className="text-xs opacity-70 mt-2">
+                Накоплено с последней инкассации
+              </p>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              variant="outline"
+              className="h-16 flex flex-col gap-1"
+              onClick={() => handleOpenTransaction("cash_in")}
+              data-testid="button-cash-in"
+            >
+              <ArrowDownLeft className="h-5 w-5 text-status-confirmed" />
+              <span className="text-sm">Приход</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-16 flex flex-col gap-1"
+              onClick={() => handleOpenTransaction("expense")}
+              data-testid="button-expense"
+            >
+              <ArrowUpRight className="h-5 w-5 text-destructive" />
+              <span className="text-sm">Расход</span>
+            </Button>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Транзакции</h3>
+              <span className="text-sm text-muted-foreground">
+                {transactions.length} с последней инкассации
+              </span>
+            </div>
+
+            {isLoading ? (
+              <div className="space-y-3">
+                <CashCardSkeleton />
+                <CashCardSkeleton />
+              </div>
+            ) : transactions.length > 0 ? (
+              <div className="space-y-2">
+                {transactions.map((tx) => (
+                  <Card key={tx.id} className="hover-elevate">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "rounded-full p-2",
+                            tx.type === "cash_in" 
+                              ? "bg-status-confirmed/10" 
+                              : tx.type === "expense"
+                              ? "bg-destructive/10"
+                              : "bg-muted"
+                          )}>
+                            {tx.type === "cash_in" ? (
+                              <ArrowDownLeft className="h-4 w-4 text-status-confirmed" />
+                            ) : tx.type === "expense" ? (
+                              <ArrowUpRight className="h-4 w-4 text-destructive" />
+                            ) : (
+                              <LockKeyhole className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              {tx.type === "cash_in" 
+                                ? INCOME_SOURCES.find(s => s.value === tx.category)?.label || "Приход"
+                                : tx.type === "expense" 
+                                ? EXPENSE_CATEGORIES.find(c => c.value === tx.category)?.label || "Расход" 
+                                : "Инкассация"}
+                            </p>
+                            {tx.comment && (
+                              <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                {tx.comment}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(tx.createdAt), "d MMM, HH:mm", { locale: ru })}
+                            </p>
+                          </div>
+                        </div>
+                        <p className={cn(
+                          "font-mono font-medium",
+                          tx.type === "cash_in" ? "text-status-confirmed" : 
+                          tx.type === "expense" ? "text-destructive" : ""
+                        )}>
+                          {tx.type === "cash_in" ? "+" : "-"}{tx.amount.toFixed(2)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
               <Card>
                 <CardContent className="p-6">
                   <EmptyState
-                    icon={Wallet}
-                    title="Нет активной смены"
-                    description="Откройте смену для начала работы с кассой"
-                    action={
-                      <Button
-                        onClick={() => openShiftMutation.mutate()}
-                        disabled={openShiftMutation.isPending}
-                        data-testid="button-open-shift"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        {openShiftMutation.isPending ? "Открытие..." : "Открыть смену"}
-                      </Button>
-                    }
+                    icon={DollarSign}
+                    title="Нет транзакций"
+                    description="Начните с добавления прихода или расхода"
+                    className="py-4"
                   />
                 </CardContent>
               </Card>
-            </div>
-          ) : (
+            )}
+          </div>
+
+          {canIncasate && balance > 0 && (
             <>
-              <Card className="bg-primary text-primary-foreground">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="h-5 w-5" />
-                      <span className="text-sm opacity-90">На руках (с последней инкасации)</span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      Смена активна
-                    </Badge>
-                  </div>
-                  <p className="text-4xl font-bold font-mono" data-testid="text-balance-since-incasation">
-                    {balanceSinceIncasation.toFixed(2)} <span className="text-lg opacity-80">BYN</span>
-                  </p>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-primary-foreground/20">
-                    <div>
-                      <p className="text-xs opacity-70">За эту смену</p>
-                      <p className="font-mono text-lg" data-testid="text-balance">
-                        {balance >= 0 ? "+" : ""}{balance.toFixed(2)} BYN
-                      </p>
-                    </div>
-                    <p className="text-xs opacity-80">
-                      Открыта {currentShift.openedAt && format(new Date(currentShift.openedAt), "d MMM, HH:mm", { locale: ru })}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Button
-                  variant="outline"
-                  className="h-16 flex flex-col gap-1"
-                  onClick={() => handleOpenTransaction("cash_in")}
-                  data-testid="button-cash-in"
-                >
-                  <ArrowDownLeft className="h-5 w-5 text-status-confirmed" />
-                  <span className="text-sm">Приход</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-16 flex flex-col gap-1"
-                  onClick={() => handleOpenTransaction("expense")}
-                  data-testid="button-expense"
-                >
-                  <ArrowUpRight className="h-5 w-5 text-destructive" />
-                  <span className="text-sm">Расход</span>
-                </Button>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold">Транзакции</h3>
-                  <span className="text-sm text-muted-foreground">
-                    {transactions.length} сегодня
-                  </span>
-                </div>
-
-                {isLoading ? (
-                  <div className="space-y-3">
-                    <CashCardSkeleton />
-                    <CashCardSkeleton />
-                  </div>
-                ) : transactions.length > 0 ? (
-                  <div className="space-y-2">
-                    {transactions.map((tx) => (
-                      <Card key={tx.id} className="hover-elevate">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "rounded-full p-2",
-                                tx.type === "cash_in" 
-                                  ? "bg-status-confirmed/10" 
-                                  : tx.type === "expense"
-                                  ? "bg-destructive/10"
-                                  : "bg-muted"
-                              )}>
-                                {tx.type === "cash_in" ? (
-                                  <ArrowDownLeft className="h-4 w-4 text-status-confirmed" />
-                                ) : tx.type === "expense" ? (
-                                  <ArrowUpRight className="h-4 w-4 text-destructive" />
-                                ) : (
-                                  <LockKeyhole className="h-4 w-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {tx.type === "cash_in" 
-                                    ? INCOME_SOURCES.find(s => s.value === tx.category)?.label || "Приход"
-                                    : tx.type === "expense" 
-                                    ? EXPENSE_CATEGORIES.find(c => c.value === tx.category)?.label || "Расход" 
-                                    : "Инкассация"}
-                                </p>
-                                {tx.comment && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                                    {tx.comment}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(tx.createdAt), "HH:mm")}
-                                </p>
-                              </div>
-                            </div>
-                            <p className={cn(
-                              "font-mono font-medium",
-                              tx.type === "cash_in" ? "text-status-confirmed" : 
-                              tx.type === "expense" ? "text-destructive" : ""
-                            )}>
-                              {tx.type === "cash_in" ? "+" : "-"}{tx.amount.toFixed(2)}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="p-6">
-                      <EmptyState
-                        icon={DollarSign}
-                        title="Нет транзакций"
-                        description="Начните с добавления прихода или расхода"
-                        className="py-4"
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
               <Separator />
-
-              {canIncasate && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-destructive text-destructive"
-                      data-testid="button-incasation"
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-destructive text-destructive"
+                    data-testid="button-incasation"
+                  >
+                    <LockKeyhole className="mr-2 h-4 w-4" />
+                    Инкассация ({balance.toFixed(2)} BYN)
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      Выполнить инкассацию?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Сумма к инкассации: <strong>{balance.toFixed(2)} BYN</strong>.
+                      Баланс будет сброшен до нуля.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => incasationMutation.mutate()}
+                      disabled={incasationMutation.isPending}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      <LockKeyhole className="mr-2 h-4 w-4" />
-                      Закрыть смену (Инкассация)
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                        Закрыть смену?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Текущий баланс смены составляет <strong>{balance.toFixed(2)} BYN</strong>.
-                        После закрытия вы не сможете просматривать транзакции этой смены.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Отмена</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => incasationMutation.mutate()}
-                        disabled={incasationMutation.isPending}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        {incasationMutation.isPending ? "Закрытие..." : "Закрыть смену"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
+                      {incasationMutation.isPending ? "Обработка..." : "Выполнить"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           )}
         </div>
