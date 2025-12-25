@@ -159,3 +159,9 @@ Five user roles with hierarchical permissions:
 ### Development Tools
 - Vite dev server with HMR
 - Replit-specific plugins for development (cartographer, dev-banner, error overlay)
+
+### Application Stability
+- **Error Handling**: Uncaught exceptions and unhandled rejections are logged without crashing the server
+- **Health Check**: `/api/health` endpoint returns server status, uptime, and memory usage
+- **Graceful Shutdown**: SIGTERM/SIGINT signals trigger graceful HTTP server shutdown
+- **Restart Wrapper**: `server/start-with-restart.ts` available for auto-restart on crashes (max 10 restarts per minute)
