@@ -57,14 +57,17 @@ export function BottomNav() {
   const getNavItems = (): NavItem[] => {
     if (!user) return guestNavItems;
     
+    // Home link for all staff to access guest landing page
+    const homeItem: NavItem = { path: "/", label: "Главная", icon: Home };
+    
     switch (user.role) {
       case "SUPER_ADMIN":
       case "OWNER":
-        return [...adminNavItems, ...ownerNavItems];
+        return [homeItem, ...adminNavItems.slice(1), ...ownerNavItems];
       case "ADMIN":
-        return adminNavItems;
+        return [homeItem, ...adminNavItems.slice(1)];
       case "INSTRUCTOR":
-        return instructorNavItems;
+        return [homeItem, ...instructorNavItems];
       default:
         return guestNavItems;
     }
