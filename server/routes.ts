@@ -1433,11 +1433,23 @@ export async function registerRoutes(
   });
 
   // ============ CASH ============
+  // Helper to ensure permanent shift exists
+  async function ensurePermanentShift(): Promise<import("@shared/schema").CashShift> {
+    let currentShift = await storage.getCurrentShift();
+    if (!currentShift) {
+      currentShift = await storage.createCashShift({
+        openedBy: "system",
+      });
+    }
+    return currentShift;
+  }
+
   app.get("/api/cash/shift/current", async (req, res) => {
     try {
-      const currentShift = await storage.getCurrentShift();
+      // Auto-create permanent shift if none exists
+      const currentShift = await ensurePermanentShift();
       
-      // Get all transactions since last incasation (not just current shift)
+      // Get all transactions since last incasation
       const allTransactionsSinceIncasation = await storage.getCashTransactionsSinceLastIncasation();
       
       // Calculate total balance since last incasation
@@ -1447,28 +1459,10 @@ export async function registerRoutes(
         return sum;
       }, 0);
       
-      // If no current shift, return total balance from previous shifts
-      if (!currentShift) {
-        return res.json({ 
-          currentShift: null, 
-          transactions: allTransactionsSinceIncasation, 
-          balance: totalBalance,
-          balanceSinceIncasation: totalBalance
-        });
-      }
-      
-      // Get current shift transactions for display
-      const currentShiftTransactions = await storage.getCashTransactions(currentShift.id);
-      const currentShiftBalance = currentShiftTransactions.reduce((sum, tx) => {
-        if (tx.type === "cash_in") return sum + tx.amount;
-        if (tx.type === "expense" || tx.type === "cash_out") return sum - tx.amount;
-        return sum;
-      }, 0);
-      
       res.json({ 
         currentShift, 
-        transactions: currentShiftTransactions, 
-        balance: currentShiftBalance,
+        transactions: allTransactionsSinceIncasation, 
+        balance: totalBalance,
         balanceSinceIncasation: totalBalance
       });
     } catch (error) {
@@ -1476,26 +1470,13 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/cash/shift/open", async (req, res) => {
-    try {
-      const existingShift = await storage.getCurrentShift();
-      if (existingShift) {
-        return res.status(400).json({ error: "A shift is already open" });
-      }
-      
-      const shift = await storage.createCashShift({
-        openedBy: req.body.openedBy || "admin",
-      });
-      res.json(shift);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to open shift" });
-    }
-  });
-
   app.post("/api/cash/transactions", async (req, res) => {
     try {
+      // Ensure shift exists for transactions
+      const shift = await ensurePermanentShift();
       const tx = await storage.createCashTransaction({
         ...req.body,
+        shiftId: req.body.shiftId || shift.id,
         createdBy: req.body.createdBy || "admin",
       });
       res.json(tx);
@@ -1504,22 +1485,22 @@ export async function registerRoutes(
     }
   });
 
-  // Incasation - only OWNER/SUPER_ADMIN can close shifts
+  // Incasation - only OWNER/SUPER_ADMIN can perform (resets balance to zero)
   app.post("/api/cash/shift/incasation", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
-      const currentShift = await storage.getCurrentShift();
-      if (!currentShift) {
-        return res.status(400).json({ error: "No open shift" });
-      }
+      const currentShift = await ensurePermanentShift();
       
-      const transactions = await storage.getCashTransactions(currentShift.id);
-      const balance = transactions.reduce((sum, tx) => {
+      // Get balance since last incasation
+      const transactionsSinceIncasation = await storage.getCashTransactionsSinceLastIncasation();
+      const balance = transactionsSinceIncasation.reduce((sum, tx) => {
         if (tx.type === "cash_in") return sum + tx.amount;
         if (tx.type === "expense" || tx.type === "cash_out") return sum - tx.amount;
         return sum;
       }, 0);
       
       const user = (req as any).user;
+      
+      // Record cash_out transaction for incasation amount (if positive)
       if (balance > 0) {
         await storage.createCashTransaction({
           shiftId: currentShift.id,
@@ -1530,15 +1511,10 @@ export async function registerRoutes(
         });
       }
       
-      const closedShift = await storage.updateCashShift(currentShift.id, {
-        isOpen: false,
-        closedAt: new Date().toISOString(),
-        visibleToAdmin: false,
-      });
-      
-      res.json(closedShift);
+      // Shift stays open - no closing
+      res.json({ success: true, amount: balance, message: "Инкассация выполнена" });
     } catch (error) {
-      res.status(500).json({ error: "Failed to close shift" });
+      res.status(500).json({ error: "Failed to perform incasation" });
     }
   });
 
@@ -1557,25 +1533,21 @@ export async function registerRoutes(
       const user = (req as any).user;
       const preview = await storage.getIncasationPreview();
       
-      // Get all shifts since last incasation
-      const lastIncasation = await storage.getLastIncasation();
-      const allShifts = await storage.getCashShifts();
-      const shiftsToClose = allShifts.filter(s => 
-        !lastIncasation || s.openedAt > lastIncasation.performedAt
-      );
+      // Ensure permanent shift exists
+      const currentShift = await ensurePermanentShift();
       
-      // Close all open shifts
-      for (const shift of shiftsToClose) {
-        if (shift.isOpen) {
-          await storage.updateCashShift(shift.id, {
-            isOpen: false,
-            closedAt: new Date().toISOString(),
-            visibleToAdmin: false,
-          });
-        }
+      // Record cash_out for incasation (if there's cash to collect)
+      if (preview.cashOnHand > 0) {
+        await storage.createCashTransaction({
+          shiftId: currentShift.id,
+          type: "cash_out",
+          amount: preview.cashOnHand,
+          comment: "Инкассация",
+          createdBy: user.id,
+        });
       }
       
-      // Create incasation record
+      // Create incasation record (shift stays open)
       const incasation = await storage.createIncasation({
         performedAt: new Date().toISOString(),
         performedBy: user.id,
@@ -1589,7 +1561,7 @@ export async function registerRoutes(
           cashOnHand: preview.cashOnHand,
           expensesByCategory: preview.expensesByCategory,
         },
-        shiftsIncluded: shiftsToClose.map(s => s.id),
+        shiftsIncluded: [currentShift.id],
       });
       
       res.json(incasation);
