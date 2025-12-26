@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -73,7 +74,7 @@ const TASK_TYPES: { value: TaskType; label: string }[] = [
 ];
 
 const UNITS = [
-  { value: "", label: "Без привязки" },
+  { value: "none", label: "Без привязки" },
   { value: "Д1", label: "Домик 1" },
   { value: "Д2", label: "Домик 2" },
   { value: "Д3", label: "Домик 3" },
@@ -102,6 +103,7 @@ const PRIORITIES: { value: TaskPriority; label: string }[] = [
 
 const taskFormSchema = z.object({
   title: z.string().min(3, "Минимум 3 символа"),
+  description: z.string().optional(),
   type: z.enum(["climate_off", "climate_on", "trash_prep", "meters", "cleaning", "call_guest", "other"]),
   date: z.date(),
   unitCode: z.string().optional(),
@@ -147,9 +149,10 @@ export default function TasksPage() {
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: "",
+      description: "",
       type: "other",
       date: new Date(),
-      unitCode: "",
+      unitCode: "none",
       priority: "normal",
       notifyAt: "",
       assignedTo: "",
@@ -161,6 +164,7 @@ export default function TasksPage() {
       const response = await apiRequest("POST", "/api/tasks", {
         ...data,
         date: format(data.date, "yyyy-MM-dd"),
+        description: data.description || undefined,
         unitCode: data.unitCode || undefined,
         priority: data.priority || "normal",
         notifyAt: data.notifyAt || undefined,
@@ -283,6 +287,11 @@ export default function TasksPage() {
                   )} />
                 </div>
               </div>
+              {task.description && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {task.description}
+                </p>
+              )}
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 {task.priority === "urgent" && (
                   <Badge variant="destructive" className="text-xs">
@@ -357,7 +366,27 @@ export default function TasksPage() {
                       <FormItem>
                         <FormLabel>Название</FormLabel>
                         <FormControl>
-                          <Input placeholder="Что нужно сделать..." {...field} data-testid="input-task-title" />
+                          <Input placeholder="Краткое название задачи..." {...field} data-testid="input-task-title" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Описание</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Подробности задачи..." 
+                            className="resize-none"
+                            rows={3}
+                            {...field} 
+                            data-testid="input-task-description" 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -403,7 +432,7 @@ export default function TasksPage() {
                           </FormControl>
                           <SelectContent>
                             {UNITS.map((unit) => (
-                              <SelectItem key={unit.value || "none"} value={unit.value || "none"}>
+                              <SelectItem key={unit.value} value={unit.value}>
                                 {unit.label}
                               </SelectItem>
                             ))}

@@ -477,7 +477,7 @@ export async function registerRoutes(
 
   app.post("/api/tasks", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
-      const { title, type, date, unitCode, priority, notifyAt, assignedTo } = req.body;
+      const { title, description, type, date, unitCode, priority, notifyAt, assignedTo } = req.body;
       
       if (!title || !type || !date) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -485,6 +485,7 @@ export async function registerRoutes(
 
       const task = await storage.createTask({
         title,
+        description: description || undefined,
         type,
         date,
         unitCode: unitCode && unitCode !== "none" ? unitCode : undefined,
