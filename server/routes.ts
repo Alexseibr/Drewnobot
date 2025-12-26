@@ -509,7 +509,7 @@ export async function registerRoutes(
         assignedTo: assignedTo || undefined,
         status: "open",
         createdBySystem: false,
-      });
+      }, req.user!.id);
       
       // Only send notification immediately if no scheduled time is set
       if (!notifyAt) {
@@ -531,6 +531,39 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[Tasks] Create error:", error);
       res.status(500).json({ error: "Failed to create task" });
+    }
+  });
+
+  app.post("/api/tasks/:id/accept", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const task = await storage.getTask(req.params.id);
+      if (!task) return res.status(404).json({ error: "Task not found" });
+      
+      // Update task with current user as assignee
+      const updated = await storage.updateTask(req.params.id, { 
+        assignedTo: req.user!.id 
+      });
+      
+      // Notify creator that task was accepted
+      if (task.createdBy && task.createdBy !== req.user!.id) {
+        const creator = await storage.getUser(task.createdBy);
+        const acceptor = req.user!;
+        
+        if (creator && creator.telegramId) {
+          const { sendTaskAcceptedNotification } = await import("./telegram-bot");
+          sendTaskAcceptedNotification({
+            taskId: task.id,
+            taskTitle: task.title,
+            acceptorName: acceptor.name,
+            creatorTelegramId: creator.telegramId,
+          }).catch(err => console.error("[Tasks] Accept notification error:", err));
+        }
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("[Tasks] Accept error:", error);
+      res.status(500).json({ error: "Failed to accept task" });
     }
   });
 

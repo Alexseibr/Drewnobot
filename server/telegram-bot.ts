@@ -803,6 +803,40 @@ export async function sendTaskNotification(task: {
   }
 }
 
+// ============ TASK ACCEPTED NOTIFICATION ============
+
+export async function sendTaskAcceptedNotification(params: {
+  taskId: string;
+  taskTitle: string;
+  acceptorName: string;
+  creatorTelegramId: string;
+}) {
+  try {
+    const webAppUrl = getWebAppUrl();
+    const taskUrl = `${webAppUrl}/ops/tasks?taskId=${params.taskId}`;
+    
+    const message = `<b>Задача принята к исполнению</b>\n\n` +
+      `Задача: ${params.taskTitle}\n` +
+      `Исполнитель: ${params.acceptorName}`;
+    
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: "Открыть задачу",
+            web_app: { url: taskUrl }
+          }
+        ]
+      ]
+    };
+    
+    await sendMessage(parseInt(params.creatorTelegramId), message, { reply_markup: keyboard });
+    console.log(`[Telegram Bot] Sent task accepted notification to creator ${params.creatorTelegramId}`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send task accepted notification:", error);
+  }
+}
+
 // ============ AUTO-INITIALIZATION ============
 
 export async function initTelegramBot() {

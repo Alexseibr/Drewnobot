@@ -84,7 +84,7 @@ export interface IStorage {
   getTasks(): Promise<Task[]>;
   getTasksForDate(date: string): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
-  createTask(task: InsertTask): Promise<Task>;
+  createTask(task: InsertTask, createdBy?: string): Promise<Task>;
   updateTask(id: string, updates: Partial<Task>): Promise<Task | undefined>;
   
   getCashShifts(): Promise<CashShift[]>;
@@ -713,11 +713,12 @@ export class MemStorage implements IStorage {
     return this.tasks.get(id);
   }
 
-  async createTask(insertTask: InsertTask): Promise<Task> {
+  async createTask(insertTask: InsertTask, createdBy?: string): Promise<Task> {
     const task: Task = {
       id: randomUUID(),
       ...insertTask,
       status: insertTask.status || "open",
+      createdBy: createdBy,
       createdAt: new Date().toISOString(),
     };
     this.tasks.set(task.id, task);

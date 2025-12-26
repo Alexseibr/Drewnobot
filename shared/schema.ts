@@ -274,12 +274,13 @@ export const taskSchema = z.object({
   notifyAt: z.string().optional(),
   notified: z.boolean().default(false),
   createdBySystem: z.boolean().default(false),
+  createdBy: z.string().optional(), // User ID who created the task
   meta: z.any().optional(),
   createdAt: z.string(),
 });
 export type Task = z.infer<typeof taskSchema>;
 
-export const insertTaskSchema = taskSchema.omit({ id: true, createdAt: true, notified: true });
+export const insertTaskSchema = taskSchema.omit({ id: true, createdAt: true, notified: true, createdBy: true });
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 // ============ CASH SHIFT ============
@@ -1162,6 +1163,7 @@ export const tasksTable = pgTable("tasks", {
   notifyAt: text("notify_at"),
   notified: boolean("notified").notNull().default(false),
   createdBySystem: boolean("created_by_system").notNull().default(false),
+  createdBy: text("created_by"),
   meta: jsonb("meta"),
   createdAt: text("created_at").notNull(),
 });

@@ -852,7 +852,7 @@ export class DatabaseStorage implements IStorage {
     return rows[0] ? this.mapRowToTask(rows[0]) : undefined;
   }
 
-  async createTask(task: InsertTask): Promise<Task> {
+  async createTask(task: InsertTask, createdBy?: string): Promise<Task> {
     const id = randomUUID();
     const now = new Date().toISOString();
     const newTask: Task = {
@@ -861,6 +861,7 @@ export class DatabaseStorage implements IStorage {
       unitCode: task.unitCode,
       type: task.type,
       title: task.title,
+      description: task.description,
       checklist: task.checklist,
       status: task.status || "open",
       assignedTo: task.assignedTo,
@@ -868,6 +869,7 @@ export class DatabaseStorage implements IStorage {
       notifyAt: task.notifyAt,
       notified: false,
       createdBySystem: task.createdBySystem || false,
+      createdBy: createdBy,
       meta: task.meta,
       createdAt: now,
     };
@@ -877,6 +879,7 @@ export class DatabaseStorage implements IStorage {
       unitCode: newTask.unitCode || null,
       type: newTask.type,
       title: newTask.title,
+      description: newTask.description || null,
       checklist: newTask.checklist || null,
       status: newTask.status,
       assignedTo: newTask.assignedTo || null,
@@ -884,6 +887,7 @@ export class DatabaseStorage implements IStorage {
       notifyAt: newTask.notifyAt || null,
       notified: newTask.notified,
       createdBySystem: newTask.createdBySystem,
+      createdBy: newTask.createdBy || null,
       meta: newTask.meta || null,
       createdAt: newTask.createdAt,
     });
@@ -915,6 +919,7 @@ export class DatabaseStorage implements IStorage {
       unitCode: row.unitCode || undefined,
       type: row.type as any,
       title: row.title,
+      description: row.description || undefined,
       checklist: row.checklist as any,
       status: row.status as any,
       assignedTo: row.assignedTo || undefined,
@@ -922,6 +927,7 @@ export class DatabaseStorage implements IStorage {
       notifyAt: row.notifyAt || undefined,
       notified: row.notified || false,
       createdBySystem: row.createdBySystem,
+      createdBy: row.createdBy || undefined,
       meta: row.meta as any,
       createdAt: row.createdAt,
     };

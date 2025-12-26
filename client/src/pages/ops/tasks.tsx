@@ -38,6 +38,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
 import { TaskCardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Task, TaskType, MeterReading, TaskPriority } from "@shared/schema";
@@ -116,6 +117,7 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 
 export default function TasksPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const taskRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -202,6 +204,21 @@ export default function TasksPage() {
     },
     onError: () => {
       toast({ title: "Ошибка выполнения задачи", variant: "destructive" });
+    },
+  });
+
+  const acceptTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const response = await apiRequest("POST", `/api/tasks/${taskId}/accept`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
+      toast({ title: "Задача принята" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка принятия задачи", variant: "destructive" });
     },
   });
 
@@ -336,6 +353,19 @@ export default function TasksPage() {
                       {item}
                     </div>
                   ))}
+                </div>
+              )}
+              {!isCompleted && !task.assignedTo && user && (
+                <div className="mt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => acceptTaskMutation.mutate(task.id)}
+                    disabled={acceptTaskMutation.isPending}
+                    data-testid={`button-accept-task-${task.id}`}
+                  >
+                    Принять задачу
+                  </Button>
                 </div>
               )}
             </div>
