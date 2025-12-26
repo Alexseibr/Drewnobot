@@ -465,6 +465,21 @@ export async function registerRoutes(
     }
   });
 
+  // ============ STAFF MEMBERS FOR TASK ASSIGNMENT ============
+  app.get("/api/staff-members", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const staff = await storage.getStaffUsers();
+      res.json(staff.map(u => ({
+        id: u.id,
+        name: u.name,
+        role: u.role,
+      })));
+    } catch (error) {
+      console.error("[StaffMembers] Fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch staff members" });
+    }
+  });
+
   // ============ TASKS ============
   app.get("/api/tasks", async (req, res) => {
     try {

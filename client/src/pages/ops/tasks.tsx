@@ -127,6 +127,10 @@ export default function TasksPage() {
     queryKey: ["/api/tasks"],
   });
 
+  const { data: staffMembers } = useQuery<{ id: string; name: string; role: string }[]>({
+    queryKey: ["/api/staff-members"],
+  });
+
   // Handle deep link - scroll to and highlight specific task
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -155,7 +159,7 @@ export default function TasksPage() {
       unitCode: "none",
       priority: "normal",
       notifyAt: "",
-      assignedTo: "",
+      assignedTo: "none",
     },
   });
 
@@ -165,10 +169,10 @@ export default function TasksPage() {
         ...data,
         date: format(data.date, "yyyy-MM-dd"),
         description: data.description || undefined,
-        unitCode: data.unitCode || undefined,
+        unitCode: data.unitCode && data.unitCode !== "none" ? data.unitCode : undefined,
         priority: data.priority || "normal",
         notifyAt: data.notifyAt || undefined,
-        assignedTo: data.assignedTo || undefined,
+        assignedTo: data.assignedTo && data.assignedTo !== "none" ? data.assignedTo : undefined,
       });
       return response.json();
     },
@@ -304,6 +308,11 @@ export default function TasksPage() {
                     {task.unitCode}
                   </Badge>
                 )}
+                {task.assignedTo && (
+                  <Badge variant="secondary" className="text-xs">
+                    {staffMembers?.find(m => m.id === task.assignedTo)?.name || "Исполнитель"}
+                  </Badge>
+                )}
                 <span className="text-xs text-muted-foreground">
                   {taskTypeLabels[task.type] || task.type}
                 </span>
@@ -434,6 +443,32 @@ export default function TasksPage() {
                             {UNITS.map((unit) => (
                               <SelectItem key={unit.value} value={unit.value}>
                                 {unit.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="assignedTo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Исполнитель</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-task-assignee">
+                              <SelectValue placeholder="Не назначен" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">Не назначен</SelectItem>
+                            {staffMembers?.map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                {member.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
