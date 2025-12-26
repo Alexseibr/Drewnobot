@@ -1,0 +1,53 @@
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | "2025-12-24T12:38:20.187Z","createdBy":"admin","location":null},{"id":"8998eb84-ae2c-4db7-8fca-94ec0e82d4b4","shiftId":"d2402c5c-e952-4692-a2aa-d50a6cb7de5b","type":"cash_in","amount":280,"category":"cottage_1","createdAt":"2025-12-23T11:05:59.051Z","createdBy":"admin","location":null},{"id":"5f64dee7-1196-447b-95b2-4d86450842ec","shiftId":"583be502-4a58-4849-a3bf-7a910c22279c","type":"cash_in","amount":100,"createdAt":"2025-12-22T16:52:50.746Z","createdBy":"admin","location":null},{"id":"21dc5566-33d0-485e-a572-9d82624f4cf7","shiftId":"7ad2b3ee-fc38-435b-938b-e1fe7cf2a261","type":"cash_out","amount":400,"comment":"Incasation","createdAt":"2025-12-22T16:07:08.038Z","createdBy":"admin","location":null},{"id":"aced870a-b5a4-424f-ac4e-fc5882666a7d","shiftId":"7ad2b3ee-fc38-435b-938b-e1fe7cf2a261","type":"cash_in","amount":120,"category":"cottage_1","comment":"Купель","createdAt":"2025-12-22T16:06:05.105Z","createdBy":"admin","location":null},{"id":"3001c93a-de82-41fc-a23c-def9975885a7","shiftId":"7ad2b3ee-fc38-435b-938b-e1fe7cf2a261","type":"cash_in","amount":280,"category":"cottage_1","createdAt":"2025-12-22T16:05:39.271Z","createdBy":"admin","location":null},{"id":"bffed22b-c7f7-4fdd-908e-a7009d49ee34","shiftId":"84f4c1fa-cb59-41ca-b788-8f379705580d","type":"cash_out","amount":278,"comment":"Incasation","createdAt":"2025-12-22T16:04:14.422Z","createdBy":"admin","location":null},{"id":"169cb78d-504c-4f55-9c2a-adb6956a9315","shiftId":"84f4c1fa-cb59-41ca-b788-8f379705580d","type":"expense","amount":10,"category":"food_staff","createdAt":"2025-12-22T16:03:18.585Z","createdBy":"admin","location":null},{"id":"66e5cc70-79d9-408f-8813-179236ce467f","shiftId":"84f4c1fa-cb59-41ca-b788-8f379705580d","type":"cash_in","amount":280,"category":"cottage_1","createdAt":"2025-12-22T16:03:03.722Z","createdBy":"admin","location":null},{"id":"22f0fd94-34b5-403a-8dc0-0076dd7b8fe6","shiftId":"84f4c1fa-cb59-41ca-b788-8f379705580d","type":"expense","amount":2,"category":"food_staff","comment":"Питание ","createdAt":"2025-12-22T15:56:49.452Z","createdBy":"admin","location":null},{"id":"0761d96d-c024-4f1e-bfd8-94d5bbd6bc72","shiftId":"84f4c1fa-cb59-41ca-b788-8f379705580d","type":"cash_in","amount":10,"comment":"Дом1 ","createdAt":"2025-12-22T15:56:31.884Z","createdBy":"admin","location":null}],"balance":1799}
+0|drewno-o | 9:52:24 AM [express] GET /api/auth/me 200 in 4ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-o | 9:52:29 AM [express] GET /api/tasks 500 in 5ms :: {"error":"Failed to fetch tasks"}
+0|drewno-o | 9:52:45 AM [express] POST /api/tasks 500 in 22ms :: {"error":"Failed to create task"}
+0|drewno-o | 9:53:32 AM [express] GET /api/tasks 500 in 24ms :: {"error":"Failed to fetch tasks"}
+0|drewno-o | 9:53:32 AM [express] GET /api/auth/me 200 in 25ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-o | 9:53:51 AM [express] POST /api/tasks 500 in 24ms :: {"error":"Failed to create task"}
+
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |   detail: undefined,
+0|drewno-o |   hint: undefined,
+0|drewno-o |   position: '52',
+0|drewno-o |   internalPosition: undefined,
+0|drewno-o |   internalQuery: undefined,
+0|drewno-o |   where: undefined,
+0|drewno-o |   schema: undefined,
+0|drewno-o |   table: undefined,
+0|drewno-o |   column: undefined,
+0|drewno-o |   dataType: undefined,
+0|drewno-o |   constraint: undefined,
+0|drewno-o |   file: 'parse_relation.c',
+0|drewno-o |   line: '3647',
+0|drewno-o |   routine: 'errorMissingColumn'
+0|drewno-o | }
+
+0|drewno-ops  | [Tasks] Create error: error: column "description" of relation "tasks" does not exist
+0|drewno-ops  |     at /var/www/drewno-ops/dist/index.cjs:64:13326
+0|drewno-ops  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-ops  |     at async Ru.createTask (/var/www/drewno-ops/dist/index.cjs:70:93956)
+0|drewno-ops  |     at async /var/www/drewno-ops/dist/index.cjs:150:13805 {
+0|drewno-ops  |   length: 129,
+0|drewno-ops  |   severity: 'ERROR',
+0|drewno-ops  |   code: '42703',
+0|drewno-ops  |   detail: undefined,
+0|drewno-ops  |   hint: undefined,
+0|drewno-ops  |   position: '66',
+0|drewno-ops  |   internalPosition: undefined,
+0|drewno-ops  |   internalQuery: undefined,
+0|drewno-ops  |   where: undefined,
+0|drewno-ops  |   schema: undefined,
+0|drewno-ops  |   table: undefined,
+0|drewno-ops  |   column: undefined,
+0|drewno-ops  |   dataType: undefined,
+0|drewno-ops  |   constraint: undefined,
+0|drewno-ops  |   file: 'parse_target.c',
+0|drewno-ops  |   line: '1075',
+0|drewno-ops  |   routine: 'checkInsertTargets'
+0|drewno-ops  | }
+0|drewno-ops  | 9:54:07 AM [express] POST /api/tasks 500 in 30ms :: {"error":"Failed to create task"}

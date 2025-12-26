@@ -353,7 +353,7 @@ export default function TasksPage() {
                 Добавить
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="top-[5%] translate-y-0 max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Новая задача</DialogTitle>
               </DialogHeader>
