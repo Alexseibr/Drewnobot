@@ -490,6 +490,58 @@ export async function registerRoutes(
     }
   });
 
+  // Authenticated task overview - separates my tasks from delegated tasks
+  app.get("/api/tasks/overview", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const allTasks = await storage.getTasks();
+      const today = new Date().toISOString().slice(0, 10);
+      
+      // Filter to today's tasks only
+      const todayTasks = allTasks.filter(t => t.date === today);
+      
+      // Tasks assigned to me (or I accepted)
+      const myTasks = todayTasks.filter(t => 
+        t.assignedTo === userId || 
+        // Tasks I created without assigning to anyone else
+        (t.createdBy === userId && !t.assignedTo)
+      );
+      
+      // Tasks I delegated to others (I created them AND assigned to someone else)
+      const delegatedTasks = todayTasks.filter(t => 
+        t.createdBy === userId && 
+        t.assignedTo && 
+        t.assignedTo !== userId
+      );
+      
+      // Unassigned pool - tasks without assignee that I didn't create
+      const unassignedPool = todayTasks.filter(t => 
+        !t.assignedTo && 
+        t.createdBy !== userId
+      );
+      
+      // Get staff info for delegated tasks
+      const staffMembers = await storage.getStaffUsers();
+      const staffMap = new Map(staffMembers.map(s => [s.id, s.name]));
+      
+      // Enrich delegated tasks with assignee names
+      const enrichedDelegated = delegatedTasks.map(t => ({
+        ...t,
+        assigneeName: t.assignedTo ? staffMap.get(t.assignedTo) || "Неизвестно" : null,
+        isAccepted: !!t.acceptedAt, // Task is accepted when acceptedAt is set
+      }));
+      
+      res.json({
+        myTasks,
+        delegatedTasks: enrichedDelegated,
+        unassignedPool,
+      });
+    } catch (error) {
+      console.error("[Tasks] Overview error:", error);
+      res.status(500).json({ error: "Failed to fetch task overview" });
+    }
+  });
+
   app.post("/api/tasks", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       const { title, description, type, date, unitCode, priority, notifyAt, assignedTo } = req.body;
@@ -539,9 +591,10 @@ export async function registerRoutes(
       const task = await storage.getTask(req.params.id);
       if (!task) return res.status(404).json({ error: "Task not found" });
       
-      // Update task with current user as assignee
+      // Update task with current user as assignee and mark as accepted
       const updated = await storage.updateTask(req.params.id, { 
-        assignedTo: req.user!.id 
+        assignedTo: req.user!.id,
+        acceptedAt: new Date().toISOString()
       });
       
       // Notify creator that task was accepted

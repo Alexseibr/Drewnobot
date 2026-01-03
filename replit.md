@@ -43,6 +43,10 @@ Five user roles with hierarchical permissions:
 - **Units**: Cottages (1-4) and Baths (1-2) with cleaning tariffs (A, B, C)
 - **Bookings**: Cottage check-ins/outs and bath reservations with status workflows
 - **Tasks**: Scheduled reminders (climate control, trash, meters) and manual tasks
+  - Task delegation: Create tasks and assign to team members
+  - Three-tab view: "Мои" (my tasks), "Команде" (delegated tasks), "Готово" (completed)
+  - Delegated tasks show assignee name and acceptance status (acceptedAt timestamp)
+  - API: `/api/tasks/overview` returns myTasks, delegatedTasks, unassignedPool
 - **Cash Management**: Shift-based cash tracking with transactions and incasation
 - **Quad Bookings**: Dynamic slot-based ATV booking system with:
   - Short route (30 min) and Long route (60 min)

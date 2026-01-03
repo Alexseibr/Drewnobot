@@ -270,6 +270,7 @@ export const taskSchema = z.object({
   checklist: z.array(z.string()).optional(),
   status: TaskStatus.default("open"),
   assignedTo: z.string().optional(),
+  acceptedAt: z.string().optional(), // When the assignee accepted the task
   priority: TaskPriority.default("normal"),
   notifyAt: z.string().optional(),
   notified: z.boolean().default(false),
@@ -1178,6 +1179,7 @@ export const tasksTable = pgTable("tasks", {
   checklist: jsonb("checklist"),
   status: text("status").notNull().default("open"),
   assignedTo: text("assigned_to"),
+  acceptedAt: text("accepted_at"),
   priority: text("priority").notNull().default("normal"),
   notifyAt: text("notify_at"),
   notified: boolean("notified").notNull().default(false),

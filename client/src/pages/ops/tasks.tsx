@@ -115,9 +115,20 @@ const taskFormSchema = z.object({
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
 
+interface DelegatedTask extends Task {
+  assigneeName?: string | null;
+  isAccepted?: boolean;
+}
+
+interface TaskOverview {
+  myTasks: Task[];
+  delegatedTasks: DelegatedTask[];
+  unassignedPool: Task[];
+}
+
 export default function TasksPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const taskRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -125,8 +136,18 @@ export default function TasksPage() {
   const [meterReadings, setMeterReadings] = useState<Record<string, number>>({});
   const searchString = useSearch();
 
-  const { data: tasks, isLoading } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
+  // Use the new overview endpoint for authenticated users
+  const { data: taskOverview, isLoading } = useQuery<TaskOverview>({
+    queryKey: ["/api/tasks/overview"],
+    queryFn: async () => {
+      const res = await fetch("/api/tasks/overview", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to fetch tasks");
+      return res.json();
+    },
+    enabled: !!token,
   });
 
   const { data: staffMembers } = useQuery<{ id: string; name: string; role: string }[]>({
@@ -137,7 +158,7 @@ export default function TasksPage() {
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     const taskId = params.get("taskId");
-    if (taskId && tasks) {
+    if (taskId && taskOverview) {
       setHighlightedTaskId(taskId);
       // Scroll to task after a short delay to ensure render
       setTimeout(() => {
@@ -149,7 +170,7 @@ export default function TasksPage() {
       // Remove highlight after 3 seconds
       setTimeout(() => setHighlightedTaskId(null), 3000);
     }
-  }, [searchString, tasks]);
+  }, [searchString, taskOverview]);
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
@@ -180,6 +201,7 @@ export default function TasksPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/overview"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
       toast({ title: "Задача создана" });
       setIsCreateOpen(false);
@@ -197,6 +219,7 @@ export default function TasksPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/overview"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
       toast({ title: "Задача выполнена" });
       setMeterDialogTask(null);
@@ -214,6 +237,7 @@ export default function TasksPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/overview"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
       toast({ title: "Задача принята" });
     },
@@ -265,9 +289,19 @@ export default function TasksPage() {
   };
 
   const today = format(new Date(), "yyyy-MM-dd");
-  const todayTasks = tasks?.filter(t => t.date === today) || [];
-  const openTasks = todayTasks.filter(t => t.status === "open");
-  const completedTasks = todayTasks.filter(t => t.status === "done");
+  
+  // Extract tasks from overview
+  const myTasks = taskOverview?.myTasks || [];
+  const delegatedTasks = taskOverview?.delegatedTasks || [];
+  const unassignedPool = taskOverview?.unassignedPool || [];
+  
+  // Filter my tasks by status
+  const myOpenTasks = myTasks.filter(t => t.status === "open");
+  const myCompletedTasks = myTasks.filter(t => t.status === "done");
+  
+  // All open tasks for legacy display (my + unassigned)
+  const openTasks = [...myOpenTasks, ...unassignedPool];
+  const completedTasks = myCompletedTasks;
 
   const TaskCard = ({ task }: { task: Task }) => {
     const Icon = taskIcons[task.type] || HelpCircle;
@@ -604,16 +638,25 @@ export default function TasksPage() {
         </div>
 
         <Tabs defaultValue="open" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className={cn("grid w-full mb-6", delegatedTasks.length > 0 ? "grid-cols-3" : "grid-cols-2")}>
             <TabsTrigger value="open" className="gap-2" data-testid="tab-open">
               <Clock className="h-4 w-4" />
-              Активные
+              Мои
               {openTasks.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">
                   {openTasks.length}
                 </Badge>
               )}
             </TabsTrigger>
+            {delegatedTasks.length > 0 && (
+              <TabsTrigger value="delegated" className="gap-2" data-testid="tab-delegated">
+                <ClipboardList className="h-4 w-4" />
+                Команде
+                <Badge variant="secondary" className="ml-1 text-xs">
+                  {delegatedTasks.length}
+                </Badge>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="completed" className="gap-2" data-testid="tab-completed">
               <CheckCircle2 className="h-4 w-4" />
               Готово
@@ -638,6 +681,90 @@ export default function TasksPage() {
                     icon={CheckCircle2}
                     title="Все задачи выполнены!"
                     description="Отличная работа! Все задачи на сегодня завершены."
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Delegated Tasks Tab - shows tasks I assigned to others */}
+          <TabsContent value="delegated" className="space-y-3">
+            {isLoading ? (
+              <>
+                <TaskCardSkeleton />
+                <TaskCardSkeleton />
+              </>
+            ) : delegatedTasks.length > 0 ? (
+              delegatedTasks.map((task) => {
+                const Icon = taskIcons[task.type] || HelpCircle;
+                const isCompleted = task.status === "done";
+                
+                return (
+                  <Card key={task.id} className={cn(isCompleted && "opacity-60")} data-testid={`card-delegated-task-${task.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={cn(
+                          "rounded-full p-1.5 shrink-0 mt-0.5",
+                          isCompleted ? "bg-status-completed/10" : "bg-primary/10"
+                        )}>
+                          <Icon className={cn(
+                            "h-4 w-4",
+                            isCompleted ? "text-status-completed" : "text-primary"
+                          )} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "font-medium",
+                            isCompleted && "line-through text-muted-foreground"
+                          )}>
+                            {task.title}
+                          </p>
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {task.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            {/* Show assignee status */}
+                            <Badge 
+                              variant={task.isAccepted ? "default" : "outline"} 
+                              className="text-xs"
+                              data-testid={`badge-status-${task.id}`}
+                            >
+                              {task.assigneeName || "Ожидает"}
+                              {task.isAccepted ? " - принял" : " - не принял"}
+                            </Badge>
+                            {task.unitCode && (
+                              <Badge variant="outline" className="text-xs">
+                                {task.unitCode}
+                              </Badge>
+                            )}
+                            {task.priority === "urgent" && (
+                              <Badge variant="destructive" className="text-xs">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Срочно
+                              </Badge>
+                            )}
+                            {isCompleted && (
+                              <Badge variant="secondary" className="text-xs bg-status-completed/20 text-status-completed">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Выполнено
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <Card>
+                <CardContent className="p-6">
+                  <EmptyState
+                    icon={ClipboardList}
+                    title="Нет задач команде"
+                    description="Задачи, назначенные другим сотрудникам, появятся здесь."
                   />
                 </CardContent>
               </Card>

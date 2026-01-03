@@ -901,6 +901,7 @@ export class DatabaseStorage implements IStorage {
     const updateData: Record<string, any> = {};
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.assignedTo !== undefined) updateData.assignedTo = updates.assignedTo;
+    if (updates.acceptedAt !== undefined) updateData.acceptedAt = updates.acceptedAt;
     if (updates.checklist !== undefined) updateData.checklist = updates.checklist;
     if (updates.priority !== undefined) updateData.priority = updates.priority;
     if (updates.notifyAt !== undefined) updateData.notifyAt = updates.notifyAt;
@@ -923,6 +924,7 @@ export class DatabaseStorage implements IStorage {
       checklist: row.checklist as any,
       status: row.status as any,
       assignedTo: row.assignedTo || undefined,
+      acceptedAt: row.acceptedAt || undefined,
       priority: row.priority || "normal",
       notifyAt: row.notifyAt || undefined,
       notified: row.notified || false,
