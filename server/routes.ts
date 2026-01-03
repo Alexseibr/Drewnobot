@@ -1668,6 +1668,50 @@ export async function registerRoutes(
     }
   });
 
+  // Get periodic summaries (last completed week + current month)
+  app.get("/api/owner/analytics/periodic", async (req, res) => {
+    try {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      // Calculate last completed week (Monday 00:00 to Sunday 23:59)
+      // Find the Monday of the current week
+      const dayOfWeek = today.getDay();
+      const daysToCurrentMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const currentMonday = new Date(today);
+      currentMonday.setDate(today.getDate() - daysToCurrentMonday);
+      
+      // Last completed week starts 7 days before current Monday
+      const lastMonday = new Date(currentMonday);
+      lastMonday.setDate(currentMonday.getDate() - 7);
+      const lastSunday = new Date(lastMonday);
+      lastSunday.setDate(lastMonday.getDate() + 6);
+      
+      const lastWeekPeriod = `week:${lastMonday.toISOString().slice(0, 10)}`;
+      
+      // Current calendar month
+      const currentMonthPeriod = `month:${now.toISOString().slice(0, 7)}`;
+      
+      const [lastWeek, currentMonth] = await Promise.all([
+        storage.getAnalyticsSummary(lastWeekPeriod),
+        storage.getAnalyticsSummary(currentMonthPeriod),
+      ]);
+      
+      res.json({
+        lastWeek: {
+          ...lastWeek,
+          periodLabel: `${lastMonday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} - ${lastSunday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`,
+        },
+        currentMonth: {
+          ...currentMonth,
+          periodLabel: now.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch periodic analytics" });
+    }
+  });
+
   // Get transactions for a period (for analytics)
   app.get("/api/owner/analytics/transactions", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {

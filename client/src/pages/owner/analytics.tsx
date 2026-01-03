@@ -19,7 +19,9 @@ import {
   ArrowUpCircle,
   Receipt,
   User,
-  Building2
+  Building2,
+  Calendar,
+  CalendarDays
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -31,6 +33,11 @@ import { StatsCardSkeleton } from "@/components/ui/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import type { AnalyticsSummary, CashTransaction } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
+
+interface PeriodicSummary {
+  lastWeek: AnalyticsSummary & { periodLabel: string };
+  currentMonth: AnalyticsSummary & { periodLabel: string };
+}
 
 type PeriodType = "day" | "week" | "month";
 
@@ -48,6 +55,18 @@ export default function OwnerAnalyticsPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch analytics");
+      return res.json();
+    },
+  });
+
+  // Fetch periodic summaries (last week + current month)
+  const { data: periodicSummary } = useQuery<PeriodicSummary>({
+    queryKey: ["/api/owner/analytics/periodic"],
+    queryFn: async () => {
+      const res = await fetch("/api/owner/analytics/periodic", {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch periodic analytics");
       return res.json();
     },
   });
@@ -160,6 +179,53 @@ export default function OwnerAnalyticsPage() {
               <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
+
+          {/* Periodic Summaries: Last Week and Current Month */}
+          {periodicSummary && (
+            <div className="grid grid-cols-2 gap-3">
+              <Card data-testid="card-last-week-summary" className="bg-muted/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Прошлая неделя</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {periodicSummary.lastWeek.periodLabel}
+                  </p>
+                  <p className="text-xl font-bold font-mono" data-testid="text-last-week-revenue">
+                    {(periodicSummary.lastWeek.cottageRevenue + periodicSummary.lastWeek.bathRevenue).toFixed(0)}
+                    <span className="text-sm font-normal text-muted-foreground ml-1">BYN</span>
+                  </p>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    <span className="text-status-confirmed">нал: {periodicSummary.lastWeek.cashTotal.toFixed(0)}</span>
+                    <span className="mx-1">/</span>
+                    <span className="text-status-awaiting">ерип: {periodicSummary.lastWeek.eripTotal.toFixed(0)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card data-testid="card-current-month-summary" className="bg-muted/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Текущий месяц</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1 capitalize">
+                    {periodicSummary.currentMonth.periodLabel}
+                  </p>
+                  <p className="text-xl font-bold font-mono" data-testid="text-current-month-revenue">
+                    {(periodicSummary.currentMonth.cottageRevenue + periodicSummary.currentMonth.bathRevenue).toFixed(0)}
+                    <span className="text-sm font-normal text-muted-foreground ml-1">BYN</span>
+                  </p>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    <span className="text-status-confirmed">нал: {periodicSummary.currentMonth.cashTotal.toFixed(0)}</span>
+                    <span className="mx-1">/</span>
+                    <span className="text-status-awaiting">ерип: {periodicSummary.currentMonth.eripTotal.toFixed(0)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {isLoading ? (
             <div className="grid grid-cols-2 gap-4">
