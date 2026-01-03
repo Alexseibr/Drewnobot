@@ -53,6 +53,7 @@ import type {
   ThermostatActionLog, InsertThermostatActionLog,
   ElectricityMeter, InsertElectricityMeter,
   ElectricityReading, InsertElectricityReading,
+  NotificationConfig, InsertNotificationConfig,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
@@ -65,6 +66,7 @@ import {
   textileStockTable, textileCheckInsTable, textileEventsTable, guestsTable,
   suppliesTable, supplyTransactionsTable, incidentsTable, staffShiftsTable, unitInfoTable,
   thermostatHousesTable, thermostatDailyPlansTable, thermostatActionLogsTable,
+  notificationConfigsTable,
 } from "@shared/schema";
 
 const PRICES: Record<string, number> = {
@@ -3550,5 +3552,145 @@ export class DatabaseStorage implements IStorage {
     }
     
     return tasks;
+  }
+  
+  // ============ NOTIFICATION CONFIGS ============
+  async getNotificationConfigs(): Promise<NotificationConfig[]> {
+    const rows = await db.select().from(notificationConfigsTable).orderBy(asc(notificationConfigsTable.title));
+    return rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: r.description || undefined,
+      cadence: r.cadence as NotificationConfig["cadence"],
+      cronExpression: r.cronExpression,
+      actionType: r.actionType as NotificationConfig["actionType"],
+      targetChatId: r.targetChatId || undefined,
+      enabled: r.enabled,
+      lastRunAt: r.lastRunAt || undefined,
+      metadata: r.metadata as Record<string, any> | undefined,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+  }
+  
+  async getNotificationConfig(id: string): Promise<NotificationConfig | undefined> {
+    const rows = await db.select().from(notificationConfigsTable).where(eq(notificationConfigsTable.id, id));
+    if (rows.length === 0) return undefined;
+    const r = rows[0];
+    return {
+      id: r.id,
+      title: r.title,
+      description: r.description || undefined,
+      cadence: r.cadence as NotificationConfig["cadence"],
+      cronExpression: r.cronExpression,
+      actionType: r.actionType as NotificationConfig["actionType"],
+      targetChatId: r.targetChatId || undefined,
+      enabled: r.enabled,
+      lastRunAt: r.lastRunAt || undefined,
+      metadata: r.metadata as Record<string, any> | undefined,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    };
+  }
+  
+  async getEnabledNotificationConfigs(): Promise<NotificationConfig[]> {
+    const rows = await db.select().from(notificationConfigsTable)
+      .where(eq(notificationConfigsTable.enabled, true))
+      .orderBy(asc(notificationConfigsTable.title));
+    return rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: r.description || undefined,
+      cadence: r.cadence as NotificationConfig["cadence"],
+      cronExpression: r.cronExpression,
+      actionType: r.actionType as NotificationConfig["actionType"],
+      targetChatId: r.targetChatId || undefined,
+      enabled: r.enabled,
+      lastRunAt: r.lastRunAt || undefined,
+      metadata: r.metadata as Record<string, any> | undefined,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+  }
+  
+  async createNotificationConfig(config: InsertNotificationConfig): Promise<NotificationConfig> {
+    const now = new Date().toISOString();
+    const newConfig = {
+      id: randomUUID(),
+      title: config.title,
+      description: config.description,
+      cadence: config.cadence,
+      cronExpression: config.cronExpression,
+      actionType: config.actionType,
+      targetChatId: config.targetChatId,
+      enabled: config.enabled,
+      metadata: config.metadata,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.insert(notificationConfigsTable).values(newConfig);
+    return {
+      ...newConfig,
+      description: newConfig.description || undefined,
+      targetChatId: newConfig.targetChatId || undefined,
+      metadata: newConfig.metadata as Record<string, any> | undefined,
+    };
+  }
+  
+  async updateNotificationConfig(id: string, updates: Partial<NotificationConfig>): Promise<NotificationConfig | undefined> {
+    const existing = await this.getNotificationConfig(id);
+    if (!existing) return undefined;
+    
+    const now = new Date().toISOString();
+    await db.update(notificationConfigsTable)
+      .set({
+        ...updates,
+        updatedAt: now,
+      })
+      .where(eq(notificationConfigsTable.id, id));
+    
+    return this.getNotificationConfig(id);
+  }
+  
+  async deleteNotificationConfig(id: string): Promise<boolean> {
+    const result = await db.delete(notificationConfigsTable).where(eq(notificationConfigsTable.id, id));
+    return true;
+  }
+  
+  async toggleNotificationConfig(id: string, enabled: boolean): Promise<NotificationConfig | undefined> {
+    return this.updateNotificationConfig(id, { enabled });
+  }
+  
+  async updateNotificationLastRun(id: string): Promise<void> {
+    await db.update(notificationConfigsTable)
+      .set({
+        lastRunAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(notificationConfigsTable.id, id));
+  }
+  
+  async initializeDefaultNotifications(): Promise<void> {
+    const existing = await this.getNotificationConfigs();
+    if (existing.length > 0) return;
+    
+    const defaults: InsertNotificationConfig[] = [
+      { title: "Напоминание о смене", description: "Ежедневное напоминание о начале смены", cadence: "daily", cronExpression: "30 8 * * *", actionType: "shift_reminder", enabled: true },
+      { title: "Сводка по баням", description: "Список бронирований бань на сегодня", cadence: "daily", cronExpression: "0 9 * * *", actionType: "bath_summary", enabled: true },
+      { title: "Климат-контроль ВКЛ", description: "Напоминание о включении климат-контроля", cadence: "daily", cronExpression: "0 12 * * *", actionType: "climate_on", enabled: true },
+      { title: "Климат-контроль ВЫКЛ", description: "Напоминание о выключении климат-контроля", cadence: "daily", cronExpression: "0 14 * * *", actionType: "climate_off", enabled: true },
+      { title: "Напоминание о прачечной", description: "Проверка текстиля для заезда", cadence: "daily", cronExpression: "0 15 * * *", actionType: "laundry_reminder", enabled: true },
+      { title: "Проверка погоды", description: "Проверка прогноза на заморозки", cadence: "daily", cronExpression: "0 18 * * *", actionType: "weather_check", enabled: true },
+      { title: "Ежедневные задачи", description: "Создание ежедневных задач", cadence: "daily", cronExpression: "0 6 * * *", actionType: "daily_tasks", enabled: true },
+      { title: "Еженедельные задачи", description: "Создание еженедельных задач", cadence: "weekly", cronExpression: "0 6 * * 1", actionType: "weekly_tasks", enabled: true },
+      { title: "Ежемесячные задачи", description: "Создание ежемесячных задач", cadence: "monthly", cronExpression: "0 6 1 * *", actionType: "monthly_tasks", enabled: true },
+      { title: "Термостат: Планирование", description: "Запрос планов на день", cadence: "daily", cronExpression: "0 12 * * *", actionType: "thermostat_prompt", enabled: true },
+      { title: "Термостат: Базовая температура", description: "Установка базовых температур", cadence: "daily", cronExpression: "5 12 * * *", actionType: "thermostat_base_temp", enabled: true },
+      { title: "Термостат: Прогрев", description: "Начало прогрева для заездов", cadence: "daily", cronExpression: "30 14 * * *", actionType: "thermostat_heat", enabled: true },
+    ];
+    
+    for (const config of defaults) {
+      await this.createNotificationConfig(config);
+    }
   }
 }

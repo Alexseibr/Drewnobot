@@ -1802,3 +1802,57 @@ export const electricityReadingSchema = z.object({
 export type ElectricityReading = z.infer<typeof electricityReadingSchema>;
 export const insertElectricityReadingSchema = electricityReadingSchema.omit({ id: true, consumption: true });
 export type InsertElectricityReading = z.infer<typeof insertElectricityReadingSchema>;
+
+// ============ NOTIFICATION CONFIGS TABLE ============
+export const notificationCadenceEnum = ["daily", "weekly", "monthly", "custom"] as const;
+export type NotificationCadence = typeof notificationCadenceEnum[number];
+
+export const notificationActionTypeEnum = [
+  "shift_reminder",
+  "bath_summary", 
+  "climate_on",
+  "climate_off",
+  "laundry_reminder",
+  "weather_check",
+  "daily_tasks",
+  "weekly_tasks",
+  "monthly_tasks",
+  "thermostat_prompt",
+  "thermostat_base_temp",
+  "thermostat_heat",
+  "custom_message"
+] as const;
+export type NotificationActionType = typeof notificationActionTypeEnum[number];
+
+export const notificationConfigsTable = pgTable("notification_configs", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  cadence: text("cadence").notNull(), // daily, weekly, monthly, custom
+  cronExpression: text("cron_expression").notNull(),
+  actionType: text("action_type").notNull(), // what notification function to call
+  targetChatId: text("target_chat_id"), // specific telegram chat ID or null for default
+  enabled: boolean("enabled").notNull().default(true),
+  lastRunAt: text("last_run_at"),
+  metadata: jsonb("metadata"), // additional config like message template
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const notificationConfigSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  cadence: z.enum(notificationCadenceEnum),
+  cronExpression: z.string(),
+  actionType: z.enum(notificationActionTypeEnum),
+  targetChatId: z.string().optional(),
+  enabled: z.boolean(),
+  lastRunAt: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type NotificationConfig = z.infer<typeof notificationConfigSchema>;
+export const insertNotificationConfigSchema = notificationConfigSchema.omit({ id: true, lastRunAt: true, createdAt: true, updatedAt: true });
+export type InsertNotificationConfig = z.infer<typeof insertNotificationConfigSchema>;
