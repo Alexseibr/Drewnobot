@@ -47,7 +47,12 @@ Five user roles with hierarchical permissions:
   - Three-tab view: "Мои" (my tasks), "Команде" (delegated tasks), "Готово" (completed)
   - Delegated tasks show assignee name and acceptance status (acceptedAt timestamp)
   - API: `/api/tasks/overview` returns myTasks, delegatedTasks, unassignedPool
-- **Cash Management**: Shift-based cash tracking with transactions and incasation
+- **Cash Management**: Dual cash box system for admin and owner
+  - Transaction types: `cash_in` (income), `expense` (business expenses), `transfer_to_owner` (incasation), `transfer_to_admin` (owner gives to admin)
+  - Incasation is NOT an expense - it's a transfer from admin cash box to owner cash box
+  - Analytics exclude transfer transactions - only count actual business income and expenses
+  - UI shows transfers with distinct styling (primary color, "перевод" label)
+  - API: `/api/cash/shift/current`, `/api/cash/transactions`, `/api/cash/incasation`, `/api/owner/transfer-to-admin`
 - **Quad Bookings**: Dynamic slot-based ATV booking system with:
   - Short route (30 min) and Long route (60 min)
   - Dynamic pricing managed by instructors (base prices + date-specific overrides for holidays/events)

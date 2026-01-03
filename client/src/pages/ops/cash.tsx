@@ -190,56 +190,76 @@ export default function CashPage() {
               </div>
             ) : transactions.length > 0 ? (
               <div className="space-y-2">
-                {transactions.map((tx) => (
-                  <Card key={tx.id} className="hover-elevate">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "rounded-full p-2",
-                            tx.type === "cash_in" 
-                              ? "bg-status-confirmed/10" 
-                              : tx.type === "expense"
-                              ? "bg-destructive/10"
-                              : "bg-muted"
-                          )}>
-                            {tx.type === "cash_in" ? (
-                              <ArrowDownLeft className="h-4 w-4 text-status-confirmed" />
-                            ) : tx.type === "expense" ? (
-                              <ArrowUpRight className="h-4 w-4 text-destructive" />
-                            ) : (
-                              <LockKeyhole className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">
-                              {tx.type === "cash_in" 
-                                ? INCOME_SOURCES.find(s => s.value === tx.category)?.label || "Приход"
-                                : tx.type === "expense" 
-                                ? EXPENSE_CATEGORIES.find(c => c.value === tx.category)?.label || "Расход" 
-                                : "Инкассация"}
-                            </p>
-                            {tx.comment && (
-                              <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                                {tx.comment}
+                {transactions.map((tx) => {
+                  const isTransfer = tx.type === "transfer_to_owner" || tx.type === "transfer_to_admin";
+                  const isIncome = tx.type === "cash_in";
+                  const isExpense = tx.type === "expense" || tx.type === "cash_out";
+                  
+                  return (
+                    <Card key={tx.id} className="hover-elevate">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "rounded-full p-2",
+                              isIncome 
+                                ? "bg-status-confirmed/10" 
+                                : isExpense
+                                ? "bg-destructive/10"
+                                : isTransfer
+                                ? "bg-primary/10"
+                                : "bg-muted"
+                            )}>
+                              {isIncome ? (
+                                <ArrowDownLeft className="h-4 w-4 text-status-confirmed" />
+                              ) : isExpense ? (
+                                <ArrowUpRight className="h-4 w-4 text-destructive" />
+                              ) : isTransfer ? (
+                                <LockKeyhole className="h-4 w-4 text-primary" />
+                              ) : (
+                                <LockKeyhole className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">
+                                {isIncome 
+                                  ? INCOME_SOURCES.find(s => s.value === tx.category)?.label || "Приход"
+                                  : isExpense 
+                                  ? EXPENSE_CATEGORIES.find(c => c.value === tx.category)?.label || "Расход" 
+                                  : tx.type === "transfer_to_owner"
+                                  ? "Инкассация"
+                                  : tx.type === "transfer_to_admin"
+                                  ? "Перевод от собственника"
+                                  : "Другое"}
                               </p>
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(tx.createdAt), "d MMM, HH:mm", { locale: ru })}
+                              {tx.comment && (
+                                <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                  {tx.comment}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(tx.createdAt), "d MMM, HH:mm", { locale: ru })}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={cn(
+                              "font-mono font-medium",
+                              isIncome ? "text-status-confirmed" : 
+                              isExpense ? "text-destructive" : 
+                              isTransfer ? "text-primary" : ""
+                            )}>
+                              {isIncome || tx.type === "transfer_to_admin" ? "+" : "-"}{tx.amount.toFixed(2)}
                             </p>
+                            {isTransfer && (
+                              <p className="text-xs text-muted-foreground">перевод</p>
+                            )}
                           </div>
                         </div>
-                        <p className={cn(
-                          "font-mono font-medium",
-                          tx.type === "cash_in" ? "text-status-confirmed" : 
-                          tx.type === "expense" ? "text-destructive" : ""
-                        )}>
-                          {tx.type === "cash_in" ? "+" : "-"}{tx.amount.toFixed(2)}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <Card>

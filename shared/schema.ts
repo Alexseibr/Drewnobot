@@ -63,7 +63,7 @@ export type MeterReadingsMeta = z.infer<typeof meterReadingsMetaSchema>;
 export const TaskStatus = z.enum(["open", "done"]);
 export type TaskStatus = z.infer<typeof TaskStatus>;
 
-export const CashTransactionType = z.enum(["cash_in", "cash_out", "expense"]);
+export const CashTransactionType = z.enum(["cash_in", "cash_out", "expense", "transfer_to_owner", "transfer_to_admin"]);
 export type CashTransactionType = z.infer<typeof CashTransactionType>;
 
 export const ExpenseCategory = z.enum(["food_staff", "supplies", "salary", "contractor", "other"]);
@@ -351,6 +351,29 @@ export type Incasation = z.infer<typeof incasationSchema>;
 
 export const insertIncasationSchema = incasationSchema.omit({ id: true, createdAt: true });
 export type InsertIncasation = z.infer<typeof insertIncasationSchema>;
+
+// ============ OWNER CASH TRANSACTION ============
+export const ownerCashTransactionSchema = z.object({
+  id: z.string(),
+  type: z.enum(["transfer_in", "transfer_out", "expense", "other"]), // transfer_in from admin, transfer_out to admin
+  amount: z.number(),
+  comment: z.string().optional(),
+  relatedAdminTxId: z.string().optional(), // Links to admin's cash_transactions
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type OwnerCashTransaction = z.infer<typeof ownerCashTransactionSchema>;
+
+export const insertOwnerCashTransactionSchema = ownerCashTransactionSchema.omit({ id: true, createdAt: true });
+export type InsertOwnerCashTransaction = z.infer<typeof insertOwnerCashTransactionSchema>;
+
+// ============ OWNER CASH BOX ============
+export const ownerCashBoxSchema = z.object({
+  id: z.string(),
+  balance: z.number(),
+  updatedAt: z.string(),
+});
+export type OwnerCashBox = z.infer<typeof ownerCashBoxSchema>;
 
 // ============ WORK LOG ============
 export const workLogSchema = z.object({
@@ -1224,6 +1247,24 @@ export const incasationsTable = pgTable("incasations", {
   periodEnd: text("period_end").notNull(),
   summary: jsonb("summary").notNull(),
   shiftsIncluded: jsonb("shifts_included").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ OWNER CASH BOX TABLE ============
+export const ownerCashBoxTable = pgTable("owner_cash_box", {
+  id: text("id").primaryKey(),
+  balance: real("balance").notNull().default(0),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// ============ OWNER CASH TRANSACTIONS TABLE ============
+export const ownerCashTransactionsTable = pgTable("owner_cash_transactions", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(), // transfer_in (from admin), transfer_out (to admin), expense, other
+  amount: real("amount").notNull(),
+  comment: text("comment"),
+  relatedAdminTxId: text("related_admin_tx_id"), // Links to admin's cash_transactions
+  createdBy: text("created_by").notNull(),
   createdAt: text("created_at").notNull(),
 });
 

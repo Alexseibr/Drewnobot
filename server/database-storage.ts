@@ -1014,23 +1014,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCashTransactionsSinceLastIncasation(): Promise<CashTransaction[]> {
-    // Find last incasation cash_out transaction as boundary
-    const lastIncasationTx = await db.select().from(cashTransactionsTable)
-      .where(and(
-        eq(cashTransactionsTable.type, "cash_out"),
-        eq(cashTransactionsTable.comment, "Инкассация")
-      ))
-      .orderBy(desc(cashTransactionsTable.createdAt))
-      .limit(1);
+    // Find last incasation (transfer_to_owner) transaction as boundary
+    // Also check for legacy "cash_out" with incasation-related comments for backwards compatibility
+    const allTransactions = await db.select().from(cashTransactionsTable)
+      .orderBy(desc(cashTransactionsTable.createdAt));
     
-    if (lastIncasationTx.length === 0) {
+    // Find the last incasation transaction using a more flexible comment check
+    const lastIncasationTx = allTransactions.find(tx => 
+      tx.type === "transfer_to_owner" ||
+      (tx.type === "cash_out" && (
+        tx.comment?.includes("Инкассация") ||
+        tx.comment?.includes("инкассация") ||
+        tx.comment?.includes("перевод собственнику")
+      ))
+    );
+    
+    if (!lastIncasationTx) {
       // No incasation ever done - return all transactions
       return this.getCashTransactions();
     }
     
     // Get transactions created AFTER the last incasation (strict >)
     const rows = await db.select().from(cashTransactionsTable)
-      .where(gt(cashTransactionsTable.createdAt, lastIncasationTx[0].createdAt))
+      .where(gt(cashTransactionsTable.createdAt, lastIncasationTx.createdAt))
       .orderBy(desc(cashTransactionsTable.createdAt));
     return rows.map(r => this.mapRowToCashTransaction(r));
   }
@@ -1201,10 +1207,30 @@ export class DatabaseStorage implements IStorage {
         dailyData[dateKey] = { cashIn: 0, expenses: 0 };
       }
       
+      // Skip transfer transactions - they are NOT income or expenses
+      const isTransfer = tx.type === "transfer_to_owner" || tx.type === "transfer_to_admin";
+      // Also check for legacy incasation records (cash_out with any incasation-related comment)
+      const isLegacyIncasation = tx.type === "cash_out" && (
+        tx.comment?.includes("Инкассация") || 
+        tx.comment?.includes("инкассация") ||
+        tx.comment?.includes("перевод собственнику")
+      );
+      
+      if (isTransfer || isLegacyIncasation) {
+        // Skip transfers from analytics - they don't affect income/expense totals
+        // But transfer_to_admin adds to admin cash, which we track separately
+        if (tx.type === "transfer_to_admin") {
+          cashRevenue += tx.amount;
+          dailyData[dateKey].cashIn += tx.amount;
+        }
+        continue;
+      }
+      
       if (tx.type === "cash_in") {
         cashRevenue += tx.amount;
         dailyData[dateKey].cashIn += tx.amount;
       } else if (tx.type === "cash_out" || tx.type === "expense") {
+        // Real business expenses only
         totalExpenses += tx.amount;
         dailyData[dateKey].expenses += tx.amount;
         const cat = tx.category || "Прочее";
@@ -1565,11 +1591,23 @@ export class DatabaseStorage implements IStorage {
     const transactions = await this.getCashTransactionsByPeriod(period);
     
     // Calculate income (cash_in) and expenses (cash_out) from transactions
+    // EXCLUDE transfer transactions - they are internal cash movements, not income/expenses
+    const isTransferTx = (t: CashTransaction) => 
+      t.type === "transfer_to_owner" || 
+      t.type === "transfer_to_admin" ||
+      (t.type === "cash_out" && (
+        t.comment?.includes("Инкассация") || 
+        t.comment?.includes("инкассация") ||
+        t.comment?.includes("перевод собственнику")
+      )); // Legacy incasation records with any related comment
+    
     const cashIncome = transactions
-      .filter(t => t.type === "cash_in")
+      .filter(t => t.type === "cash_in" || t.type === "transfer_to_admin")
+      .filter(t => !isTransferTx(t) || t.type === "transfer_to_admin") // transfer_to_admin adds to admin cash
       .reduce((sum, t) => sum + t.amount, 0);
     const cashExpenses = transactions
-      .filter(t => t.type === "cash_out")
+      .filter(t => t.type === "cash_out" || t.type === "expense")
+      .filter(t => !isTransferTx(t)) // Exclude all transfers including legacy
       .reduce((sum, t) => sum + t.amount, 0);
     
     // Separate by payment method from transaction comments/categories

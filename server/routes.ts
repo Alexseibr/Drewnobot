@@ -1612,13 +1612,14 @@ export async function registerRoutes(
       
       const user = (req as any).user;
       
-      // Record cash_out transaction for incasation amount (if positive)
+      // Record transfer_to_owner transaction for incasation amount (if positive)
+      // This is NOT an expense - it's a transfer from admin cash box to owner cash box
       if (balance > 0) {
         await storage.createCashTransaction({
           shiftId: currentShift.id,
-          type: "cash_out",
+          type: "transfer_to_owner",
           amount: balance,
-          comment: "Инкассация",
+          comment: "Инкассация - перевод собственнику",
           createdBy: user?.id || "owner",
         });
       }
@@ -1648,13 +1649,14 @@ export async function registerRoutes(
       // Ensure permanent shift exists
       const currentShift = await ensurePermanentShift();
       
-      // Record cash_out for incasation (if there's cash to collect)
+      // Record transfer_to_owner for incasation (if there's cash to collect)
+      // This is NOT an expense - it's a transfer from admin cash box to owner cash box
       if (preview.cashOnHand > 0) {
         await storage.createCashTransaction({
           shiftId: currentShift.id,
-          type: "cash_out",
+          type: "transfer_to_owner",
           amount: preview.cashOnHand,
-          comment: "Инкассация",
+          comment: "Инкассация - перевод собственнику",
           createdBy: user.id,
         });
       }
@@ -1688,6 +1690,34 @@ export async function registerRoutes(
       res.json(incasations);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch incasations" });
+    }
+  });
+
+  // Owner-to-admin transfer (owner gives money to admin, e.g. for salary payments)
+  app.post("/api/owner/transfer-to-admin", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { amount, comment } = req.body;
+      const user = (req as any).user;
+      
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ error: "Invalid amount" });
+      }
+      
+      const currentShift = await ensurePermanentShift();
+      
+      // Create transfer_to_admin transaction - this adds money to admin cash box
+      const transaction = await storage.createCashTransaction({
+        shiftId: currentShift.id,
+        type: "transfer_to_admin",
+        amount,
+        comment: comment || "Перевод от собственника",
+        createdBy: user.id,
+      });
+      
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error creating transfer_to_admin:", error);
+      res.status(500).json({ error: "Failed to create transfer" });
     }
   });
 
