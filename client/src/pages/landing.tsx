@@ -111,7 +111,7 @@ export default function LandingPage() {
             <div className="pt-8 border-t space-y-4">
               <h2 className="text-lg font-semibold">Панель управления</h2>
               
-              {hasRole("ADMIN", "OWNER") && (
+              {hasRole("ADMIN", "OWNER", "SUPER_ADMIN") && (
                 <Card 
                   className="hover-elevate cursor-pointer"
                   onClick={() => setLocation("/ops")}
@@ -157,7 +157,7 @@ export default function LandingPage() {
                 </Card>
               )}
 
-              {hasRole("OWNER") && (
+              {hasRole("OWNER", "SUPER_ADMIN") && (
                 <Card 
                   className="hover-elevate cursor-pointer"
                   onClick={() => setLocation("/owner/analytics")}
