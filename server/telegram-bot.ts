@@ -445,7 +445,8 @@ export async function sendShiftReminder() {
     }
     
     const message = `<b>Напоминание: Открытие смены</b>\n\nСмена ещё не открыта. Не забудьте открыть кассу!`;
-    await notifyAdmins(message, { deepLink: "/ops/cash" });
+    // Send to ADMIN and OWNER only, not SUPER_ADMIN
+    await notifyOpsAdmins(message, { deepLink: "/ops/cash" });
     
     console.log("[Telegram Bot] Sent shift reminder");
   } catch (error) {
@@ -485,7 +486,8 @@ export async function sendBathBookingsSummary() {
       message += `${statusIcon} ${booking.startTime}-${booking.endTime} ${booking.bathCode}${servicesStr}\n`;
     }
     
-    await notifyAdmins(message, { deepLink: "/ops/spa" });
+    // Send to ADMIN and OWNER only, not SUPER_ADMIN
+    await notifyOpsAdmins(message, { deepLink: "/ops/spa" });
     
     console.log("[Telegram Bot] Sent bath bookings summary");
   } catch (error) {
@@ -509,7 +511,8 @@ export async function sendClimateControlReminder(action: "on" | "off") {
     let message = `<b>${actionEmoji} ${actionText}</b>\n\n`;
     message += `Сегодня есть бронирования бань.\nПроверьте климат-контроль!`;
     
-    await notifyAdmins(message, { deepLink: "/ops/tasks" });
+    // Send to ADMIN and OWNER only, not SUPER_ADMIN
+    await notifyOpsAdmins(message, { deepLink: "/ops/tasks" });
     
     console.log(`[Telegram Bot] Sent climate control reminder (${action})`);
   } catch (error) {
@@ -531,8 +534,8 @@ export async function sendWeatherAlert(alertType: "frost" | "storm", details: st
       message += details.join("\n");
     }
     
-    // Send to owners and admins
-    await notifyAdmins(message, { deepLink: "/ops/tasks" });
+    // Send to ADMIN and OWNER only, not SUPER_ADMIN
+    await notifyOpsAdmins(message, { deepLink: "/ops/tasks" });
     
     console.log(`[Telegram Bot] Sent weather alert (${alertType})`);
   } catch (error) {
@@ -548,7 +551,8 @@ export async function sendLaundryCheckInReminder() {
     message += `Не забудьте внести данные о выданном белье для сегодняшних заселений.\n\n`;
     message += `Откройте раздел "Прачечная" -> "Заселить"`;
     
-    await notifyAdmins(message, { deepLink: "/ops/laundry" });
+    // Send to ADMIN and OWNER only, not SUPER_ADMIN
+    await notifyOpsAdmins(message, { deepLink: "/ops/laundry" });
     
     console.log("[Telegram Bot] Sent laundry check-in reminder");
   } catch (error) {
@@ -569,7 +573,8 @@ export async function sendThermostatPrompt(housesWithoutPlans: number[]) {
     message += `В 12:05 начнётся автоматическая установка базовых температур.\n`;
     message += `Откройте раздел "Термостаты" для настройки.`;
     
-    await notifyAdmins(message, { deepLink: "/owner/thermostats" });
+    // Send to ADMIN and OWNER only, not SUPER_ADMIN
+    await notifyOpsAdmins(message, { deepLink: "/owner/thermostats" });
     
     console.log("[Telegram Bot] Sent thermostat prompt for houses:", housesWithoutPlans);
   } catch (error) {
@@ -588,11 +593,40 @@ export async function sendThermostatAlert(houseId: number, failureType: "base_te
     message += `Проверьте устройство и интернет-соединение.\n\n`;
     message += `Возможно, потребуется ручная настройка.`;
     
-    await notifyAdmins(message, { deepLink: "/owner/thermostats" });
+    // Send to ADMIN and OWNER only, not SUPER_ADMIN
+    await notifyOpsAdmins(message, { deepLink: "/owner/thermostats" });
     
     console.log(`[Telegram Bot] Sent thermostat failure alert for house ${houseId}`);
   } catch (error) {
     console.error("[Telegram Bot] Failed to send thermostat alert:", error);
+  }
+}
+
+// Financial transaction notification - for SUPER_ADMIN only
+export async function sendFinancialNotification(transaction: {
+  type: "income" | "expense";
+  amount: number;
+  comment?: string;
+  category?: string;
+}) {
+  try {
+    const typeLabel = transaction.type === "income" ? "ПРИХОД" : "РАСХОД";
+    const sign = transaction.type === "income" ? "+" : "-";
+    
+    let message = `<b>Касса: ${typeLabel}</b>\n\n`;
+    message += `Сумма: ${sign}${transaction.amount.toFixed(2)} BYN\n`;
+    if (transaction.category) {
+      message += `Категория: ${transaction.category}\n`;
+    }
+    if (transaction.comment) {
+      message += `Комментарий: ${transaction.comment}`;
+    }
+    
+    await notifySuperAdmin(message, { deepLink: "/ops/cash" });
+    
+    console.log(`[Telegram Bot] Sent financial notification: ${typeLabel} ${transaction.amount}`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send financial notification:", error);
   }
 }
 

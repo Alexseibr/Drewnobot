@@ -5,7 +5,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole, SpaBooking, GuestRating, insertUnitInfoSchema } from "@shared/schema";
 import { validateInitData, generateSessionToken, getSessionExpiresAt } from "./telegram-auth";
-import { handleTelegramUpdate, setupTelegramWebhook, sendTaskNotification } from "./telegram-bot";
+import { handleTelegramUpdate, setupTelegramWebhook, sendTaskNotification, sendFinancialNotification } from "./telegram-bot";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -1527,6 +1527,17 @@ export async function registerRoutes(
         shiftId: req.body.shiftId || shift.id,
         createdBy: req.body.createdBy || "admin",
       });
+      
+      // Send financial notification to SUPER_ADMIN
+      if (tx.type === "cash_in" || tx.type === "expense") {
+        sendFinancialNotification({
+          type: tx.type === "cash_in" ? "income" : "expense",
+          amount: tx.amount,
+          comment: tx.comment || undefined,
+          category: tx.category || undefined,
+        }).catch(err => console.error("[Cash] Failed to send notification:", err));
+      }
+      
       res.json(tx);
     } catch (error) {
       res.status(500).json({ error: "Failed to create transaction" });
