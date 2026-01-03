@@ -1,0 +1,90 @@
+✓ 3262 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CWixxKYk.css            97.72 kB │ gzip:  20.10 kB
+../dist/public/assets/index-CHg1RPQR.js          1,407.98 kB │ gzip: 384.07 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 21.46s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 731ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Перезапустить
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬───────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name          │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ drewno-ops    │ default     │ N/A     │ fork    │ 954256   │ 0s     │ 6193 │ online    │ 0%       │ 18.5mb   │ root     │ disabled │
+└────┴───────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |   detail: undefined,
+0|drewno-o |   hint: 'Perhaps you meant to reference the column "tasks.created_at".',
+0|drewno-o |   position: '105',
+0|drewno-o |   internalPosition: undefined,
+0|drewno-o |   internalQuery: undefined,
+0|drewno-o |   where: undefined,
+0|drewno-o |   schema: undefined,
+0|drewno-o |   table: undefined,
+0|drewno-o |   column: undefined,
+0|drewno-o |   dataType: undefined,
+0|drewno-o |   constraint: undefined,
+0|drewno-o |   file: 'parse_relation.c',
+0|drewno-o |   line: '3647',
+0|drewno-o |   routine: 'errorMissingColumn'
+0|drewno-o | }
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 9:59:30 PM [scheduler]   - Weekly tasks: 06:00 Monday
+0|drewno-o | 9:59:30 PM [scheduler]   - Monthly tasks: 06:00 1st of month
+0|drewno-o | 9:59:30 PM [scheduler]   - Weather check: 18:00 daily
+0|drewno-o | 9:59:30 PM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 9:59:30 PM [scheduler]   - Notifications:
+0|drewno-o | 9:59:30 PM [scheduler]     - Shift reminder: 08:30 daily
+0|drewno-o | 9:59:30 PM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 9:59:30 PM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 9:59:30 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 9:59:30 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 9:59:30 PM [scheduler]   - Thermostat:
+0|drewno-o | 9:59:30 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 9:59:30 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 9:59:30 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 9:59:30 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | [Scheduler] Failed to check scheduled task notifications: error: column "accepted_at" does not exist
+0|drewno-ops  |     at /var/www/drewno-ops/dist/index.cjs:64:13326
+0|drewno-ops  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-ops  |     at async /var/www/drewno-ops/dist/index.cjs:70:37918
+0|drewno-ops  |     at async Ou.getTasks (/var/www/drewno-ops/dist/index.cjs:70:94846)
+0|drewno-ops  |     at async w3 (/var/www/drewno-ops/dist/index.cjs:157:100421)
+0|drewno-ops  |     at async qt.default.schedule.timezone (/var/www/drewno-ops/dist/index.cjs:157:105103)
+0|drewno-ops  |     at async Timeout._onTimeout (/var/www/drewno-ops/node_modules/node-cron/dist/cjs/scheduler/runner.js:70:44) {
+0|drewno-ops  |   length: 175,
+0|drewno-ops  |   severity: 'ERROR',
+0|drewno-ops  |   code: '42703',
+0|drewno-ops  |   detail: undefined,
+0|drewno-ops  |   hint: 'Perhaps you meant to reference the column "tasks.created_at".',
+0|drewno-ops  |   position: '105',
+0|drewno-ops  |   internalPosition: undefined,
+0|drewno-ops  |   internalQuery: undefined,
+0|drewno-ops  |   where: undefined,
+0|drewno-ops  |   schema: undefined,
+0|drewno-ops  |   table: undefined,
+0|drewno-ops  |   column: undefined,
+0|drewno-ops  |   dataType: undefined,
+0|drewno-ops  |   constraint: undefined,
+0|drewno-ops  |   file: 'parse_relation.c',
+0|drewno-ops  |   line: '3647',
+0|drewno-ops  |   routine: 'errorMissingColumn'
+0|drewno-ops  | }
