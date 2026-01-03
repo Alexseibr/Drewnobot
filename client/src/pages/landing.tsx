@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth-context";
+import { LocationMap } from "@/components/location-map";
 import drewnoLogo from "@assets/drewno-logo.webp";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -103,6 +104,8 @@ export default function LandingPage() {
             </Card>
 
           </div>
+
+          <LocationMap data-testid="map-location" />
 
           {isStaff && (
             <div className="pt-8 border-t space-y-4">
