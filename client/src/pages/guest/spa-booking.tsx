@@ -58,11 +58,11 @@ const isSlotAvailableForToday = (timeSlot: string, minHoursAdvance: number): boo
   return !isBefore(slotTime, minBookingTime);
 };
 
-const BOOKING_TYPES: { value: BookingType; label: string; description: string; icon: typeof Bath }[] = [
-  { value: "bath_only", label: "Только СПА", description: "3 часа, до 6 гостей", icon: Bath },
+const BOOKING_TYPES: { value: BookingType; label: string; description: string; icon: typeof Flame }[] = [
+  { value: "bath_only", label: "Только СПА", description: "3 часа, до 6 гостей", icon: Flame },
   { value: "terrace_only", label: "Только терраса", description: "3 часа, до 12 гостей (лето)", icon: Sun },
   { value: "tub_only", label: "Только купель", description: "3 часа, 4-6 гостей", icon: Droplets },
-  { value: "bath_with_tub", label: "СПА + Купель", description: "3 часа, 6-10 гостей", icon: Bath },
+  { value: "bath_with_tub", label: "СПА + Купель", description: "3 часа, 6-10 гостей", icon: Flame },
 ];
 
 const getMaxGuests = (bookingType: BookingType, spaResource: string): number => {

@@ -6,7 +6,7 @@ import {
   ClipboardList, 
   BarChart3,
   Bike,
-  Bath,
+  Flame,
   Settings,
   DollarSign,
   Wrench,
@@ -23,7 +23,7 @@ interface NavItem {
 }
 
 const guestNavItems: NavItem[] = [
-  { path: "/guest/spa", label: "СПА", icon: Bath },
+  { path: "/guest/spa", label: "СПА", icon: Flame },
   { path: "/guest/quads", label: "Квадро", icon: Bike },
 ];
 
