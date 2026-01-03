@@ -699,6 +699,8 @@ export const analyticsSummarySchema = z.object({
   quadRevenue: z.number(),
   cashTotal: z.number(),
   eripTotal: z.number(),
+  income: z.number().optional(), // Total cash_in transactions
+  expenses: z.number().optional(), // Total cash_out transactions
   cleaningsByTariff: z.record(z.string(), z.number()),
   tubSmallCount: z.number(),
   tubSmallRevenue: z.number(),

@@ -1561,17 +1561,29 @@ export class DatabaseStorage implements IStorage {
       return wDate >= startDate && wDate <= endDate;
     });
     
+    // Get cash transactions for the period - this is the actual source of truth
+    const transactions = await this.getCashTransactionsByPeriod(period);
+    
+    // Calculate income (cash_in) and expenses (cash_out) from transactions
+    const cashIncome = transactions
+      .filter(t => t.type === "cash_in")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const cashExpenses = transactions
+      .filter(t => t.type === "cash_out")
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    // Separate by payment method from transaction comments/categories
+    const eripTransactions = transactions.filter(t => 
+      t.comment?.toLowerCase().includes('ерип') || 
+      t.comment?.toLowerCase().includes('erip') ||
+      t.category === 'erip'
+    );
+    const eripTotal = eripTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const cashTotal = cashIncome - eripTotal; // Cash is income minus ERIP
+    
     const cottageRevenue = filteredCottage.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
     const bathRevenue = filteredBath.reduce((sum, b) => sum + (b.pricing?.total || 0), 0);
     const quadRevenue = filteredQuad.reduce((sum, b) => sum + (b.pricing?.total || 0), 0);
-    
-    const cashTotal = filteredCottage.reduce((s, b) => s + (b.payments?.cash || 0), 0)
-      + filteredBath.reduce((s, b) => s + (b.payments?.cashPaid || 0), 0)
-      + filteredQuad.reduce((s, b) => s + (b.payments?.cashPaid || 0), 0);
-    
-    const eripTotal = filteredCottage.reduce((s, b) => s + (b.payments?.erip || 0), 0)
-      + filteredBath.reduce((s, b) => s + (b.payments?.eripPaid || 0), 0)
-      + filteredQuad.reduce((s, b) => s + (b.payments?.eripPaid || 0), 0);
     
     const tubSmallCount = filteredBath.filter(b => b.options?.tub === "small").length;
     const tubLargeCount = filteredBath.filter(b => b.options?.tub === "large").length;
@@ -1617,6 +1629,8 @@ export class DatabaseStorage implements IStorage {
       quadRevenue,
       cashTotal,
       eripTotal,
+      income: cashIncome,
+      expenses: cashExpenses,
       cleaningsByTariff: {},
       tubSmallCount,
       tubSmallRevenue: tubSmallCount * tubSmallPrice,

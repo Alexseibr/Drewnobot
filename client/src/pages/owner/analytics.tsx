@@ -21,7 +21,8 @@ import {
   User,
   Building2,
   Calendar,
-  CalendarDays
+  CalendarDays,
+  ChevronDown
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -31,8 +32,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatsCardSkeleton } from "@/components/ui/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import type { AnalyticsSummary, CashTransaction } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
+
+interface PeriodData {
+  periodStart: string;
+  periodEnd: string;
+  periodLabel: string;
+  income: number;
+  expenses: number;
+  cashTotal: number;
+  eripTotal: number;
+  cottageRevenue: number;
+  bathRevenue: number;
+  quadRevenue: number;
+}
 
 interface PeriodicSummary {
   lastWeek: AnalyticsSummary & { periodLabel: string };
@@ -59,6 +76,10 @@ export default function OwnerAnalyticsPage() {
     },
   });
 
+  // State for sheet views
+  const [showWeeksHistory, setShowWeeksHistory] = useState(false);
+  const [showMonthsHistory, setShowMonthsHistory] = useState(false);
+
   // Fetch periodic summaries (last week + current month)
   const { data: periodicSummary } = useQuery<PeriodicSummary>({
     queryKey: ["/api/owner/analytics/periodic"],
@@ -69,6 +90,34 @@ export default function OwnerAnalyticsPage() {
       if (!res.ok) throw new Error("Failed to fetch periodic analytics");
       return res.json();
     },
+  });
+
+  // Fetch historical weeks data
+  const { data: historicalWeeks, isLoading: weeksLoading } = useQuery<PeriodData[]>({
+    queryKey: ["/api/owner/analytics/weeks"],
+    queryFn: async () => {
+      const res = await fetch("/api/owner/analytics/weeks?limit=12", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to fetch weekly analytics");
+      return res.json();
+    },
+    enabled: showWeeksHistory && (user?.role === "OWNER" || user?.role === "SUPER_ADMIN") && !!token,
+  });
+
+  // Fetch historical months data
+  const { data: historicalMonths, isLoading: monthsLoading } = useQuery<PeriodData[]>({
+    queryKey: ["/api/owner/analytics/months"],
+    queryFn: async () => {
+      const res = await fetch("/api/owner/analytics/months?limit=12", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to fetch monthly analytics");
+      return res.json();
+    },
+    enabled: showMonthsHistory && (user?.role === "OWNER" || user?.role === "SUPER_ADMIN") && !!token,
   });
 
   // Fetch transactions for super admin
@@ -180,50 +229,210 @@ export default function OwnerAnalyticsPage() {
             </Button>
           </div>
 
-          {/* Periodic Summaries: Last Week and Current Month */}
+          {/* Periodic Summaries: Last Week and Current Month - Clickable for history */}
           {periodicSummary && (
             <div className="grid grid-cols-2 gap-3">
-              <Card data-testid="card-last-week-summary" className="bg-muted/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Прошлая неделя</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {periodicSummary.lastWeek.periodLabel}
-                  </p>
-                  <p className="text-xl font-bold font-mono" data-testid="text-last-week-revenue">
-                    {(periodicSummary.lastWeek.cottageRevenue + periodicSummary.lastWeek.bathRevenue).toFixed(0)}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">BYN</span>
-                  </p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    <span className="text-status-confirmed">нал: {periodicSummary.lastWeek.cashTotal.toFixed(0)}</span>
-                    <span className="mx-1">/</span>
-                    <span className="text-status-awaiting">ерип: {periodicSummary.lastWeek.eripTotal.toFixed(0)}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <Sheet open={showWeeksHistory} onOpenChange={setShowWeeksHistory}>
+                <SheetTrigger asChild>
+                  <Card 
+                    data-testid="card-last-week-summary" 
+                    className="bg-muted/50 cursor-pointer hover-elevate"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Прошлая неделя</span>
+                        </div>
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {periodicSummary.lastWeek.periodLabel}
+                      </p>
+                      <p className="text-xl font-bold font-mono" data-testid="text-last-week-revenue">
+                        {(periodicSummary.lastWeek.cottageRevenue + periodicSummary.lastWeek.bathRevenue).toFixed(0)}
+                        <span className="text-sm font-normal text-muted-foreground ml-1">BYN</span>
+                      </p>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        <span className="text-status-confirmed">нал: {periodicSummary.lastWeek.cashTotal.toFixed(0)}</span>
+                        <span className="mx-1">/</span>
+                        <span className="text-status-awaiting">ерип: {periodicSummary.lastWeek.eripTotal.toFixed(0)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[85vh]">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <CalendarDays className="h-5 w-5" />
+                      История по неделям
+                    </SheetTitle>
+                  </SheetHeader>
+                  <ScrollArea className="h-full mt-4">
+                    {weeksLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                      </div>
+                    ) : historicalWeeks && historicalWeeks.length > 0 ? (
+                      <div className="space-y-4 pr-4">
+                        {/* Income/Expense Chart */}
+                        <div className="h-48 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={[...historicalWeeks].reverse().slice(-8)}>
+                              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                              <XAxis 
+                                dataKey="periodLabel" 
+                                tick={{ fontSize: 10 }}
+                                tickFormatter={(v) => v.split(' ')[0]}
+                              />
+                              <YAxis tick={{ fontSize: 10 }} />
+                              <Tooltip 
+                                formatter={(value: number) => [`${value.toFixed(0)} BYN`]}
+                                labelFormatter={(label) => `Неделя: ${label}`}
+                              />
+                              <Legend />
+                              <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" />
+                              <Bar dataKey="expenses" name="Расходы" fill="hsl(var(--chart-1))" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        
+                        {/* List of weeks */}
+                        <div className="space-y-2">
+                          {historicalWeeks.map((week, idx) => (
+                            <Card key={idx} className="bg-muted/30">
+                              <CardContent className="p-3">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="text-sm font-medium">{week.periodLabel}</p>
+                                    <div className="text-xs text-muted-foreground mt-1 flex gap-2">
+                                      <span className="text-status-confirmed">+{week.income.toFixed(0)}</span>
+                                      <span className="text-destructive">-{week.expenses.toFixed(0)}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-lg font-bold font-mono">
+                                      {(week.income - week.expenses).toFixed(0)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      нал: {week.cashTotal.toFixed(0)} / ерип: {week.eripTotal.toFixed(0)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center text-muted-foreground py-8">
+                        Нет данных за указанный период
+                      </div>
+                    )}
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
               
-              <Card data-testid="card-current-month-summary" className="bg-muted/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Текущий месяц</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1 capitalize">
-                    {periodicSummary.currentMonth.periodLabel}
-                  </p>
-                  <p className="text-xl font-bold font-mono" data-testid="text-current-month-revenue">
-                    {(periodicSummary.currentMonth.cottageRevenue + periodicSummary.currentMonth.bathRevenue).toFixed(0)}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">BYN</span>
-                  </p>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    <span className="text-status-confirmed">нал: {periodicSummary.currentMonth.cashTotal.toFixed(0)}</span>
-                    <span className="mx-1">/</span>
-                    <span className="text-status-awaiting">ерип: {periodicSummary.currentMonth.eripTotal.toFixed(0)}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <Sheet open={showMonthsHistory} onOpenChange={setShowMonthsHistory}>
+                <SheetTrigger asChild>
+                  <Card 
+                    data-testid="card-current-month-summary" 
+                    className="bg-muted/50 cursor-pointer hover-elevate"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Текущий месяц</span>
+                        </div>
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1 capitalize">
+                        {periodicSummary.currentMonth.periodLabel}
+                      </p>
+                      <p className="text-xl font-bold font-mono" data-testid="text-current-month-revenue">
+                        {(periodicSummary.currentMonth.cottageRevenue + periodicSummary.currentMonth.bathRevenue).toFixed(0)}
+                        <span className="text-sm font-normal text-muted-foreground ml-1">BYN</span>
+                      </p>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        <span className="text-status-confirmed">нал: {periodicSummary.currentMonth.cashTotal.toFixed(0)}</span>
+                        <span className="mx-1">/</span>
+                        <span className="text-status-awaiting">ерип: {periodicSummary.currentMonth.eripTotal.toFixed(0)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[85vh]">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      История по месяцам
+                    </SheetTitle>
+                  </SheetHeader>
+                  <ScrollArea className="h-full mt-4">
+                    {monthsLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                      </div>
+                    ) : historicalMonths && historicalMonths.length > 0 ? (
+                      <div className="space-y-4 pr-4">
+                        {/* Income/Expense Chart */}
+                        <div className="h-48 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={[...historicalMonths].reverse().slice(-8)}>
+                              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                              <XAxis 
+                                dataKey="periodLabel" 
+                                tick={{ fontSize: 10 }}
+                                tickFormatter={(v) => v.split(' ')[0].slice(0, 3)}
+                              />
+                              <YAxis tick={{ fontSize: 10 }} />
+                              <Tooltip 
+                                formatter={(value: number) => [`${value.toFixed(0)} BYN`]}
+                                labelFormatter={(label) => `Месяц: ${label}`}
+                              />
+                              <Legend />
+                              <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" />
+                              <Bar dataKey="expenses" name="Расходы" fill="hsl(var(--chart-1))" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        
+                        {/* List of months */}
+                        <div className="space-y-2">
+                          {historicalMonths.map((month, idx) => (
+                            <Card key={idx} className="bg-muted/30">
+                              <CardContent className="p-3">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="text-sm font-medium capitalize">{month.periodLabel}</p>
+                                    <div className="text-xs text-muted-foreground mt-1 flex gap-2">
+                                      <span className="text-status-confirmed">+{month.income.toFixed(0)}</span>
+                                      <span className="text-destructive">-{month.expenses.toFixed(0)}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-lg font-bold font-mono">
+                                      {(month.income - month.expenses).toFixed(0)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      нал: {month.cashTotal.toFixed(0)} / ерип: {month.eripTotal.toFixed(0)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center text-muted-foreground py-8">
+                        Нет данных за указанный период
+                      </div>
+                    )}
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
             </div>
           )}
 

@@ -1776,6 +1776,111 @@ export async function registerRoutes(
     }
   });
 
+  // Get historical weeks for analytics
+  app.get("/api/owner/analytics/weeks", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 12;
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      // Find the Monday of the current week
+      const dayOfWeek = today.getDay();
+      const daysToCurrentMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const currentMonday = new Date(today);
+      currentMonday.setDate(today.getDate() - daysToCurrentMonday);
+      
+      const weeks: Array<{
+        periodStart: string;
+        periodEnd: string;
+        periodLabel: string;
+        income: number;
+        expenses: number;
+        cashTotal: number;
+        eripTotal: number;
+        cottageRevenue: number;
+        bathRevenue: number;
+        quadRevenue: number;
+      }> = [];
+      
+      // Go back 'limit' weeks, starting from last completed week
+      for (let i = 1; i <= limit; i++) {
+        const monday = new Date(currentMonday);
+        monday.setDate(currentMonday.getDate() - (i * 7));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        
+        const period = `week:${monday.toISOString().slice(0, 10)}`;
+        const summary = await storage.getAnalyticsSummary(period);
+        
+        weeks.push({
+          periodStart: monday.toISOString().slice(0, 10),
+          periodEnd: sunday.toISOString().slice(0, 10),
+          periodLabel: `${monday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`,
+          income: summary.income || 0,
+          expenses: summary.expenses || 0,
+          cashTotal: summary.cashTotal,
+          eripTotal: summary.eripTotal,
+          cottageRevenue: summary.cottageRevenue,
+          bathRevenue: summary.bathRevenue,
+          quadRevenue: summary.quadRevenue,
+        });
+      }
+      
+      res.json(weeks);
+    } catch (error) {
+      console.error("[Analytics] Weeks error:", error);
+      res.status(500).json({ error: "Failed to fetch weekly analytics" });
+    }
+  });
+
+  // Get historical months for analytics
+  app.get("/api/owner/analytics/months", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 12;
+      const now = new Date();
+      
+      const months: Array<{
+        periodStart: string;
+        periodEnd: string;
+        periodLabel: string;
+        income: number;
+        expenses: number;
+        cashTotal: number;
+        eripTotal: number;
+        cottageRevenue: number;
+        bathRevenue: number;
+        quadRevenue: number;
+      }> = [];
+      
+      // Go back 'limit' months, starting from current month
+      for (let i = 0; i < limit; i++) {
+        const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0);
+        
+        const period = `month:${targetDate.toISOString().slice(0, 7)}`;
+        const summary = await storage.getAnalyticsSummary(period);
+        
+        months.push({
+          periodStart: targetDate.toISOString().slice(0, 10),
+          periodEnd: monthEnd.toISOString().slice(0, 10),
+          periodLabel: targetDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }),
+          income: summary.income || 0,
+          expenses: summary.expenses || 0,
+          cashTotal: summary.cashTotal,
+          eripTotal: summary.eripTotal,
+          cottageRevenue: summary.cottageRevenue,
+          bathRevenue: summary.bathRevenue,
+          quadRevenue: summary.quadRevenue,
+        });
+      }
+      
+      res.json(months);
+    } catch (error) {
+      console.error("[Analytics] Months error:", error);
+      res.status(500).json({ error: "Failed to fetch monthly analytics" });
+    }
+  });
+
   // ============ SETTINGS ============
   app.get("/api/settings/site", async (req, res) => {
     try {
