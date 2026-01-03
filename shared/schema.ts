@@ -320,6 +320,7 @@ export const cashTransactionSchema = z.object({
   comment: z.string().optional(),
   createdAt: z.string(),
   createdBy: z.string(),
+  createdByName: z.string().optional(),
   location: locationSchema.optional(),
 });
 export type CashTransaction = z.infer<typeof cashTransactionSchema>;
@@ -671,6 +672,22 @@ export const siteSettingsSchema = z.object({
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
 // ============ ANALYTICS SUMMARY ============
+export const cottageAnalyticsSchema = z.object({
+  cottageCode: z.string(),
+  bookingsCount: z.number(),
+  revenue: z.number(),
+  cashTotal: z.number(),
+  eripTotal: z.number(),
+});
+export type CottageAnalytics = z.infer<typeof cottageAnalyticsSchema>;
+
+export const serviceAnalyticsSchema = z.object({
+  serviceType: z.string(),
+  count: z.number(),
+  revenue: z.number(),
+});
+export type ServiceAnalytics = z.infer<typeof serviceAnalyticsSchema>;
+
 export const analyticsSummarySchema = z.object({
   month: z.string(),
   cottageBookingsCount: z.number(),
@@ -687,6 +704,8 @@ export const analyticsSummarySchema = z.object({
   tubLargeCount: z.number(),
   tubLargeRevenue: z.number(),
   workHoursTotal: z.number(),
+  cottageBreakdown: z.array(cottageAnalyticsSchema).optional(),
+  serviceBreakdown: z.array(serviceAnalyticsSchema).optional(),
 });
 export type AnalyticsSummary = z.infer<typeof analyticsSummarySchema>;
 

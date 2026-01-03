@@ -17,7 +17,9 @@ import {
   Timer,
   ArrowDownCircle,
   ArrowUpCircle,
-  Receipt
+  Receipt,
+  User,
+  Building2
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -268,6 +270,70 @@ export default function OwnerAnalyticsPage() {
                 </CardContent>
               </Card>
 
+              {/* Cottage Breakdown */}
+              {(analytics.cottageBreakdown ?? []).length > 0 && (
+                <Card data-testid="card-cottage-breakdown">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      По домикам
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {(analytics.cottageBreakdown ?? []).map(c => (
+                        <div key={c.cottageCode} className="flex items-center justify-between" data-testid={`row-cottage-${c.cottageCode}`}>
+                          <div className="flex items-center gap-2">
+                            <Home className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{c.cottageCode}</span>
+                            <Badge variant="secondary" className="text-xs">{c.bookingsCount}</Badge>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-mono font-medium">{c.revenue.toFixed(2)} BYN</span>
+                            <div className="text-xs text-muted-foreground">
+                              <span className="text-status-confirmed">нал: {c.cashTotal.toFixed(0)}</span>
+                              <span className="mx-1">/</span>
+                              <span className="text-status-awaiting">ерип: {c.eripTotal.toFixed(0)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Service Breakdown */}
+              {(analytics.serviceBreakdown ?? []).length > 0 && (
+                <Card data-testid="card-service-breakdown">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Receipt className="h-4 w-4" />
+                      По услугам
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {(analytics.serviceBreakdown ?? []).filter(s => s.count > 0).map(s => (
+                        <div key={s.serviceType} className="flex items-center justify-between" data-testid={`row-service-${s.serviceType}`}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              {s.serviceType === "cottages" && "Домики"}
+                              {s.serviceType === "baths" && "Бани"}
+                              {s.serviceType === "quads" && "Квадроциклы"}
+                              {s.serviceType === "tub_small" && "Мал. купели"}
+                              {s.serviceType === "tub_large" && "Бол. купели"}
+                            </span>
+                            <Badge variant="secondary" className="text-xs">{s.count}</Badge>
+                          </div>
+                          <span className="font-mono font-medium">{s.revenue.toFixed(2)} BYN</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Выручка купелей</CardTitle>
@@ -319,9 +385,17 @@ export default function OwnerAnalyticsPage() {
                           {incomeTransactions.map(tx => (
                             <div key={tx.id} className="flex items-start justify-between border-b pb-2 last:border-0">
                               <div className="flex-1">
-                                <p className="text-sm font-medium">
-                                  +{tx.amount.toFixed(2)} BYN
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium">
+                                    +{tx.amount.toFixed(2)} BYN
+                                  </p>
+                                  {tx.createdByName && (
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <User className="h-3 w-3" />
+                                      {tx.createdByName}
+                                    </span>
+                                  )}
+                                </div>
                                 {tx.comment && (
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     {tx.comment}
@@ -363,9 +437,17 @@ export default function OwnerAnalyticsPage() {
                           {expenseTransactions.map(tx => (
                             <div key={tx.id} className="flex items-start justify-between border-b pb-2 last:border-0">
                               <div className="flex-1">
-                                <p className="text-sm font-medium text-destructive">
-                                  -{tx.amount.toFixed(2)} BYN
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium text-destructive">
+                                    -{tx.amount.toFixed(2)} BYN
+                                  </p>
+                                  {tx.createdByName && (
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <User className="h-3 w-3" />
+                                      {tx.createdByName}
+                                    </span>
+                                  )}
+                                </div>
                                 {tx.comment && (
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     {tx.comment}

@@ -1058,13 +1058,21 @@ export class DatabaseStorage implements IStorage {
       endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
     }
     
-    const rows = await db.select().from(cashTransactionsTable)
+    const rows = await db.select({
+      transaction: cashTransactionsTable,
+      userName: usersTable.name,
+    }).from(cashTransactionsTable)
+      .leftJoin(usersTable, eq(cashTransactionsTable.createdBy, usersTable.id))
       .where(and(
         gte(cashTransactionsTable.createdAt, startDate.toISOString()),
         lte(cashTransactionsTable.createdAt, endDate.toISOString())
       ))
       .orderBy(desc(cashTransactionsTable.createdAt));
-    return rows.map(r => this.mapRowToCashTransaction(r));
+    
+    return rows.map(r => ({
+      ...this.mapRowToCashTransaction(r.transaction),
+      createdByName: r.userName || undefined,
+    }));
   }
 
   async createCashTransaction(tx: InsertCashTransaction): Promise<CashTransaction> {
@@ -1570,6 +1578,33 @@ export class DatabaseStorage implements IStorage {
     
     const workHoursTotal = filteredWork.reduce((sum, w) => sum + (w.durationMinutes / 60), 0);
     
+    // Per-cottage breakdown
+    const cottageBreakdown: Array<{cottageCode: string; bookingsCount: number; revenue: number; cashTotal: number; eripTotal: number}> = [];
+    const cottageGroups = new Map<string, typeof filteredCottage>();
+    for (const b of filteredCottage) {
+      const code = b.unitCode || "unknown";
+      if (!cottageGroups.has(code)) cottageGroups.set(code, []);
+      cottageGroups.get(code)!.push(b);
+    }
+    for (const [code, bookings] of cottageGroups) {
+      cottageBreakdown.push({
+        cottageCode: code,
+        bookingsCount: bookings.length,
+        revenue: bookings.reduce((s, b) => s + (b.totalAmount || 0), 0),
+        cashTotal: bookings.reduce((s, b) => s + (b.payments?.cash || 0), 0),
+        eripTotal: bookings.reduce((s, b) => s + (b.payments?.erip || 0), 0),
+      });
+    }
+    cottageBreakdown.sort((a, b) => a.cottageCode.localeCompare(b.cottageCode));
+    
+    // Service breakdown
+    const serviceBreakdown: Array<{serviceType: string; count: number; revenue: number}> = [];
+    serviceBreakdown.push({ serviceType: "cottages", count: filteredCottage.length, revenue: cottageRevenue });
+    serviceBreakdown.push({ serviceType: "baths", count: filteredBath.length, revenue: bathRevenue });
+    serviceBreakdown.push({ serviceType: "quads", count: filteredQuad.length, revenue: quadRevenue });
+    serviceBreakdown.push({ serviceType: "tub_small", count: tubSmallCount, revenue: tubSmallCount * tubSmallPrice });
+    serviceBreakdown.push({ serviceType: "tub_large", count: tubLargeCount, revenue: tubLargeCount * tubLargePrice });
+    
     return {
       month: period,
       cottageBookingsCount: filteredCottage.length,
@@ -1586,6 +1621,8 @@ export class DatabaseStorage implements IStorage {
       tubLargeCount,
       tubLargeRevenue: tubLargeCount * tubLargePrice,
       workHoursTotal,
+      cottageBreakdown,
+      serviceBreakdown,
     };
   }
 
