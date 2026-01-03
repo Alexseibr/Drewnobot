@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { eq, and, gte, gt, lt, desc, asc, or, isNull, sql } from "drizzle-orm";
+import { eq, and, gte, gt, lt, lte, desc, asc, or, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import type { IStorage } from "./storage";
 import type {
@@ -1029,6 +1029,40 @@ export class DatabaseStorage implements IStorage {
     // Get transactions created AFTER the last incasation (strict >)
     const rows = await db.select().from(cashTransactionsTable)
       .where(gt(cashTransactionsTable.createdAt, lastIncasationTx[0].createdAt))
+      .orderBy(desc(cashTransactionsTable.createdAt));
+    return rows.map(r => this.mapRowToCashTransaction(r));
+  }
+
+  async getCashTransactionsByPeriod(period: string): Promise<CashTransaction[]> {
+    const [type, dateStr] = period.split(":");
+    const date = new Date(dateStr);
+    
+    let startDate: Date, endDate: Date;
+    
+    if (type === "day") {
+      startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (type === "week") {
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      startDate = new Date(date);
+      startDate.setDate(diff);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+      endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+    
+    const rows = await db.select().from(cashTransactionsTable)
+      .where(and(
+        gte(cashTransactionsTable.createdAt, startDate.toISOString()),
+        lte(cashTransactionsTable.createdAt, endDate.toISOString())
+      ))
       .orderBy(desc(cashTransactionsTable.createdAt));
     return rows.map(r => this.mapRowToCashTransaction(r));
   }

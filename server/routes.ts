@@ -1668,6 +1668,17 @@ export async function registerRoutes(
     }
   });
 
+  // Get transactions for a period (for analytics)
+  app.get("/api/owner/analytics/transactions", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const period = req.query.period as string || `day:${new Date().toISOString().slice(0, 10)}`;
+      const transactions = await storage.getCashTransactionsByPeriod(period);
+      res.json(transactions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch transactions" });
+    }
+  });
+
   // ============ SETTINGS ============
   app.get("/api/settings/site", async (req, res) => {
     try {

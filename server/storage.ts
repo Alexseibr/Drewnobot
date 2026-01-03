@@ -95,6 +95,7 @@ export interface IStorage {
   
   getCashTransactions(shiftId?: string): Promise<CashTransaction[]>;
   getCashTransactionsSinceLastIncasation(): Promise<CashTransaction[]>;
+  getCashTransactionsByPeriod(period: string): Promise<CashTransaction[]>;
   createCashTransaction(tx: InsertCashTransaction): Promise<CashTransaction>;
   
   // Incasations
@@ -791,6 +792,40 @@ export class MemStorage implements IStorage {
     }
     
     return allTransactions.filter(tx => tx.createdAt > lastIncasation.performedAt);
+  }
+
+  async getCashTransactionsByPeriod(period: string): Promise<CashTransaction[]> {
+    const allTransactions = Array.from(this.cashTransactions.values());
+    const [type, dateStr] = period.split(":");
+    const date = new Date(dateStr);
+    
+    let startDate: Date, endDate: Date;
+    
+    if (type === "day") {
+      startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (type === "week") {
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      startDate = new Date(date);
+      startDate.setDate(diff);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+      endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+    
+    return allTransactions
+      .filter(tx => {
+        const txDate = new Date(tx.createdAt);
+        return txDate >= startDate && txDate <= endDate;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async getIncasations(): Promise<Incasation[]> {

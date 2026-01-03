@@ -14,7 +14,10 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  Timer
+  Timer,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Receipt
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -23,11 +26,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatsCardSkeleton } from "@/components/ui/loading-skeleton";
-import type { AnalyticsSummary } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import type { AnalyticsSummary, CashTransaction } from "@shared/schema";
+import { useAuth } from "@/lib/auth-context";
 
 type PeriodType = "day" | "week" | "month";
 
 export default function OwnerAnalyticsPage() {
+  const { user, token } = useAuth();
   const [periodType, setPeriodType] = useState<PeriodType>("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -43,6 +49,25 @@ export default function OwnerAnalyticsPage() {
       return res.json();
     },
   });
+
+  // Fetch transactions for super admin
+  const { data: transactions, isError: transactionsError } = useQuery<CashTransaction[]>({
+    queryKey: ["/api/owner/analytics/transactions", periodType, format(selectedDate, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const res = await fetch(`/api/owner/analytics/transactions?period=${encodeURIComponent(period)}`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to fetch transactions");
+      return res.json();
+    },
+    enabled: (user?.role === "SUPER_ADMIN" || user?.role === "OWNER") && !!token,
+  });
+
+  const incomeTransactions = transactions?.filter(tx => tx.type === "cash_in") || [];
+  const expenseTransactions = transactions?.filter(tx => tx.type === "expense" || tx.type === "cash_out") || [];
+  const totalIncome = incomeTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const totalExpenses = expenseTransactions.reduce((sum, tx) => sum + tx.amount, 0);
 
   const navigate = (direction: "prev" | "next") => {
     setSelectedDate(prev => {
@@ -270,6 +295,99 @@ export default function OwnerAnalyticsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Income and Expenses section for SUPER_ADMIN */}
+              {(user?.role === "SUPER_ADMIN" || user?.role === "OWNER") && transactions && transactions.length > 0 && (
+                <>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ArrowDownCircle className="h-4 w-4 text-status-confirmed" />
+                          Приходы
+                        </div>
+                        <Badge variant="secondary" className="font-mono">
+                          +{totalIncome.toFixed(2)} BYN
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {incomeTransactions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Нет приходов за период</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {incomeTransactions.map(tx => (
+                            <div key={tx.id} className="flex items-start justify-between border-b pb-2 last:border-0">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">
+                                  +{tx.amount.toFixed(2)} BYN
+                                </p>
+                                {tx.comment && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {tx.comment}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(tx.createdAt), "dd.MM HH:mm", { locale: ru })}
+                                </p>
+                              </div>
+                              {tx.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {tx.category}
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ArrowUpCircle className="h-4 w-4 text-destructive" />
+                          Расходы
+                        </div>
+                        <Badge variant="destructive" className="font-mono">
+                          -{totalExpenses.toFixed(2)} BYN
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {expenseTransactions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Нет расходов за период</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {expenseTransactions.map(tx => (
+                            <div key={tx.id} className="flex items-start justify-between border-b pb-2 last:border-0">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-destructive">
+                                  -{tx.amount.toFixed(2)} BYN
+                                </p>
+                                {tx.comment && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {tx.comment}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(tx.createdAt), "dd.MM HH:mm", { locale: ru })}
+                                </p>
+                              </div>
+                              {tx.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {tx.category}
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </>
           ) : (
             <Card>
