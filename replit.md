@@ -110,6 +110,13 @@ Five user roles with hierarchical permissions:
   - Date range filtering with calendar picker
   - Tasks grouped by date with task type and assignee info
   - API: `/api/owner/tasks/completed`
+- **Notification Management** (`/owner/notifications`) - SUPER_ADMIN only
+  - Configure scheduled notifications with custom cron expressions
+  - Toggle notifications on/off without deleting
+  - Action types: shift_reminder, bath_summary, climate_on/off, laundry_reminder, weather_check, daily/weekly/monthly_tasks, thermostat operations
+  - Cadence options: daily, weekly, monthly, once, custom
+  - Initialize with default notifications for new installations
+  - API: `/api/admin/notifications` (GET, POST, PATCH, DELETE, toggle, initialize)
   
 ### Project Structure
 ```

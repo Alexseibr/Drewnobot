@@ -35,6 +35,7 @@ import UnitInfoPage from "@/pages/owner/unit-info";
 import ThermostatsPage from "@/pages/owner/thermostats";
 import UtilitiesPage from "@/pages/owner/utilities";
 import CompletedTasksPage from "@/pages/owner/completed-tasks";
+import NotificationsPage from "@/pages/owner/notifications";
 import StaffManagementPage from "@/pages/admin/staff";
 import ClaimRolePage from "@/pages/claim-role";
 import NotFound from "@/pages/not-found";
@@ -76,6 +77,7 @@ function Router() {
       <Route path="/owner/thermostats" component={ThermostatsPage} />
       <Route path="/owner/utilities" component={UtilitiesPage} />
       <Route path="/owner/completed-tasks" component={CompletedTasksPage} />
+      <Route path="/owner/notifications" component={NotificationsPage} />
       
       <Route path="/admin/staff" component={StaffManagementPage} />
       

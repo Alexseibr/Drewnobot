@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Bath, Bike, Briefcase, ChevronRight, Droplets, Users, Shield, BarChart3 } from "lucide-react";
+import { Bath, Bike, Briefcase, ChevronRight, Droplets, Users, Shield, BarChart3, Bell } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -195,6 +195,29 @@ export default function LandingPage() {
                         <h3 className="font-semibold">Управление сотрудниками</h3>
                         <p className="text-sm text-muted-foreground">
                           Назначение ролей и прав доступа
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {isSuperAdmin && (
+                <Card 
+                  className="hover-elevate cursor-pointer"
+                  onClick={() => setLocation("/owner/notifications")}
+                  data-testid="card-notifications"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-4">
+                      <div className="rounded-full bg-primary/10 p-3">
+                        <Bell className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">Управление уведомлениями</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Настройка расписания и типов уведомлений
                         </p>
                       </div>
                       <ChevronRight className="h-5 w-5 text-muted-foreground" />
