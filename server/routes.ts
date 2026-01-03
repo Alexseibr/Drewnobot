@@ -2458,6 +2458,111 @@ export async function registerRoutes(
     }
   });
 
+  // ============ NOTIFICATION CONFIGS - SUPER_ADMIN ============
+  app.get("/api/admin/notifications", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const configs = await storage.getNotificationConfigs();
+      res.json(configs);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить настройки уведомлений" });
+    }
+  });
+
+  app.get("/api/admin/notifications/:id", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const config = await storage.getNotificationConfig(req.params.id);
+      if (!config) {
+        return res.status(404).json({ error: "Уведомление не найдено" });
+      }
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось получить настройки уведомления" });
+    }
+  });
+
+  app.post("/api/admin/notifications", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { title, description, cadence, cronExpression, actionType, targetChatId, enabled, metadata } = req.body;
+      if (!title || !cadence || !cronExpression || !actionType) {
+        return res.status(400).json({ error: "Требуются обязательные поля: title, cadence, cronExpression, actionType" });
+      }
+      const config = await storage.createNotificationConfig({
+        title,
+        description,
+        cadence,
+        cronExpression,
+        actionType,
+        targetChatId,
+        enabled: enabled !== false,
+        metadata,
+      });
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось создать уведомление" });
+    }
+  });
+
+  app.patch("/api/admin/notifications/:id", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { title, description, cadence, cronExpression, actionType, targetChatId, enabled, metadata } = req.body;
+      const updates: Record<string, any> = {};
+      if (title !== undefined) updates.title = title;
+      if (description !== undefined) updates.description = description;
+      if (cadence !== undefined) updates.cadence = cadence;
+      if (cronExpression !== undefined) updates.cronExpression = cronExpression;
+      if (actionType !== undefined) updates.actionType = actionType;
+      if (targetChatId !== undefined) updates.targetChatId = targetChatId;
+      if (enabled !== undefined) updates.enabled = enabled;
+      if (metadata !== undefined) updates.metadata = metadata;
+      
+      const updated = await storage.updateNotificationConfig(req.params.id, updates);
+      if (!updated) {
+        return res.status(404).json({ error: "Уведомление не найдено" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось обновить уведомление" });
+    }
+  });
+
+  app.delete("/api/admin/notifications/:id", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteNotificationConfig(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Уведомление не найдено" });
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось удалить уведомление" });
+    }
+  });
+
+  app.post("/api/admin/notifications/:id/toggle", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") {
+        return res.status(400).json({ error: "Требуется поле enabled (boolean)" });
+      }
+      const updated = await storage.toggleNotificationConfig(req.params.id, enabled);
+      if (!updated) {
+        return res.status(404).json({ error: "Уведомление не найдено" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось переключить уведомление" });
+    }
+  });
+
+  app.post("/api/admin/notifications/initialize", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      await storage.initializeDefaultNotifications();
+      const configs = await storage.getNotificationConfigs();
+      res.json(configs);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось инициализировать уведомления" });
+    }
+  });
+
   // ============ BLOCKED DATES - INSTRUCTOR ============
   app.get("/api/instructor/blocked-dates", async (req, res) => {
     try {
