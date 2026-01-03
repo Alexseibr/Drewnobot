@@ -214,7 +214,7 @@ export default function NotificationsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" data-testid="loading-state">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -320,11 +320,11 @@ export default function NotificationsPage() {
         </div>
 
         {configs.length === 0 && (
-          <Card>
+          <Card data-testid="card-empty-state">
             <CardContent className="p-8 text-center">
               <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">Нет настроенных уведомлений</p>
-              <Button onClick={() => initializeMutation.mutate()} disabled={initializeMutation.isPending}>
+              <p className="text-muted-foreground mb-4" data-testid="text-empty-message">Нет настроенных уведомлений</p>
+              <Button onClick={() => initializeMutation.mutate()} disabled={initializeMutation.isPending} data-testid="button-initialize-defaults">
                 Создать стандартные уведомления
               </Button>
             </CardContent>
@@ -425,7 +425,7 @@ export default function NotificationsPage() {
               setShowCreateDialog(false);
               setEditingConfig(null);
               resetForm();
-            }}>
+            }} data-testid="button-cancel">
               Отмена
             </Button>
             <Button
