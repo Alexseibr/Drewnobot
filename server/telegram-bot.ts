@@ -380,6 +380,62 @@ export async function notifyAdmins(message: string, options: { deepLink?: string
   }
 }
 
+// Operational notifications - for ADMIN and OWNER only, NOT super admin
+// Used for: weather alerts, check-in reminders, climate control, laundry, etc.
+export async function notifyOpsAdmins(message: string, options: { deepLink?: string } = {}) {
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(u => 
+      (u.role === "ADMIN" || u.role === "OWNER") && 
+      u.isActive && 
+      u.telegramId
+    );
+    
+    const keyboard = options.deepLink ? {
+      inline_keyboard: [[{
+        text: "Открыть",
+        web_app: { url: `${getWebAppUrl()}${options.deepLink}` }
+      }]]
+    } : undefined;
+    
+    for (const admin of admins) {
+      await sendMessage(parseInt(admin.telegramId!), message, keyboard ? { reply_markup: keyboard } : {});
+    }
+    
+    console.log(`[Telegram Bot] Notified ${admins.length} ops admins (ADMIN/OWNER only)`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to notify ops admins:", error);
+  }
+}
+
+// Financial notifications - for SUPER_ADMIN only
+// Used for: cash in/out transactions
+export async function notifySuperAdmin(message: string, options: { deepLink?: string } = {}) {
+  try {
+    const users = await storage.getUsers();
+    const superAdmins = users.filter(u => 
+      u.role === "SUPER_ADMIN" && 
+      u.isActive && 
+      u.telegramId
+    );
+    
+    const keyboard = options.deepLink ? {
+      inline_keyboard: [[{
+        text: "Открыть",
+        web_app: { url: `${getWebAppUrl()}${options.deepLink}` }
+      }]]
+    } : undefined;
+    
+    for (const admin of superAdmins) {
+      await sendMessage(parseInt(admin.telegramId!), message, keyboard ? { reply_markup: keyboard } : {});
+    }
+    
+    console.log(`[Telegram Bot] Notified ${superAdmins.length} super admins`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to notify super admins:", error);
+  }
+}
+
 export async function sendShiftReminder() {
   try {
     // Check if shift is already open
