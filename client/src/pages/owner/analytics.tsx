@@ -34,7 +34,7 @@ import { StatsCardSkeleton } from "@/components/ui/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend, PieChart, Pie, Cell } from "recharts";
 import type { AnalyticsSummary, CashTransaction } from "@shared/schema";
 import { useAuth } from "@/lib/auth-context";
 
@@ -120,7 +120,7 @@ export default function OwnerAnalyticsPage() {
     enabled: showMonthsHistory && (user?.role === "OWNER" || user?.role === "SUPER_ADMIN") && !!token,
   });
 
-  // Fetch transactions for super admin
+  // Fetch transactions for super admin only
   const { data: transactions, isError: transactionsError } = useQuery<CashTransaction[]>({
     queryKey: ["/api/owner/analytics/transactions", periodType, format(selectedDate, "yyyy-MM-dd")],
     queryFn: async () => {
@@ -131,7 +131,7 @@ export default function OwnerAnalyticsPage() {
       if (!res.ok) throw new Error("Failed to fetch transactions");
       return res.json();
     },
-    enabled: (user?.role === "SUPER_ADMIN" || user?.role === "OWNER") && !!token,
+    enabled: user?.role === "SUPER_ADMIN" && !!token,
   });
 
   const incomeTransactions = transactions?.filter(tx => tx.type === "cash_in") || [];
@@ -188,6 +188,30 @@ export default function OwnerAnalyticsPage() {
   const totalRevenue = analytics 
     ? analytics.cottageRevenue + analytics.bathRevenue
     : 0;
+
+  // Chart colors for SUPER_ADMIN visualizations
+  const CHART_COLORS = {
+    cottages: "hsl(var(--chart-1))",
+    baths: "hsl(var(--chart-2))",
+    quads: "hsl(var(--chart-3))",
+    cash: "hsl(var(--chart-4))",
+    erip: "hsl(var(--chart-5))",
+    income: "hsl(142.1 76.2% 36.3%)",
+    expenses: "hsl(var(--destructive))",
+  };
+
+  // Prepare data for pie charts (SUPER_ADMIN only)
+  const revenueSourceData = analytics ? [
+    { name: "Домики", value: analytics.cottageRevenue, color: CHART_COLORS.cottages },
+    { name: "Бани", value: analytics.bathRevenue, color: CHART_COLORS.baths },
+    { name: "Квадроциклы", value: analytics.quadRevenue || 0, color: CHART_COLORS.quads },
+  ].filter(d => d.value > 0) : [];
+
+  const paymentMethodData = analytics ? [
+    { name: "Наличные", value: analytics.cashTotal, color: CHART_COLORS.cash },
+    { name: "ЕРИП", value: analytics.eripTotal, color: CHART_COLORS.erip },
+  ].filter(d => d.value > 0) : [];
+
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -457,6 +481,194 @@ export default function OwnerAnalyticsPage() {
                 </CardContent>
               </Card>
 
+              {/* SUPER_ADMIN Visual Charts Section */}
+              {user?.role === "SUPER_ADMIN" && analytics && (
+                <div className="space-y-4" data-testid="section-superadmin-charts">
+                  {/* Revenue Sources Pie Chart */}
+                  {revenueSourceData.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4" />
+                          Источники дохода
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                          <div className="w-full sm:w-1/2 h-40">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={revenueSourceData}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={35}
+                                  outerRadius={60}
+                                  paddingAngle={2}
+                                  dataKey="value"
+                                >
+                                  {revenueSourceData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Pie>
+                                <Tooltip 
+                                  formatter={(value: number) => [`${value.toFixed(0)} BYN`]}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="w-full sm:w-1/2 space-y-2">
+                            {revenueSourceData.map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: item.color }}
+                                  />
+                                  <span>{item.name}</span>
+                                </div>
+                                <span className="font-mono font-medium">
+                                  {item.value.toFixed(0)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Payment Methods Pie Chart */}
+                  {paymentMethodData.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Wallet className="h-4 w-4" />
+                          Способы оплаты
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                          <div className="w-full sm:w-1/2 h-40">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={paymentMethodData}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={35}
+                                  outerRadius={60}
+                                  paddingAngle={2}
+                                  dataKey="value"
+                                >
+                                  {paymentMethodData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Pie>
+                                <Tooltip 
+                                  formatter={(value: number) => [`${value.toFixed(0)} BYN`]}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="w-full sm:w-1/2 space-y-3">
+                            {paymentMethodData.map((item, idx) => {
+                              const total = paymentMethodData.reduce((s, d) => s + d.value, 0);
+                              const percent = total > 0 ? ((item.value / total) * 100).toFixed(0) : 0;
+                              return (
+                                <div key={idx} className="space-y-1">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-3 h-3 rounded-full" 
+                                        style={{ backgroundColor: item.color }}
+                                      />
+                                      <span>{item.name}</span>
+                                    </div>
+                                    <span className="font-mono font-medium">
+                                      {percent}%
+                                    </span>
+                                  </div>
+                                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full rounded-full transition-all"
+                                      style={{ 
+                                        width: `${percent}%`,
+                                        backgroundColor: item.color 
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Income vs Expenses Comparison */}
+                  {transactions && transactions.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          Доходы vs Расходы
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-32">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart 
+                              data={[{ name: "Период", income: totalIncome, expenses: totalExpenses }]}
+                              layout="vertical"
+                            >
+                              <CartesianGrid strokeDasharray="3 3" className="opacity-30" horizontal={false} />
+                              <XAxis type="number" tick={{ fontSize: 10 }} />
+                              <YAxis type="category" dataKey="name" hide />
+                              <Tooltip 
+                                formatter={(value: number) => [`${value.toFixed(0)} BYN`]}
+                              />
+                              <Bar dataKey="income" name="Доходы" fill={CHART_COLORS.income} radius={[0, 4, 4, 0]} />
+                              <Bar dataKey="expenses" name="Расходы" fill={CHART_COLORS.expenses} radius={[0, 4, 4, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="flex justify-around mt-3 pt-3 border-t">
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                              <ArrowDownCircle className="h-4 w-4 text-status-confirmed" />
+                              <span className="text-sm text-muted-foreground">Доходы</span>
+                            </div>
+                            <p className="text-xl font-bold font-mono text-status-confirmed">
+                              +{totalIncome.toFixed(0)}
+                            </p>
+                          </div>
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                              <ArrowUpCircle className="h-4 w-4 text-destructive" />
+                              <span className="text-sm text-muted-foreground">Расходы</span>
+                            </div>
+                            <p className="text-xl font-bold font-mono text-destructive">
+                              -{totalExpenses.toFixed(0)}
+                            </p>
+                          </div>
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                              <Wallet className="h-4 w-4 text-primary" />
+                              <span className="text-sm text-muted-foreground">Баланс</span>
+                            </div>
+                            <p className={`text-xl font-bold font-mono ${totalIncome - totalExpenses >= 0 ? 'text-status-confirmed' : 'text-destructive'}`}>
+                              {totalIncome - totalExpenses >= 0 ? '+' : ''}{(totalIncome - totalExpenses).toFixed(0)}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="p-4">
@@ -637,8 +849,8 @@ export default function OwnerAnalyticsPage() {
                 </CardContent>
               </Card>
 
-              {/* Income and Expenses section for SUPER_ADMIN */}
-              {(user?.role === "SUPER_ADMIN" || user?.role === "OWNER") && transactions && transactions.length > 0 && (
+              {/* Income and Expenses section for SUPER_ADMIN only */}
+              {user?.role === "SUPER_ADMIN" && transactions && transactions.length > 0 && (
                 <>
                   <Card>
                     <CardHeader className="pb-3">
