@@ -51,6 +51,7 @@ import type {
   ElectricityMeter, InsertElectricityMeter,
   ElectricityReading, InsertElectricityReading,
   NotificationConfig, InsertNotificationConfig,
+  BotMessage, InsertBotMessage,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -355,6 +356,13 @@ export interface IStorage {
   toggleNotificationConfig(id: string, enabled: boolean): Promise<NotificationConfig | undefined>;
   updateNotificationLastRun(id: string): Promise<void>;
   initializeDefaultNotifications(): Promise<void>;
+  
+  // Bot Message Tracking for nightly cleanup
+  trackBotMessage(chatId: string, messageId: number, isPinned?: boolean): Promise<BotMessage>;
+  getBotMessagesForChat(chatId: string): Promise<BotMessage[]>;
+  getPinnedBotMessage(chatId: string): Promise<BotMessage | undefined>;
+  deleteBotMessagesForChat(chatId: string, excludePinned?: boolean): Promise<number>;
+  setPinnedBotMessage(chatId: string, messageId: number): Promise<void>;
 }
 
 const PRICES: Record<string, number> = {
@@ -408,6 +416,7 @@ export class MemStorage implements IStorage {
   private electricityMeters: Map<string, ElectricityMeter> = new Map();
   private electricityReadings: Map<string, ElectricityReading> = new Map();
   private notificationConfigs: Map<string, NotificationConfig> = new Map();
+  private botMessages: Map<string, BotMessage> = new Map();
   private siteSettings: SiteSettings;
 
   constructor() {
@@ -2167,6 +2176,64 @@ export class MemStorage implements IStorage {
       for (const config of defaults) {
         await this.createNotificationConfig(config);
       }
+    }
+  }
+  
+  // Bot Message Tracking
+  async trackBotMessage(chatId: string, messageId: number, isPinned?: boolean): Promise<BotMessage> {
+    const id = randomUUID();
+    const message: BotMessage = {
+      id,
+      chatId,
+      messageId,
+      isPinned: isPinned || false,
+      createdAt: new Date().toISOString(),
+    };
+    this.botMessages.set(id, message);
+    return message;
+  }
+  
+  async getBotMessagesForChat(chatId: string): Promise<BotMessage[]> {
+    return Array.from(this.botMessages.values())
+      .filter(m => m.chatId === chatId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+  
+  async getPinnedBotMessage(chatId: string): Promise<BotMessage | undefined> {
+    return Array.from(this.botMessages.values())
+      .find(m => m.chatId === chatId && m.isPinned);
+  }
+  
+  async deleteBotMessagesForChat(chatId: string, excludePinned?: boolean): Promise<number> {
+    let deleted = 0;
+    for (const [id, msg] of this.botMessages) {
+      if (msg.chatId === chatId) {
+        if (excludePinned && msg.isPinned) continue;
+        this.botMessages.delete(id);
+        deleted++;
+      }
+    }
+    return deleted;
+  }
+  
+  async setPinnedBotMessage(chatId: string, messageId: number): Promise<void> {
+    // Unpin existing pinned messages for this chat
+    for (const [id, msg] of this.botMessages) {
+      if (msg.chatId === chatId && msg.isPinned) {
+        this.botMessages.set(id, { ...msg, isPinned: false });
+      }
+    }
+    // Find and pin the new message, or create new entry
+    let found = false;
+    for (const [id, msg] of this.botMessages) {
+      if (msg.chatId === chatId && msg.messageId === messageId) {
+        this.botMessages.set(id, { ...msg, isPinned: true });
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      await this.trackBotMessage(chatId, messageId, true);
     }
   }
 }

@@ -1856,3 +1856,24 @@ export const notificationConfigSchema = z.object({
 export type NotificationConfig = z.infer<typeof notificationConfigSchema>;
 export const insertNotificationConfigSchema = notificationConfigSchema.omit({ id: true, lastRunAt: true, createdAt: true, updatedAt: true });
 export type InsertNotificationConfig = z.infer<typeof insertNotificationConfigSchema>;
+
+// ============ BOT MESSAGE TRACKING ============
+// Track bot messages per chat for nightly cleanup (delete all except pinned)
+export const botMessagesTable = pgTable("bot_messages", {
+  id: text("id").primaryKey(),
+  chatId: text("chat_id").notNull(),
+  messageId: integer("message_id").notNull(),
+  isPinned: boolean("is_pinned").notNull().default(false),
+  createdAt: text("created_at").notNull(),
+});
+
+export const botMessageSchema = z.object({
+  id: z.string(),
+  chatId: z.string(),
+  messageId: z.number(),
+  isPinned: z.boolean(),
+  createdAt: z.string(),
+});
+export type BotMessage = z.infer<typeof botMessageSchema>;
+export const insertBotMessageSchema = botMessageSchema.omit({ id: true, createdAt: true });
+export type InsertBotMessage = z.infer<typeof insertBotMessageSchema>;

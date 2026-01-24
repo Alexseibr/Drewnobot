@@ -150,6 +150,11 @@ Five user roles with hierarchical permissions:
 - Guest menu: Book bath, book quads, SPA, website link
 - Staff menu: Role-based buttons (panel, bookings, cash, tasks, analytics)
 - Auto-detection of user role from database
+- **Nightly Chat Cleanup** (00:00 Minsk time):
+  - Deletes all bot messages from staff chats
+  - Preserves pinned admin panel message with quick access buttons
+  - Admin panel includes: Panel, Cash, Bookings, Tasks, Analytics, Settings
+  - Messages tracked in `bot_messages` table for cleanup
 
 ### Staff Authorization System
 - **Telegram ID-based authorizations**: Owner can pre-assign roles using Telegram user IDs

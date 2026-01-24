@@ -66,7 +66,8 @@ import {
   textileStockTable, textileCheckInsTable, textileEventsTable, guestsTable,
   suppliesTable, supplyTransactionsTable, incidentsTable, staffShiftsTable, unitInfoTable,
   thermostatHousesTable, thermostatDailyPlansTable, thermostatActionLogsTable,
-  notificationConfigsTable,
+  notificationConfigsTable, botMessagesTable,
+  BotMessage,
 } from "@shared/schema";
 
 const PRICES: Record<string, number> = {
@@ -3691,6 +3692,104 @@ export class DatabaseStorage implements IStorage {
     
     for (const config of defaults) {
       await this.createNotificationConfig(config);
+    }
+  }
+  
+  // ============ BOT MESSAGE TRACKING ============
+  
+  async trackBotMessage(chatId: string, messageId: number, isPinned?: boolean): Promise<BotMessage> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    
+    await db.insert(botMessagesTable).values({
+      id,
+      chatId,
+      messageId,
+      isPinned: isPinned || false,
+      createdAt: now,
+    });
+    
+    return {
+      id,
+      chatId,
+      messageId,
+      isPinned: isPinned || false,
+      createdAt: now,
+    };
+  }
+  
+  async getBotMessagesForChat(chatId: string): Promise<BotMessage[]> {
+    const rows = await db.select().from(botMessagesTable)
+      .where(eq(botMessagesTable.chatId, chatId))
+      .orderBy(asc(botMessagesTable.createdAt));
+    
+    return rows.map(r => ({
+      id: r.id,
+      chatId: r.chatId,
+      messageId: r.messageId,
+      isPinned: r.isPinned,
+      createdAt: r.createdAt,
+    }));
+  }
+  
+  async getPinnedBotMessage(chatId: string): Promise<BotMessage | undefined> {
+    const rows = await db.select().from(botMessagesTable)
+      .where(and(
+        eq(botMessagesTable.chatId, chatId),
+        eq(botMessagesTable.isPinned, true)
+      ))
+      .limit(1);
+    
+    if (rows.length === 0) return undefined;
+    
+    const r = rows[0];
+    return {
+      id: r.id,
+      chatId: r.chatId,
+      messageId: r.messageId,
+      isPinned: r.isPinned,
+      createdAt: r.createdAt,
+    };
+  }
+  
+  async deleteBotMessagesForChat(chatId: string, excludePinned?: boolean): Promise<number> {
+    if (excludePinned) {
+      await db.delete(botMessagesTable)
+        .where(and(
+          eq(botMessagesTable.chatId, chatId),
+          eq(botMessagesTable.isPinned, false)
+        ));
+    } else {
+      await db.delete(botMessagesTable)
+        .where(eq(botMessagesTable.chatId, chatId));
+    }
+    return 0; // PostgreSQL doesn't easily return affected count
+  }
+  
+  async setPinnedBotMessage(chatId: string, messageId: number): Promise<void> {
+    // Unpin existing pinned messages for this chat
+    await db.update(botMessagesTable)
+      .set({ isPinned: false })
+      .where(and(
+        eq(botMessagesTable.chatId, chatId),
+        eq(botMessagesTable.isPinned, true)
+      ));
+    
+    // Try to update existing message
+    const existing = await db.select().from(botMessagesTable)
+      .where(and(
+        eq(botMessagesTable.chatId, chatId),
+        eq(botMessagesTable.messageId, messageId)
+      ))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      await db.update(botMessagesTable)
+        .set({ isPinned: true })
+        .where(eq(botMessagesTable.id, existing[0].id));
+    } else {
+      // Create new pinned message entry
+      await this.trackBotMessage(chatId, messageId, true);
     }
   }
 }

@@ -76,12 +76,23 @@ function getWebAppUrl(): string {
 }
 
 async function sendMessage(chatId: number, text: string, options: object = {}) {
-  return telegramApi("sendMessage", {
+  const result = await telegramApi("sendMessage", {
     chat_id: chatId,
     text,
     parse_mode: "HTML",
     ...options,
   });
+  
+  // Track message for nightly cleanup
+  if (result?.ok && result.result?.message_id) {
+    try {
+      await storage.trackBotMessage(chatId.toString(), result.result.message_id, false);
+    } catch (e) {
+      // Silently fail - tracking is not critical
+    }
+  }
+  
+  return result;
 }
 
 async function answerCallbackQuery(callbackQueryId: string, text?: string) {
@@ -992,4 +1003,150 @@ function scheduleNotifications() {
   }, msUntilEvening);
   
   console.log("[Telegram Bot] Notifications scheduled");
+}
+
+// ============ NIGHTLY CHAT CLEANUP ============
+
+// Get admin panel keyboard for pinned message
+function getAdminPanelKeyboard() {
+  const webAppUrl = getWebAppUrl();
+  
+  return {
+    inline_keyboard: [
+      [
+        { text: "Панель", web_app: { url: `${webAppUrl}/ops` } },
+        { text: "Касса", web_app: { url: `${webAppUrl}/ops/cash` } },
+      ],
+      [
+        { text: "Брони", web_app: { url: `${webAppUrl}/ops/bookings` } },
+        { text: "Задачи", web_app: { url: `${webAppUrl}/ops/tasks` } },
+      ],
+      [
+        { text: "Аналитика", web_app: { url: `${webAppUrl}/owner/analytics` } },
+        { text: "Настройки", web_app: { url: `${webAppUrl}/owner` } },
+      ],
+    ],
+  };
+}
+
+// Send and pin admin panel message
+async function sendAndPinAdminPanel(chatId: number): Promise<number | null> {
+  const result = await telegramApi("sendMessage", {
+    chat_id: chatId,
+    text: "<b>Усадьба Дрэўна - Панель управления</b>\n\nБыстрый доступ к основным разделам:",
+    parse_mode: "HTML",
+    reply_markup: getAdminPanelKeyboard(),
+  });
+  
+  if (!result?.ok || !result.result?.message_id) {
+    return null;
+  }
+  
+  const messageId = result.result.message_id;
+  
+  // Pin the message (silently)
+  await telegramApi("pinChatMessage", {
+    chat_id: chatId,
+    message_id: messageId,
+    disable_notification: true,
+  });
+  
+  // Track as pinned message
+  try {
+    await storage.setPinnedBotMessage(chatId.toString(), messageId);
+  } catch (e) {
+    console.error("[Telegram Bot] Failed to track pinned message:", e);
+  }
+  
+  return messageId;
+}
+
+// Perform nightly cleanup for a single chat
+async function cleanupChatMessages(chatId: string): Promise<{ deleted: number; errors: number }> {
+  let deleted = 0;
+  let errors = 0;
+  
+  try {
+    const messages = await storage.getBotMessagesForChat(chatId);
+    const pinnedMessage = await storage.getPinnedBotMessage(chatId);
+    
+    for (const msg of messages) {
+      // Skip pinned message
+      if (pinnedMessage && msg.messageId === pinnedMessage.messageId) {
+        continue;
+      }
+      
+      // Try to delete the message
+      const result = await telegramApi("deleteMessage", {
+        chat_id: parseInt(chatId, 10),
+        message_id: msg.messageId,
+      });
+      
+      if (result?.ok) {
+        deleted++;
+      } else {
+        errors++;
+      }
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    // Clean up database records (except pinned)
+    await storage.deleteBotMessagesForChat(chatId, true);
+    
+  } catch (error) {
+    console.error(`[Telegram Bot] Error cleaning chat ${chatId}:`, error);
+  }
+  
+  return { deleted, errors };
+}
+
+// Perform nightly cleanup for all staff chats
+export async function performNightlyCleanup(): Promise<void> {
+  console.log("[Telegram Bot] Starting nightly chat cleanup...");
+  
+  try {
+    // Get all active staff users
+    const users = await storage.getUsers();
+    const staffUsers = users.filter(u => 
+      u.role !== "GUEST" && 
+      u.isActive && 
+      u.telegramId
+    );
+    
+    let totalDeleted = 0;
+    let totalErrors = 0;
+    let chatsProcessed = 0;
+    
+    for (const user of staffUsers) {
+      const chatId = user.telegramId!;
+      
+      // Check if there's a pinned message already
+      const pinnedMessage = await storage.getPinnedBotMessage(chatId);
+      
+      // Cleanup old messages
+      const { deleted, errors } = await cleanupChatMessages(chatId);
+      totalDeleted += deleted;
+      totalErrors += errors;
+      
+      // Send and pin fresh admin panel if no pinned message exists
+      if (!pinnedMessage) {
+        const result = await sendAndPinAdminPanel(parseInt(chatId, 10));
+        if (result) {
+          console.log(`[Telegram Bot] Pinned admin panel for user ${user.name || chatId}`);
+        }
+      }
+      
+      chatsProcessed++;
+      
+      // Delay between users to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    console.log(`[Telegram Bot] Nightly cleanup complete: ${chatsProcessed} chats, ${totalDeleted} deleted, ${totalErrors} errors`);
+    
+  } catch (error) {
+    console.error("[Telegram Bot] Nightly cleanup failed:", error);
+  }
 }
