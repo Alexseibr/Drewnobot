@@ -200,11 +200,10 @@ export default function OwnerAnalyticsPage() {
     expenses: "hsl(var(--destructive))",
   };
 
-  // Prepare data for pie charts (SUPER_ADMIN only)
+  // Prepare data for pie charts (SUPER_ADMIN only) - без квадроциклов (отдельный сервис)
   const revenueSourceData = analytics ? [
     { name: "Домики", value: analytics.cottageRevenue, color: CHART_COLORS.cottages },
     { name: "Бани", value: analytics.bathRevenue, color: CHART_COLORS.baths },
-    { name: "Квадроциклы", value: analytics.quadRevenue || 0, color: CHART_COLORS.quads },
   ].filter(d => d.value > 0) : [];
 
   const paymentMethodData = analytics ? [
