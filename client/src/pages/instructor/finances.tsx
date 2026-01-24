@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
-  Bike
+  Bike,
+  BarChart3
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -36,6 +37,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";
 import { BookingCardSkeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import type { InstructorExpense } from "@shared/schema";
 
 type InstructorExpenseCategory = "fuel" | "maintenance" | "parts" | "other";
@@ -72,6 +74,13 @@ const CATEGORY_ICONS: Record<InstructorExpenseCategory, typeof Fuel> = {
   maintenance: Wrench,
   parts: Package,
   other: MoreHorizontal,
+};
+
+const CATEGORY_COLORS: Record<InstructorExpenseCategory, string> = {
+  fuel: "hsl(var(--chart-1))",
+  maintenance: "hsl(var(--chart-2))",
+  parts: "hsl(var(--chart-3))",
+  other: "hsl(var(--chart-4))",
 };
 
 export default function InstructorFinancesPage() {
@@ -255,6 +264,123 @@ export default function InstructorFinancesPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Visual Charts Section */}
+              {(revenue > 0 || totalExpenses > 0) && (
+                <Card data-testid="card-financial-overview">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2" data-testid="title-financial-overview">
+                      <BarChart3 className="h-4 w-4" />
+                      Финансовый обзор
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-32 mb-4" data-testid="chart-revenue-expenses">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart 
+                          data={[{ name: "Период", revenue, expenses: totalExpenses }]}
+                          layout="vertical"
+                        >
+                          <CartesianGrid strokeDasharray="3 3" className="opacity-30" horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 10 }} />
+                          <YAxis type="category" dataKey="name" hide />
+                          <Tooltip 
+                            formatter={(value: number) => [`${value.toFixed(0)} BYN`]}
+                          />
+                          <Bar dataKey="revenue" name="Выручка" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
+                          <Bar dataKey="expenses" name="Расходы" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex justify-around pt-3 border-t">
+                      <div className="text-center" data-testid="legend-revenue">
+                        <p className="text-xs text-muted-foreground">Выручка</p>
+                        <p className="text-lg font-bold font-mono text-status-confirmed">+{revenue}</p>
+                      </div>
+                      <div className="text-center" data-testid="legend-expenses">
+                        <p className="text-xs text-muted-foreground">Расходы</p>
+                        <p className="text-lg font-bold font-mono text-destructive">-{totalExpenses}</p>
+                      </div>
+                      <div className="text-center" data-testid="legend-net-profit">
+                        <p className="text-xs text-muted-foreground">Чистая</p>
+                        <p className={`text-lg font-bold font-mono ${netProfit >= 0 ? 'text-status-confirmed' : 'text-destructive'}`}>
+                          {netProfit >= 0 ? '+' : ''}{netProfit}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Expenses by Category Pie Chart */}
+              {Object.keys(expensesByCategory).length > 0 && (
+                <Card data-testid="card-expense-categories">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2" data-testid="title-expense-categories">
+                      <TrendingDown className="h-4 w-4" />
+                      Расходы по категориям
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="w-full sm:w-1/2 h-40" data-testid="chart-expense-categories">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={Object.entries(expensesByCategory).map(([category, amount]) => ({
+                                name: CATEGORY_LABELS[category as InstructorExpenseCategory],
+                                value: amount as number,
+                                color: CATEGORY_COLORS[category as InstructorExpenseCategory],
+                              }))}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={35}
+                              outerRadius={60}
+                              paddingAngle={2}
+                              dataKey="value"
+                            >
+                              {Object.entries(expensesByCategory).map(([category], index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={CATEGORY_COLORS[category as InstructorExpenseCategory]} 
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              formatter={(value: number) => [`${value} BYN`]}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="w-full sm:w-1/2 space-y-2">
+                        {Object.entries(expensesByCategory).map(([category, amount]) => {
+                          const Icon = CATEGORY_ICONS[category as InstructorExpenseCategory];
+                          const percent = totalExpenses > 0 ? ((amount as number / totalExpenses) * 100).toFixed(0) : 0;
+                          return (
+                            <div 
+                              key={category} 
+                              className="flex items-center justify-between text-sm"
+                              data-testid={`legend-expense-${category}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: CATEGORY_COLORS[category as InstructorExpenseCategory] }}
+                                />
+                                <Icon className="h-3 w-3 text-muted-foreground" />
+                                <span>{CATEGORY_LABELS[category as InstructorExpenseCategory]}</span>
+                              </div>
+                              <span className="font-mono font-medium">
+                                {amount} <span className="text-xs text-muted-foreground">({percent}%)</span>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
