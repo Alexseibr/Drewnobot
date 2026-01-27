@@ -18,7 +18,7 @@ import type { ThermostatPlanType } from "@shared/schema";
 const DAILY_TASKS_CRON = "0 6 * * *";
 const WEEKLY_TASKS_CRON = "0 6 * * 1";
 const MONTHLY_TASKS_CRON = "0 6 1 * *";
-const NIGHTLY_CLEANUP_CRON = "0 0 * * *"; // 00:00 - Nightly chat cleanup
+const NIGHTLY_CLEANUP_CRON = "0 3 * * *"; // 03:00 - Nightly chat cleanup
 
 // Notification schedules (Minsk time)
 const SHIFT_REMINDER_CRON = "30 8 * * *";       // 08:30 - Shift reminder
@@ -481,7 +481,7 @@ export function initScheduler(): void {
   // ============ NIGHTLY CHAT CLEANUP ============
   
   cron.schedule(NIGHTLY_CLEANUP_CRON, async () => {
-    log("Starting nightly chat cleanup (00:00)", "scheduler");
+    log("Starting nightly chat cleanup (03:00)", "scheduler");
     await performNightlyCleanup();
   }, {
     timezone: "Europe/Minsk"
@@ -493,7 +493,7 @@ export function initScheduler(): void {
   log("  - Monthly tasks: 06:00 1st of month", "scheduler");
   log("  - Weather check: 18:00 daily", "scheduler");
   log("  - Scheduled task notifications: every minute", "scheduler");
-  log("  - Nightly chat cleanup: 00:00 daily", "scheduler");
+  log("  - Nightly chat cleanup: 03:00 daily", "scheduler");
   log("  - Notifications:", "scheduler");
   log("    - Shift reminder: 08:30 daily", "scheduler");
   log("    - Bath summary: 09:00 daily", "scheduler");

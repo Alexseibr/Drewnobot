@@ -87,8 +87,9 @@ async function sendMessage(chatId: number, text: string, options: object = {}) {
   if (result?.ok && result.result?.message_id) {
     try {
       await storage.trackBotMessage(chatId.toString(), result.result.message_id, false);
+      console.log(`[Telegram Bot] Tracked message ${result.result.message_id} for chat ${chatId}`);
     } catch (e) {
-      // Silently fail - tracking is not critical
+      console.error(`[Telegram Bot] Failed to track message for chat ${chatId}:`, e);
     }
   }
   
