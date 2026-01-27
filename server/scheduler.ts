@@ -388,12 +388,13 @@ export function initScheduler(): void {
 
   // ============ STAFF NOTIFICATIONS ============
   
-  cron.schedule(SHIFT_REMINDER_CRON, async () => {
-    log("Sending shift reminder (08:30)", "scheduler");
-    await sendShiftReminder();
-  }, {
-    timezone: "Europe/Minsk"
-  });
+  // Shift reminder disabled - not needed
+  // cron.schedule(SHIFT_REMINDER_CRON, async () => {
+  //   log("Sending shift reminder (08:30)", "scheduler");
+  //   await sendShiftReminder();
+  // }, {
+  //   timezone: "Europe/Minsk"
+  // });
 
   cron.schedule(BATH_SUMMARY_CRON, async () => {
     log("Sending bath bookings summary (09:00)", "scheduler");
@@ -495,7 +496,6 @@ export function initScheduler(): void {
   log("  - Scheduled task notifications: every minute", "scheduler");
   log("  - Nightly chat cleanup: 03:00 daily", "scheduler");
   log("  - Notifications:", "scheduler");
-  log("    - Shift reminder: 08:30 daily", "scheduler");
   log("    - Bath summary: 09:00 daily", "scheduler");
   log("    - Climate ON: 12:00 daily", "scheduler");
   log("    - Climate OFF: 14:00 daily", "scheduler");

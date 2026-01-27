@@ -5,7 +5,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole, SpaBooking, GuestRating, insertUnitInfoSchema } from "@shared/schema";
 import { validateInitData, generateSessionToken, getSessionExpiresAt } from "./telegram-auth";
-import { handleTelegramUpdate, setupTelegramWebhook, sendTaskNotification, sendFinancialNotification } from "./telegram-bot";
+import { handleTelegramUpdate, setupTelegramWebhook, sendTaskNotification, sendFinancialNotification, pinAdminPanelForAllStaff } from "./telegram-bot";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -2560,6 +2560,20 @@ export async function registerRoutes(
       res.json(configs);
     } catch (error) {
       res.status(500).json({ error: "Не удалось инициализировать уведомления" });
+    }
+  });
+
+  // Pin admin panel for all staff
+  app.post("/api/admin/pin-admin-panel", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const result = await pinAdminPanelForAllStaff();
+      res.json({
+        success: true,
+        message: `Закреплено: ${result.pinned}, пропущено: ${result.skipped}, ошибок: ${result.errors}`,
+        ...result
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось закрепить панели" });
     }
   });
 

@@ -248,7 +248,17 @@ async function handleStart(chatId: number, from: { id: number; first_name: strin
   const name = [from.first_name, from.last_name].filter(Boolean).join(" ");
   
   if (user && user.isActive && user.role !== "GUEST") {
-    // Staff user
+    // Staff user - check if admin panel is pinned
+    const pinnedMessage = await storage.getPinnedBotMessage(telegramId);
+    
+    if (!pinnedMessage) {
+      // Pin admin panel for staff
+      const pinResult = await sendAndPinAdminPanel(chatId);
+      if (pinResult) {
+        console.log(`[Telegram Bot] Pinned admin panel for ${user.name || telegramId} on /start`);
+      }
+    }
+    
     const roleLabel = ROLE_LABELS[user.role] || user.role;
     await sendMessage(
       chatId,
@@ -1101,6 +1111,53 @@ async function cleanupChatMessages(chatId: string): Promise<{ deleted: number; e
   }
   
   return { deleted, errors };
+}
+
+// Pin admin panel for all staff users (can be called manually)
+export async function pinAdminPanelForAllStaff(): Promise<{ pinned: number; skipped: number; errors: number }> {
+  console.log("[Telegram Bot] Pinning admin panel for all staff...");
+  
+  let pinned = 0;
+  let skipped = 0;
+  let errors = 0;
+  
+  try {
+    const users = await storage.getUsers();
+    const staffUsers = users.filter(u => 
+      u.role !== "GUEST" && 
+      u.isActive && 
+      u.telegramId
+    );
+    
+    for (const user of staffUsers) {
+      const chatId = user.telegramId!;
+      
+      // Check if already pinned
+      const pinnedMessage = await storage.getPinnedBotMessage(chatId);
+      if (pinnedMessage) {
+        skipped++;
+        continue;
+      }
+      
+      // Pin admin panel
+      const result = await sendAndPinAdminPanel(parseInt(chatId, 10));
+      if (result) {
+        pinned++;
+        console.log(`[Telegram Bot] Pinned admin panel for ${user.name || chatId}`);
+      } else {
+        errors++;
+      }
+      
+      // Delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    console.log(`[Telegram Bot] Pinning complete: ${pinned} pinned, ${skipped} skipped, ${errors} errors`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to pin admin panels:", error);
+  }
+  
+  return { pinned, skipped, errors };
 }
 
 // Perform nightly cleanup for all staff chats
