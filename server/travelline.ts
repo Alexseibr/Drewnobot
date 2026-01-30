@@ -183,6 +183,29 @@ function transformReservation(reservation: TLReservation): InsertTravelLineBooki
   };
 }
 
+async function fetchBookingDetails(propertyId: string, bookingNumber: string, token: string): Promise<TLReservation | null> {
+  try {
+    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${propertyId}/bookings/${bookingNumber}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`[TravelLine] Failed to fetch booking ${bookingNumber}: ${response.status}`);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`[TravelLine] Error fetching booking ${bookingNumber}:`, error);
+    return null;
+  }
+}
+
 export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
   const config = getConfig();
   if (!config) {
@@ -196,8 +219,8 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
   const today = new Date().toISOString().split("T")[0];
 
   try {
-    // Use PMS API v2 endpoint
-    const url = `${TRAVELLINE_API_URL}/api/pms/v2/properties/${config.propertyId}/reservations`;
+    // Use Read Reservation API v1 endpoint
+    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings`;
     
     const response = await fetch(url, {
       headers: {
@@ -213,15 +236,28 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     }
 
     const data = await response.json();
-    const reservations: TLReservation[] = data.reservations || data.items || data || [];
+    const bookingSummaries = data.bookingSummaries || [];
+    
+    console.log(`[TravelLine] Received ${bookingSummaries.length} booking summaries`);
+    
+    // Need to fetch detailed info for each booking to get check-in dates
+    const detailedBookings: TLReservation[] = [];
+    for (const summary of bookingSummaries) {
+      if (summary.status === "Cancelled" || summary.status === "NoShow") continue;
+      
+      const details = await fetchBookingDetails(config.propertyId, summary.number, token);
+      if (details) {
+        detailedBookings.push(details);
+      }
+    }
 
     // Filter for today's check-ins
-    const todayCheckIns = reservations.filter(r => {
+    const todayCheckIns = detailedBookings.filter(r => {
       const checkIn = r.roomStays?.[0]?.checkIn;
       return checkIn && checkIn.startsWith(today);
     });
 
-    console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${reservations.length} total)`);
+    console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${detailedBookings.length} active bookings)`);
 
     const bookings: InsertTravelLineBooking[] = [];
     for (const reservation of todayCheckIns) {
@@ -246,8 +282,8 @@ export async function fetchReservationById(reservationId: string): Promise<Inser
   if (!token) return null;
 
   try {
-    // Use PMS API v2 endpoint
-    const url = `${TRAVELLINE_API_URL}/api/pms/v2/properties/${config.propertyId}/reservations/${reservationId}`;
+    // Use Read Reservation API v1 endpoint
+    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings/${reservationId}`;
     
     const response = await fetch(url, {
       headers: {
