@@ -1,0 +1,111 @@
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 50
+[TAILING] Tailing last 50 lines for [drewno-ops] process (change the value with --linesoption)
+/root/.pm2/logs/drewno-ops-error.log last 50 lines:
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+
+/root/.pm2/logs/drewno-ops-out.log last 50 lines:
+0|drewno-o | 1:14:40 PM [express] GET /api/admin/bookings/upcoming 200 in 8ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:14:40 PM [express] POST /api/admin/travelline/sync 200 in 132ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:14:40 PM [express] GET /api/admin/bookings/upcoming 200 in 11ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:14:46 PM [express] POST /api/admin/travelline/sync 200 in 138ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:14:46 PM [express] GET /api/admin/bookings/upcoming 200 in 10ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:14:51 PM [express] POST /api/admin/travelline/sync 200 in 57ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:14:51 PM [express] GET /api/admin/bookings/upcoming 200 in 3ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:14:52 PM [express] POST /api/admin/travelline/sync 200 in 57ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:14:52 PM [express] GET /api/admin/bookings/upcoming 200 in 4ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:14:53 PM [express] POST /api/admin/travelline/sync 200 in 57ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:14:53 PM [express] GET /api/admin/bookings/upcoming 200 in 3ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:14:53 PM [express] POST /api/admin/travelline/sync 200 in 62ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:14:53 PM [express] GET /api/admin/bookings/upcoming 200 in 5ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:14:53 PM [express] POST /api/admin/travelline/sync 200 in 56ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:14:53 PM [express] GET /api/admin/bookings/upcoming 200 in 5ms :: {"cottageBookings":[],"bathBookings":[]}
+
+^C
+root@server-srekbm:/var/www/drewno-ops# pm2 save
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+root@server-srekbm:/var/www/drewno-ops#
