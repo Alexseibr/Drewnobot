@@ -272,14 +272,24 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     // Booking number format: YYYYMMDD-propertyId-bookingId (e.g., 20260130-39140-123456)
     // Filter by today's date prefix FIRST to reduce dataset
     const todayPrefix = today.replace(/-/g, ""); // "2026-01-30" -> "20260130"
-    const todaysBookings = bookingSummaries.filter((s: { number: string; status: string }) => {
-      // Only match today's date and pending statuses (not already checked in/out)
-      const isToday = s.number.startsWith(todayPrefix);
-      const isPending = s.status === "New" || s.status === "Confirmed";
-      return isToday && isPending;
+    
+    // Debug: show all bookings for today with their statuses
+    const allTodaysBookings = bookingSummaries.filter((s: { number: string }) => 
+      s.number.startsWith(todayPrefix)
+    );
+    console.log(`[TravelLine] All bookings for today (${todayPrefix}): ${allTodaysBookings.length}`);
+    if (allTodaysBookings.length > 0) {
+      allTodaysBookings.forEach((s: { number: string; status: string }) => {
+        console.log(`[TravelLine]   - ${s.number}: status=${s.status}`);
+      });
+    }
+    
+    // Filter pending statuses (New, Confirmed, Active - not CheckedIn/CheckedOut/Cancelled)
+    const todaysBookings = allTodaysBookings.filter((s: { status: string }) => {
+      return s.status === "New" || s.status === "Confirmed" || s.status === "Active";
     });
     
-    console.log(`[TravelLine] Received ${bookingSummaries.length} summaries, ${todaysBookings.length} pending for today (${todayPrefix})`);
+    console.log(`[TravelLine] Received ${bookingSummaries.length} summaries, ${todaysBookings.length} pending for today`);
     
     // Fetch details only for today's bookings
     const detailedBookings: TLReservation[] = [];
