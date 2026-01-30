@@ -1,0 +1,46 @@
+geBookings":[],"bathBookings":[]}
+^C
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && git pull && npm run build && pkill -f "node dist" && pm2 restart ecosystem.config.cjs
+remote: Enumerating objects: 19, done.
+remote: Counting objects: 100% (19/19), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 14 (delta 10), reused 13 (delta 9), pack-reused 0 (from 0)
+Unpacking objects: 100% (14/14), 93.99 KiB | 1023.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+   3d5a3bb..fbd7e9f  main       -> origin/main
+Updating 3d5a3bb..fbd7e9f
+Fast-forward
+ ...r-www-drewno-ops-cd-var-www-drewno_1769767449808.txt |  84 ++++++++++++++++++++++++
+ ...\260_2026-01-30_\320\262_13.05.10_1769767524575.png" | Bin 0 -> 108272 bytes
+ server/routes.ts                                        |  36 +++++++++-
+ server/travelline.ts                                    |  15 +++--
+ 4 files changed, 127 insertions(+), 8 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1769767449808.txt
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-01-30_\320\262_13.05.10_1769767524575.png"
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3218 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-Chgfip0s.js          1,294.37 kB │ gzip: 346.44 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 19.21s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 414ms
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --linesoption)
