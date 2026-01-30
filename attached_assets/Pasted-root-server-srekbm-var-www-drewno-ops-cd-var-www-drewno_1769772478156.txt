@@ -1,0 +1,44 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && git pull && npm run build && pkill -f "node dist/index.cjs"; sleep 2 && NODE_ENV=production nohup node dist/index.cjs > /var/log/drewno.log 2>&1 & sleep 3
+Already up to date.
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (5) ../node_modules/wouter/esm/index.js
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3217 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-Bed7l7tQ.js          1,293.38 kB │ gzip: 345.85 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 19.82s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 431ms
+[11] 558907
+[10]-  Done                    sleep 2 && NODE_ENV=production nohup node dist/index.cjs> /var/log/drewno.log 2>&1
+root@server-srekbm:/var/www/drewno-ops# cat /var/log/drewno.log | grep -E "TravelLine"
+2:27:48 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+2:27:48 PM [scheduler]     - TravelLine new bookings sync: 17:00 daily
+[TravelLine] Manual sync triggered from admin panel
+[TravelLine] Requesting new token for client: api_connection_591d3...
+[TravelLine] Token obtained successfully
+[TravelLine] Today's date (Minsk): 2026-01-30
+[TravelLine] Fetching bookings for today (2026-01-30) from: https://partner.tlintegration.com/api/read-reservation/v1/properties/39140/bookings?arrivalDate=2026-01-30
+[TravelLine] Received 1000 summaries, 0 pending for today (20260130)
+[TravelLine] Fetched 0 booking details for today
+[TravelLine] Synced 0 bookings
+[TravelLine] Manual sync triggered from admin panel
+[TravelLine] Using cached token
+[TravelLine] Today's date (Minsk): 2026-01-30
+[TravelLine] Fetching bookings for today (2026-01-30) from: https://partner.tlintegration.com/api/read-reservation/v1/properties/39140/bookings?arrivalDate=2026-01-30
+root@server-srekbm:/var/www/drewno-ops#

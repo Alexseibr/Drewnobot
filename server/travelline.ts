@@ -269,6 +269,14 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     const data = await response.json();
     const bookingSummaries = data.bookingSummaries || [];
     
+    // Debug: show first 3 booking numbers to understand format
+    if (bookingSummaries.length > 0) {
+      console.log(`[TravelLine] Sample booking numbers:`);
+      bookingSummaries.slice(0, 3).forEach((s: { number: string; status: string }) => {
+        console.log(`[TravelLine]   - ${s.number} (status: ${s.status})`);
+      });
+    }
+    
     // Booking number format: YYYYMMDD-propertyId-bookingId (e.g., 20260130-39140-123456)
     // Filter by today's date prefix FIRST to reduce dataset
     const todayPrefix = today.replace(/-/g, ""); // "2026-01-30" -> "20260130"
