@@ -5,7 +5,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { insertSpaBookingSchema, insertReviewSchema, UserRole, StaffRole, SpaBooking, GuestRating, insertUnitInfoSchema } from "@shared/schema";
 import { validateInitData, generateSessionToken, getSessionExpiresAt } from "./telegram-auth";
-import { handleTelegramUpdate, setupTelegramWebhook, sendTaskNotification, sendFinancialNotification, pinAdminPanelForAllStaff } from "./telegram-bot";
+import { handleTelegramUpdate, setupTelegramWebhook, sendTaskNotification, sendFinancialNotification, pinAdminPanelForAllStaff, performNightlyCleanup } from "./telegram-bot";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -2574,6 +2574,17 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Не удалось закрепить панели" });
+    }
+  });
+
+  // Manual bot cleanup trigger for testing
+  app.post("/api/admin/bot-cleanup", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      await performNightlyCleanup();
+      res.json({ success: true, message: "Очистка чатов выполнена" });
+    } catch (error) {
+      console.error("[Bot Cleanup] Error:", error);
+      res.status(500).json({ error: "Не удалось выполнить очистку" });
     }
   });
 
