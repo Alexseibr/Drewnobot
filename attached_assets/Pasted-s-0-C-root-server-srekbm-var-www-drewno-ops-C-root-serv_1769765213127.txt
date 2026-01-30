@@ -1,0 +1,129 @@
+s":0}^C
+root@server-srekbm:/var/www/drewno-ops# ^C
+root@server-srekbm:/var/www/drewno-ops# ^C
+root@server-srekbm:/var/www/drewno-ops# cat /var/www/drewno-ops/ecosystem.config.cjs
+module.exports = {
+  apps: [{
+    name: "drewno-ops",
+    script: "npm",
+    args: "start",
+    cwd: "/var/www/drewno-ops",
+    env: {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://drewno:39903990aSs$@localhost:5432/drewno",
+      TRAVELLINE_CLIENT_ID: "api_connection_591d3_f8821b2920",
+      TRAVELLINE_CLIENT_SECRET: "poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3",
+      TRAVELLINE_PROPERTY_ID: "39140"
+    }
+  }]
+}
+root@server-srekbm:/var/www/drewno-ops# # Проверим что git не отслеживает этот файл
+git status ecosystem.config.cjs
+
+# Пересоздаём конфиг
+cat > /var/www/drewno-ops/ecosystem.config.cjs << 'EOF'
+module.exports = {
+  apps: [{
+    name: "drewno-ops",
+    script: "npm",
+    args: "start",
+    cwd: "/var/www/drewno-ops",
+    env: {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://drewno:39903990aSs$@localhost:5432/drewno",
+      TRAVELLINE_CLIENT_ID: "api_connection_591d3_f8821b2920",
+      TRAVELLINE_CLIENT_SECRET: "poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3",
+      TRAVELLINE_PROPERTY_ID: "39140"
+    }
+  }]
+}
+EOF
+
+# Полная перезагрузка PM2
+pm2 kill
+pm2 start ecosystem.config.cjs
+pm2 save
+sleep 5
+curl http://localhost:5000/api/test/travelline-sync
+pm2 logs drewno-ops --lines 5
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        ecosystem.config.cjs
+
+nothing added to commit but untracked files present (use "git add" to track)
+[PM2] Applying action deleteProcessId on app [all](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+[PM2] [v] All Applications Stopped
+[PM2] [v] PM2 Daemon Stopped
+[PM2] Spawning PM2 daemon with pm2_home=/root/.pm2
+
+
+
+
+^C
+[PM2] Saving current process list...
+[PM2][WARN] PM2 is not managing any process, skipping save...
+[PM2][WARN] To force saving use: pm2 save --force
+^X^C
+curl: (7) Failed to connect to localhost port 5000 after 0 ms: Connection refused
+[TAILING] Tailing last 5 lines for [drewno-ops] process (change the value with --lines option)
+^C
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 5
+[TAILING] Tailing last 5 lines for [drewno-ops] process (change the value with --lines option)
+
+
+^C
+root@server-srekbm:/var/www/drewno-ops# ^C
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --linesoption)
+
+^C
+root@server-srekbm:/var/www/drewno-ops# ^C
+root@server-srekbm:/var/www/drewno-ops# pm2 start ecosystem.config.cjs
+pm2 save
+sleep 5
+pm2 list
+curl http://localhost:5000/api/test/travelline-sync
+pm2 logs drewno-ops --lines 10
+[PM2][WARN] Applications drewno-ops not running, starting...
+[PM2] App [drewno-ops] launched (1 instances)
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 33.3mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 58.7mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+{"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | 12:26:18 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 12:26:18 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 12:26:18 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 12:26:18 PM [scheduler] [ThermostatScheduler] Houses initialized
+0|drewno-o | [TravelLine] Manual sync trigger via test endpoint
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 12:26:22 PM [express] GET /api/test/travelline-sync 200 in 182ms :: {"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}
