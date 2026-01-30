@@ -2604,7 +2604,8 @@ export async function registerRoutes(
   app.get("/api/test/travelline-sync", async (req, res) => {
     console.log("[TravelLine] Manual sync trigger via test endpoint");
     try {
-      const { syncTravelLineBookings, sendCheckInNotifications, isTravelLineConfigured } = await import("./travelline");
+      const { syncTodayBookings, isTravelLineConfigured } = await import("./travelline");
+      const { sendCheckInNotifications } = await import("./telegram-bot");
       
       if (!isTravelLineConfigured()) {
         return res.json({ 
@@ -2614,15 +2615,14 @@ export async function registerRoutes(
         });
       }
       
-      const syncResult = await syncTravelLineBookings();
-      const notifyResult = await sendCheckInNotifications();
+      const syncResult = await syncTodayBookings(storage);
+      await sendCheckInNotifications();
       
       res.json({ 
         success: true, 
         message: "TravelLine синхронизация выполнена",
         configured: true,
-        sync: syncResult,
-        notifications: notifyResult
+        syncedBookings: syncResult.length
       });
     } catch (error) {
       console.error("[TravelLine] Sync error:", error);
