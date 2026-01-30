@@ -2600,6 +2600,39 @@ export async function registerRoutes(
     }
   });
 
+  // Test endpoint for TravelLine sync and check-in notifications
+  app.get("/api/test/travelline-sync", async (req, res) => {
+    console.log("[TravelLine] Manual sync trigger via test endpoint");
+    try {
+      const { syncTravelLineBookings, sendCheckInNotifications, isTravelLineConfigured } = await import("./travelline");
+      
+      if (!isTravelLineConfigured()) {
+        return res.json({ 
+          success: false, 
+          message: "TravelLine не настроен - отсутствуют переменные окружения",
+          configured: false
+        });
+      }
+      
+      const syncResult = await syncTravelLineBookings();
+      const notifyResult = await sendCheckInNotifications();
+      
+      res.json({ 
+        success: true, 
+        message: "TravelLine синхронизация выполнена",
+        configured: true,
+        sync: syncResult,
+        notifications: notifyResult
+      });
+    } catch (error) {
+      console.error("[TravelLine] Sync error:", error);
+      res.status(500).json({ 
+        error: "Ошибка синхронизации TravelLine",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // ============ BLOCKED DATES - INSTRUCTOR ============
   app.get("/api/instructor/blocked-dates", async (req, res) => {
     try {
