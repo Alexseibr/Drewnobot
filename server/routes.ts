@@ -2633,6 +2633,40 @@ export async function registerRoutes(
     }
   });
 
+  // Manual TravelLine sync for admin panel (sends notifications to admins)
+  app.post("/api/admin/travelline/sync", async (req, res) => {
+    console.log("[TravelLine] Manual sync triggered from admin panel");
+    try {
+      const { syncTodayBookings, isTravelLineConfigured } = await import("./travelline");
+      const { sendCheckInNotifications } = await import("./telegram-bot");
+      
+      if (!isTravelLineConfigured()) {
+        return res.json({ 
+          success: false, 
+          message: "TravelLine не настроен",
+          configured: false,
+          syncedBookings: 0
+        });
+      }
+      
+      const syncResult = await syncTodayBookings(storage);
+      await sendCheckInNotifications();
+      
+      res.json({ 
+        success: true, 
+        message: "Синхронизация выполнена",
+        configured: true,
+        syncedBookings: syncResult.length
+      });
+    } catch (error) {
+      console.error("[TravelLine] Manual sync error:", error);
+      res.status(500).json({ 
+        error: "Ошибка синхронизации",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // ============ TRAVELLINE WEBHOOK ============
   app.post("/api/travelline/webhook", async (req, res) => {
     const authHeader = req.headers.authorization;
