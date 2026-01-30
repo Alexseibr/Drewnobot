@@ -1,0 +1,84 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && git pull && npm run build && pm2 restart ecosystem.config.cjs
+remote: Enumerating objects: 26, done.
+remote: Counting objects: 100% (26/26), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 17 (delta 15), reused 17 (delta 15), pack-reused 0 (from 0)
+Unpacking objects: 100% (17/17), 5.79 KiB | 296.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+   8238667..3d5a3bb  main       -> origin/main
+Updating 8238667..3d5a3bb
+Fast-forward
+ ...r-www-drewno-ops-cd-var-www-drewno_1769767120891.txt | 174 ++++++++++++++++++++++++
+ ...r-www-drewno-ops-pkill-f-node-dist_1769767171360.txt |  77 +++++++++++
+ client/src/pages/ops/bookings.tsx                       |  34 ++++-
+ server/routes.ts                                        |  34 +++++
+ 4 files changed, 318 insertions(+), 1 deletion(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1769767120891.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-pkill-f-node-dist_1769767171360.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3218 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-Chgfip0s.js          1,294.37 kB │ gzip: 346.44 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 23.08s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 1065ms
+[PM2][WARN] Applications drewno-ops not running, starting...
+[PM2] App [drewno-ops] launched (1 instances)
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 33.8mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --linesoption)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+0|drewno-o | [Process] Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:5000
+0|drewno-o | Error: listen EADDRINUSE: address already in use 0.0.0.0:5000
+0|drewno-o |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|drewno-o |     at listenInCluster (node:net:1965:12)
+0|drewno-o |     at doListen (node:net:2139:7)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+0|drewno-o | [Process] Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:5000
+0|drewno-o | Error: listen EADDRINUSE: address already in use 0.0.0.0:5000
+0|drewno-o |     at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+0|drewno-o |     at listenInCluster (node:net:1965:12)
+0|drewno-o |     at doListen (node:net:2139:7)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:83:21)
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 1:03:42 PM [express] GET /api/auth/me 200 in 5ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:03:44 PM [express] POST /api/admin/travelline/sync 200 in 173ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:03:44 PM [express] GET /api/admin/bookings/upcoming 200 in 3ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-o | [TravelLine] Manual sync triggered from admin panel
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | [Telegram Bot] Sending check-in notifications...
+0|drewno-o | [Telegram Bot] No check-ins for today
+0|drewno-o | 1:03:46 PM [express] POST /api/admin/travelline/sync 200 in 131ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+0|drewno-o | 1:03:46 PM [express] GET /api/admin/bookings/upcoming 200 in 6ms :: {"cottageBookings":[],"bathBookings":[]}
