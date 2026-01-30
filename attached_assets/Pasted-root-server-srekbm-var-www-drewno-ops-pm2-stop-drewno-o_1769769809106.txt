@@ -1,0 +1,45 @@
+root@server-srekbm:/var/www/drewno-ops# pm2 stop drewno-ops && sleep 2 && pm2 start ecosystem.config.cjs && pm2 logs drewno-ops --lines 10
+[PM2] Applying action stopProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ stopped   │ 0%       │ 0b       │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 26.1mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --linesoption)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o | Error: Cannot find module '/var/www/drewno-ops/dist/index.cjs'
+0|drewno-o |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+0|drewno-o |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+0|drewno-o |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+0|drewno-o |     at node:internal/main/run_main_module:28:49 {
+0|drewno-o |   code: 'MODULE_NOT_FOUND',
+0|drewno-o |   requireStack: []
+0|drewno-o | }
+0|drewno-o |
+0|drewno-o | Node.js v20.19.6
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | 1:41:18 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 1:41:18 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:41:18 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:41:18 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:41:18 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:41:18 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:41:18 PM [scheduler] [ThermostatScheduler] Houses initialized
+0|drewno-o |
+0|drewno-o | [Process] Received SIGINT, shutting down gracefully...
+0|drewno-o | [Process] HTTP server closed
+
+^C
+root@server-srekbm:/var/www/drewno-ops# pm2 status && sleep 5 && pm2 status
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
