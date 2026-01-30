@@ -242,7 +242,10 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
   const token = await getAccessToken();
   if (!token) return [];
 
-  const today = new Date().toISOString().split("T")[0];
+  // Use Minsk timezone for today's date
+  const minskDate = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Minsk" }).split(" ")[0];
+  const today = minskDate;
+  console.log(`[TravelLine] Today's date (Minsk): ${today}`);
 
   try {
     // Use Read Reservation API v1 endpoint with arrivalDate filter
