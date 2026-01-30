@@ -1,0 +1,42 @@
+Bookings":0}root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (5) ../node_modules/wouter/esm/index.js
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3218 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-B-XaFFTn.js          1,293.58 kB │ gzip: 346.22 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 23.54s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 408ms
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 2    │ online    │ 0%       │ 25.6mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# sleep 3
+root@server-srekbm:/var/www/drewno-ops# curl http://localhost:5000/api/test/travelline-sync
+{"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}root@server-srekbm:/var/www/drewno-ops#
