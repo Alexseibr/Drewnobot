@@ -760,11 +760,43 @@ export async function registerRoutes(
   // ============ BATH BOOKINGS - ADMIN ============
   app.get("/api/admin/bookings/upcoming", async (req, res) => {
     try {
-      const [cottageBookings, bathBookings] = await Promise.all([
+      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const hour = now.getHours();
+      
+      // Only show TravelLine bookings between 09:00 and 23:00
+      const showTravelLine = hour >= 9 && hour < 23;
+      
+      const [cottageBookings, bathBookings, travelLineBookings] = await Promise.all([
         storage.getCottageBookingsUpcoming(),
         storage.getBathBookingsUpcoming(),
+        showTravelLine ? storage.getTravelLineBookingsForDate(today) : Promise.resolve([]),
       ]);
-      res.json({ cottageBookings, bathBookings });
+      
+      // Convert TravelLine bookings to cottage booking format for display
+      const tlAsCottages = travelLineBookings.map(tl => ({
+        id: tl.id,
+        unitCode: tl.unitCode || tl.roomCategoryName,
+        dateCheckIn: tl.checkInDate,
+        dateCheckOut: tl.checkOutDate,
+        status: "awaiting_checkin" as const,
+        customer: {
+          fullName: tl.guestName,
+          phone: tl.guestPhone || "",
+          email: tl.guestEmail || "",
+        },
+        guestsCount: tl.guestsCount,
+        source: "travelline" as const,
+        tubSmall: false,
+        notes: tl.notes || "",
+        createdAt: tl.createdAt,
+      }));
+      
+      // Return TravelLine bookings for cottages (only today's check-ins between 09:00-23:00)
+      res.json({ 
+        cottageBookings: tlAsCottages, 
+        bathBookings 
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch bookings" });
     }
