@@ -269,19 +269,26 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     const data = await response.json();
     const bookingSummaries = data.bookingSummaries || [];
     
-    // Filter only Active/Confirmed/New bookings (API already filtered by arrivalDate)
+    // Filter only Active/Confirmed/New bookings
     const activeBookings = bookingSummaries.filter((s: { status: string }) => 
       s.status === "Active" || s.status === "Confirmed" || s.status === "New"
     );
     
-    console.log(`[TravelLine] Received ${bookingSummaries.length} booking summaries for ${today}, ${activeBookings.length} active`);
+    // Booking number format: YYYYMMDD-propertyId-bookingId (e.g., 20260130-39140-123456)
+    // Filter by today's date prefix BEFORE fetching details to avoid rate limits
+    const todayPrefix = today.replace(/-/g, ""); // "2026-01-30" -> "20260130"
+    const todaysBookings = activeBookings.filter((s: { number: string }) => 
+      s.number.startsWith(todayPrefix)
+    );
     
-    // Fetch details for all today's bookings (with rate limit protection)
+    console.log(`[TravelLine] Received ${bookingSummaries.length} booking summaries, ${activeBookings.length} active, ${todaysBookings.length} for today (${todayPrefix})`);
+    
+    // Fetch details only for today's bookings
     const detailedBookings: TLReservation[] = [];
     const maxRequests = 20; // Enough for daily check-ins
     
-    for (let i = 0; i < Math.min(activeBookings.length, maxRequests); i++) {
-      const summary = activeBookings[i];
+    for (let i = 0; i < Math.min(todaysBookings.length, maxRequests); i++) {
+      const summary = todaysBookings[i];
       console.log(`[TravelLine] Fetching details for booking: ${summary.number}`);
       const details = await fetchBookingDetails(config.propertyId, summary.number, token);
       if (details) {
@@ -291,21 +298,16 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
         console.log(`[TravelLine] Booking ${summary.number}: checkIn=${rs?.stayDates?.arrivalDateTime}, guest=${rs?.guests?.[0]?.lastName || b?.customer?.lastName || 'N/A'}, room=${rs?.roomType?.name}`);
       }
       // Delay to respect rate limit
-      if (i < activeBookings.length - 1) {
+      if (i < todaysBookings.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 350));
       }
     }
 
-    // Filter for today's check-ins (API arrivalDate filter not working, so filter locally)
-    const todayCheckIns = detailedBookings.filter(d => {
-      const checkInDate = d.booking?.roomStays?.[0]?.stayDates?.arrivalDateTime?.split("T")[0];
-      return checkInDate === today;
-    });
-
-    console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${detailedBookings.length} fetched)`);
+    // All fetched bookings should be today's (already pre-filtered by booking number prefix)
+    console.log(`[TravelLine] Fetched ${detailedBookings.length} booking details for today`);
 
     const bookings: InsertTravelLineBooking[] = [];
-    for (const reservation of todayCheckIns) {
+    for (const reservation of detailedBookings) {
       const booking = transformReservation(reservation);
       if (booking) {
         bookings.push(booking);
