@@ -220,13 +220,16 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
 
   try {
     // Use Read Reservation API v1 endpoint
-    // Filter by createdFrom to get only recent bookings (last 24 hours by default)
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(16, 59, 0, 0); // 16:59 yesterday
-    const createdFrom = yesterday.toISOString();
+    // Filter by arrivalFrom/arrivalTo to get today's check-ins
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
     
-    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings?createdFrom=${encodeURIComponent(createdFrom)}`;
+    const arrivalFrom = todayStart.toISOString();
+    const arrivalTo = todayEnd.toISOString();
+    
+    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings?arrivalFrom=${encodeURIComponent(arrivalFrom)}&arrivalTo=${encodeURIComponent(arrivalTo)}`;
     
     const response = await fetch(url, {
       headers: {
