@@ -42,3 +42,6 @@ waitForPort = 5000
 
 [userenv.shared]
 TELEGRAM_BOT_TOKEN = "7409502547:AAEIpGl2VdyNmC92q7NLrMDhSqMZiQqNCPA"
+
+[agent]
+integrations = ["github:1.0.0"]
