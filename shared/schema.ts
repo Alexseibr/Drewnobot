@@ -1877,3 +1877,83 @@ export const botMessageSchema = z.object({
 export type BotMessage = z.infer<typeof botMessageSchema>;
 export const insertBotMessageSchema = botMessageSchema.omit({ id: true, createdAt: true });
 export type InsertBotMessage = z.infer<typeof insertBotMessageSchema>;
+
+// ============ TRAVELLINE BOOKINGS ============
+// Store bookings fetched from TravelLine API
+export const travelLineBookingStatusEnum = ["new", "confirmed", "checked_in", "checked_out", "cancelled", "no_show"] as const;
+export type TravelLineBookingStatus = typeof travelLineBookingStatusEnum[number];
+
+export const travelLineBookingsTable = pgTable("travelline_bookings", {
+  id: text("id").primaryKey(), // TravelLine reservation ID
+  propertyId: text("property_id").notNull(),
+  roomCategoryName: text("room_category_name").notNull(),
+  unitCode: text("unit_code"), // Mapped to our cottage codes: D1, D2, D3, D4
+  checkInDate: text("check_in_date").notNull(),
+  checkOutDate: text("check_out_date").notNull(),
+  guestName: text("guest_name").notNull(),
+  guestPhone: text("guest_phone"),
+  guestEmail: text("guest_email"),
+  adultsCount: integer("adults_count").notNull().default(1),
+  childrenCount: integer("children_count").notNull().default(0),
+  totalAmount: real("total_amount"),
+  currency: text("currency").default("BYN"),
+  additionalServices: jsonb("additional_services").$type<string[]>(), // ["Баня", "Купель", "Мангал"]
+  status: text("status").notNull().default("new"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const travelLineBookingSchema = z.object({
+  id: z.string(),
+  propertyId: z.string(),
+  roomCategoryName: z.string(),
+  unitCode: z.string().optional(),
+  checkInDate: z.string(),
+  checkOutDate: z.string(),
+  guestName: z.string(),
+  guestPhone: z.string().optional(),
+  guestEmail: z.string().optional(),
+  adultsCount: z.number().default(1),
+  childrenCount: z.number().default(0),
+  totalAmount: z.number().optional(),
+  currency: z.string().default("BYN"),
+  additionalServices: z.array(z.string()).optional(),
+  status: z.enum(travelLineBookingStatusEnum),
+  notes: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type TravelLineBooking = z.infer<typeof travelLineBookingSchema>;
+export const insertTravelLineBookingSchema = travelLineBookingSchema.omit({ createdAt: true, updatedAt: true });
+export type InsertTravelLineBooking = z.infer<typeof insertTravelLineBookingSchema>;
+
+// ============ CHECK-IN ACTION LOGS ============
+// Track admin actions on check-in notifications (contacted, accepted)
+export const checkInActionTypeEnum = ["contacted", "accepted"] as const;
+export type CheckInActionType = typeof checkInActionTypeEnum[number];
+
+export const checkInActionLogsTable = pgTable("check_in_action_logs", {
+  id: text("id").primaryKey(),
+  bookingId: text("booking_id").notNull(), // TravelLine booking ID
+  unitCode: text("unit_code").notNull(),
+  actionType: text("action_type").notNull(), // "contacted" or "accepted"
+  adminId: text("admin_id").notNull(), // Telegram ID of admin
+  adminName: text("admin_name").notNull(),
+  actionAt: text("action_at").notNull(),
+  notes: text("notes"),
+});
+
+export const checkInActionLogSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  unitCode: z.string(),
+  actionType: z.enum(checkInActionTypeEnum),
+  adminId: z.string(),
+  adminName: z.string(),
+  actionAt: z.string(),
+  notes: z.string().optional(),
+});
+export type CheckInActionLog = z.infer<typeof checkInActionLogSchema>;
+export const insertCheckInActionLogSchema = checkInActionLogSchema.omit({ id: true, actionAt: true });
+export type InsertCheckInActionLog = z.infer<typeof insertCheckInActionLogSchema>;
