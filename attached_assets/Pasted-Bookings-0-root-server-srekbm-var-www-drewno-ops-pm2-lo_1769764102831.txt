@@ -1,0 +1,55 @@
+Bookings":0}root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 30 | grep -i travel
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | 12:05:05 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+0|drewno-o | [TravelLine] Manual sync trigger via test endpoint
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | 12:05:10 PM [express] GET /api/test/travelline-sync 200 in 197ms :: {"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}
+^C
+root@server-srekbm:/var/www/drewno-ops# ^C
+root@server-srekbm:/var/www/drewno-ops# cat /var/www/drewno-ops/ecosystem.config.cjs
+module.exports = {
+  apps: [{
+    name: "drewno-ops",
+    script: "npm",
+    args: "start",
+    cwd: "/var/www/drewno-ops",
+    env: {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://drewno:39903990aSs$@localhost:5432/drewno",
+      TRAVELLINE_CLIENT_ID: "39140",
+      TRAVELLINE_CLIENT_SECRET: "eM2oigxACsRGyBebVzUVOEY20HOFQGeO",
+      TRAVELLINE_PROPERTY_ID: "api_connection_591d3_f8821b2920"
+    }
+  }]
+}
+root@server-srekbm:/var/www/drewno-ops# cat > /var/www/drewno-ops/ecosystem.config.cjs << 'EOFCONFIG'
+module.exports = {
+  apps: [{
+    name: "drewno-ops",
+    script: "npm",
+    args: "start",
+    cwd: "/var/www/drewno-ops",
+    env: {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://drewno:39903990aSs$@localhost:5432/drewno",
+      TRAVELLINE_CLIENT_ID: "api_connection_591d3_f8821b2920",
+      TRAVELLINE_CLIENT_SECRET: "eM2oigxACsRGyBebVzUVOEY20HOFQGeO",
+      TRAVELLINE_PROPERTY_ID: "39140"
+    }
+  }]
+}
+EOFCONFIG
+
+pm2 restart drewno-ops
+sleep 3
+curl http://localhost:5000/api/test/travelline-sync
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 3    │ online    │ 0%       │ 25.8mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+{"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}root@server-srekbm:/var/www/drewno-ops#
