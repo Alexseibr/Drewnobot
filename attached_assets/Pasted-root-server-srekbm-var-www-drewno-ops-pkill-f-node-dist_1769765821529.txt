@@ -1,0 +1,131 @@
+root@server-srekbm:/var/www/drewno-ops# pkill -f "node dist/index.cjs"
+
+[Process] Received SIGTERM, shutting down gracefully...
+[Process] HTTP server closed
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+git pull origin main
+npm run build
+[1]+  Done                    TRAVELLINE_CLIENT_ID="api_connection_591d3_f8821b2920" TRAVELLINE_CLIENT_SECRET="poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3" TRAVELLINE_PROPERTY_ID="39140"DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno" NODE_ENV="production" node dist/index.cjs
+remote: Enumerating objects: 30, done.
+remote: Counting objects: 100% (30/30), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 26 (delta 21), reused 26 (delta 21), pack-reused 0 (from 0)
+Unpacking objects: 100% (26/26), 8.90 KiB | 364.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   cc4aa0a..b9b7c15  main       -> origin/main
+Updating cc4aa0a..b9b7c15
+Fast-forward
+ ...r-www-drewno-ops-cd-var-www-drewno_1769764794229.txt |  83 +++++++++++++++
+ ...r-www-drewno-ops-cd-var-www-drewno_1769764874973.txt | 118 ++++++++++++++++++++++
+ ...r-www-drewno-ops-cd-var-www-drewno_1769765629559.txt |  43 ++++++++
+ ...r-www-drewno-ops-grep-r-TRAVELLINE_1769765415633.txt |  50 +++++++++
+ ...kbm-var-www-drewno-ops-C-root-serv_1769765142653.txt |  82 +++++++++++++++
+ ...kbm-var-www-drewno-ops-C-root-serv_1769765213127.txt | 129 ++++++++++++++++++++++++
+ server/travelline.ts                                    |  19 +++-
+ 7 files changed, 519 insertions(+), 5 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1769764794229.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1769764874973.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1769765629559.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-grep-r-TRAVELLINE_1769765415633.txt
+ create mode 100644 attached_assets/Pasted-s-0-C-root-server-srekbm-var-www-drewno-ops-C-root-serv_1769765142653.txt
+ create mode 100644 attached_assets/Pasted-s-0-C-root-server-srekbm-var-www-drewno-ops-C-root-serv_1769765213127.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3218 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-B-XaFFTn.js          1,293.58 kB │ gzip: 346.22 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 22.65s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 560ms
+root@server-srekbm:/var/www/drewno-ops# TRAVELLINE_CLIENT_ID="api_connection_591d3_f8821b2920" \
+TRAVELLINE_CLIENT_SECRET="poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3" \
+TRAVELLINE_PROPERTY_ID="39140" \
+DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno" \
+NODE_ENV="production" \
+node dist/index.cjs &
+
+sleep 5
+curl http://localhost:5000/api/test/travelline-syncTRAVELLINE_CLIENT_ID="api_connection_591d3_f8821b2920" \
+TRAVELLINE_CLIENT_SECRET="poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3" \
+TRAVELLINE_PROPERTY_ID="39140" \
+DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno" \
+NODE_ENV="production" \
+node dist/index.cjs &
+
+sleep 5
+curl http://localhost:5000/api/test/travelline-sync
+[1] 551507
+12:36:42 PM [express] serving on port 5000
+[Telegram Bot] Setting up webhook for production: https://d.drewno.by
+[Telegram Bot] Webhook set successfully
+[Telegram Bot] Notifications scheduled
+12:36:42 PM [scheduler] Scheduler initialized:
+12:36:42 PM [scheduler]   - Daily tasks: 06:00 daily
+12:36:42 PM [scheduler]   - Weekly tasks: 06:00 Monday
+12:36:42 PM [scheduler]   - Monthly tasks: 06:00 1st of month
+12:36:42 PM [scheduler]   - Weather check: 18:00 daily
+12:36:42 PM [scheduler]   - Scheduled task notifications: every minute
+12:36:42 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+12:36:42 PM [scheduler]   - Notifications:
+12:36:42 PM [scheduler]     - Bath summary: 09:00 daily
+12:36:42 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+12:36:42 PM [scheduler]     - Climate ON: 12:00 daily
+12:36:42 PM [scheduler]     - Climate OFF: 14:00 daily
+12:36:42 PM [scheduler]     - Laundry check-in: 15:00 daily
+12:36:42 PM [scheduler]   - Thermostat:
+12:36:42 PM [scheduler]     - Prompt: 12:00 daily
+12:36:42 PM [scheduler]     - Base temps: 12:05 daily
+12:36:42 PM [scheduler]     - Heating: 14:30 daily
+12:36:42 PM [scheduler] [ThermostatScheduler] Houses initialized
+[2] 551526
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#1a365d" />
+    <meta name="description" content="Village Drewno - Загородный комплекс. Аренда домиков. Баня. Горячая купель." />
+    <title>Village Drewno</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script type="module" crossorigin src="/assets/index-B-XaFFTn.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-B9-RVpwy.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>12:36:47 PM [express] GET /api/test/travelline-syncTRAVELLINE_CLIENT_ID=api_connection_591d3_f8821b2920 200 in 13ms
+curl: (6) Could not resolve host: TRAVELLINE_CLIENT_SECRET=poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3
+curl: (6) Could not resolve host: TRAVELLINE_PROPERTY_ID=39140
+curl: (3) URL using bad/illegal format or missing URL
+curl: (6) Could not resolve host: NODE_ENV=production
+curl: (6) Could not resolve host: node
+curl: (6) Could not resolve host: dist
+[2]+  Exit 6                  curl http://localhost:5000/api/test/travelline-syncTRAVELLINE_CLIENT_ID="api_connection_591d3_f8821b2920" TRAVELLINE_CLIENT_SECRET="poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3" TRAVELLINE_PROPERTY_ID="39140" DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno" NODE_ENV="production" node dist/index.cjs
+[TravelLine] Manual sync trigger via test endpoint
+[TravelLine] Requesting new token for client: api_connection_591d3...
+[TravelLine] Token obtained successfully
+[TravelLine] API error: 404 -
+[TravelLine] Synced 0 bookings
+[Telegram Bot] Sending check-in notifications...
+[Telegram Bot] No check-ins for today
+{"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}root@server-srekbm:/var/www/drewno-ops# 12:36:52 PM [express] GET /api/test/travelline-sync 200 in 316ms :: {"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}
