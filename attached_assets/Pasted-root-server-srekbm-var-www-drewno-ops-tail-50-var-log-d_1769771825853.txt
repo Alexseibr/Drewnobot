@@ -1,0 +1,56 @@
+root@server-srekbm:/var/www/drewno-ops# tail -50 /var/log/drewno.log
+
+root@server-srekbm:/var/www/drewno-ops# tail -50 /var/log/drewno.log
+
+root@server-srekbm:/var/www/drewno-ops# tail -50 /var/log/drewno.log
+      "firstName": "Дарья",
+      "lastName": "Инстаграм дарья"
+    }
+  }
+}
+[TravelLine] Booking 20231208-39140-240086819: checkIn=2023-12-08T14:00, guest=Инстаграм дарья, room=Стандарт
+[TravelLine] Fetching details for booking: 20231210-39140-240625057
+[TravelLine] Booking 20231210-39140-240625057: checkIn=2023-12-10T14:00, guest=Фотографот дени, room=Стандарт
+[TravelLine] Fetching details for booking: 20231215-39140-240624721
+[TravelLine] Booking 20231215-39140-240624721: checkIn=2023-12-15T14:00, guest=Инстаграм, room=Стандарт
+[TravelLine] Fetching details for booking: 20231216-39140-241566665
+[TravelLine] Booking 20231216-39140-241566665: checkIn=2023-12-16T14:00, guest=Маркова,room=Стандарт
+[TravelLine] Fetching details for booking: 20231216-39140-240625221
+[TravelLine] Booking 20231216-39140-240625221: checkIn=2023-12-16T14:00, guest=Козимирчик, room=Стандарт
+[TravelLine] Fetching details for booking: 20231217-39140-241566946
+[TravelLine] Booking 20231217-39140-241566946: checkIn=2023-12-17T14:00, guest=Дмитрук,room=Стандарт
+[TravelLine] Fetching details for booking: 20231221-39140-242159243
+[TravelLine] Booking 20231221-39140-242159243: checkIn=2023-12-21T14:00, guest=Блошук, room=Домики
+[TravelLine] Fetching details for booking: 20231222-39140-241567475
+[TravelLine] Booking 20231222-39140-241567475: checkIn=2023-12-22T14:00, guest=Денисова, room=Стандарт
+[TravelLine] Fetching details for booking: 20231223-39140-241568032
+[TravelLine] Booking 20231223-39140-241568032: checkIn=2023-12-23T14:00, guest=Гологуш,room=Стандарт
+[TravelLine] Fetching details for booking: 20231224-39140-240627339
+[TravelLine] Booking 20231224-39140-240627339: checkIn=2023-12-24T14:00, guest=Сидорук,room=Стандарт
+[TravelLine] Fetching details for booking: 20231226-39140-242470809
+[TravelLine] Booking 20231226-39140-242470809: checkIn=2023-12-26T14:00, guest=Касперович, room=Домики
+[TravelLine] Fetching details for booking: 20231227-39140-242218928
+[TravelLine] Booking 20231227-39140-242218928: checkIn=2023-12-27T14:00, guest=Миневич,room=Домики
+[TravelLine] Fetching details for booking: 20231227-39140-242108977
+[TravelLine] Booking 20231227-39140-242108977: checkIn=2023-12-27T14:00, guest=Мотузко,room=Домики
+[TravelLine] Fetching details for booking: 20231229-39140-243730945
+[TravelLine] Booking 20231229-39140-243730945: checkIn=2023-12-29T14:00, guest=Лебедева, room=Домики
+[TravelLine] Fetching details for booking: 20231229-39140-243811539
+[TravelLine] Booking 20231229-39140-243811539: checkIn=2023-12-29T14:00, guest=Куров, room=Домики
+[TravelLine] Fetching details for booking: 20231231-39140-241569189
+[TravelLine] Booking 20231231-39140-241569189: checkIn=2023-12-31T14:00, guest=Бардушко, room=Стандарт
+[TravelLine] Fetching details for booking: 20231231-39140-240781885
+[TravelLine] Booking 20231231-39140-240781885: checkIn=2023-12-31T14:00, guest=Бардушко, room=Стандарт
+[TravelLine] Fetching details for booking: 20240102-39140-241538749
+[TravelLine] Booking 20240102-39140-241538749: checkIn=2024-01-02T14:00, guest=Елина, room=Стандарт
+[TravelLine] Fetching details for booking: 20240102-39140-241538097
+[TravelLine] Booking 20240102-39140-241538097: checkIn=2024-01-02T14:00, guest=Мелушева, room=Стандарт
+[TravelLine] Fetching details for booking: 20240103-39140-242026178
+[TravelLine] Booking 20240103-39140-242026178: checkIn=2024-01-03T14:00, guest=ЛазареваВиолетта Геннадьевна +375295063989Violettasiitalia@mail.ru, room=Домики
+[TravelLine] Found 0 check-ins for today (of 20 fetched)
+[TravelLine] Synced 0 bookings
+[Telegram Bot] Sending check-in notifications...
+[Telegram Bot] No check-ins for today
+2:16:58 PM [express] POST /api/admin/travelline/sync 200 in 10750ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+2:16:59 PM [express] GET /api/admin/bookings/upcoming 200 in 21ms :: {"cottageBookings":[],"bathBookings":[]}
+root@server-srekbm:/var/www/drewno-ops#
