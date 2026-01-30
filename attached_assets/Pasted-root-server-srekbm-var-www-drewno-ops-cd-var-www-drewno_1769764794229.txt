@@ -1,0 +1,83 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+remote: Enumerating objects: 35, done.
+remote: Counting objects: 100% (35/35), done.
+remote: Compressing objects: 100% (7/7), done.
+remote: Total 31 (delta 24), reused 31 (delta 24), pack-reused 0 (from 0)
+Unpacking objects: 100% (31/31), 3.72 MiB | 6.50 MiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   4fdc637..cc4aa0a  main       -> origin/main
+Updating 4fdc637..cc4aa0a
+Fast-forward
+ attached_assets/IMG_7742_1769764519652.jpeg             | Bin 0 -> 3134301 bytes
+ ...r-srekbm-var-www-drewno-ops-cd-var_1769763923315.txt |  42 ++++++++++++
+ ...r-srekbm-var-www-drewno-ops-pm2-de_1769764280405.txt |  50 ++++++++++++++
+ ...r-srekbm-var-www-drewno-ops-pm2-lo_1769764102831.txt |  55 ++++++++++++++++
+ ...r-srekbm-var-www-drewno-ops-pm2-lo_1769764464458.txt |  54 +++++++++++++++
+ ...r-srekbm-var-www-drewno-ops-pm2-lo_1769764479142.txt |  54 +++++++++++++++
+ ...r-srekbm-var-www-drewno-ops-pm2-lo_1769764486973.txt |  54 +++++++++++++++
+ ...r-www-drewno-ops-curl-L-X-POST-htt_1769764624030.txt |  84 ++++++++++++++++++++++++
+ ...\260_2026-01-30_\320\262_12.02.55_1769763787338.png" | Bin 0 -> 307844 bytes
+ ...\260_2026-01-30_\320\262_12.06.58_1769764032640.png" | Bin 0 -> 596026 bytes
+ server/travelline.ts                                    |  18 +++--
+ 11 files changed, 405 insertions(+), 6 deletions(-)
+ create mode 100644 attached_assets/IMG_7742_1769764519652.jpeg
+ create mode 100644 attached_assets/Pasted-Bookings-0-root-server-srekbm-var-www-drewno-ops-cd-var_1769763923315.txt
+ create mode 100644 attached_assets/Pasted-Bookings-0-root-server-srekbm-var-www-drewno-ops-pm2-de_1769764280405.txt
+ create mode 100644 attached_assets/Pasted-Bookings-0-root-server-srekbm-var-www-drewno-ops-pm2-lo_1769764102831.txt
+ create mode 100644 attached_assets/Pasted-Bookings-0-root-server-srekbm-var-www-drewno-ops-pm2-lo_1769764464458.txt
+ create mode 100644 attached_assets/Pasted-Bookings-0-root-server-srekbm-var-www-drewno-ops-pm2-lo_1769764479142.txt
+ create mode 100644 attached_assets/Pasted-Bookings-0-root-server-srekbm-var-www-drewno-ops-pm2-lo_1769764486973.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-curl-L-X-POST-htt_1769764624030.txt
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-01-30_\320\262_12.02.55_1769763787338.png"
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-01-30_\320\262_12.06.58_1769764032640.png"
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (4) src/App.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3218 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-B-XaFFTn.js          1,293.58 kB │ gzip: 346.22 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 26.55s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 486ms
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 2    │ online    │ 0%       │ 24.0mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# sleep 3
+root@server-srekbm:/var/www/drewno-ops# curl http://localhost:5000/api/test/travelline-sync
+{"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 15 | grep -i travel
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | 12:19:34 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+0|drewno-o | [TravelLine] Manual sync trigger via test endpoint
+0|drewno-o | [TravelLine] Requesting new token for client: 39140...
+0|drewno-o | [TravelLine] Synced 0 bookings
+0|drewno-o | 12:19:36 PM [express] GET /api/test/travelline-sync 200 in 177ms :: {"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}
