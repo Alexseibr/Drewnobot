@@ -36,24 +36,30 @@ async function getAccessToken(): Promise<string | null> {
   if (!config) return null;
 
   if (cachedToken && cachedToken.expiresAt > Date.now()) {
+    console.log("[TravelLine] Using cached token");
     return cachedToken.access_token;
   }
 
+  console.log(`[TravelLine] Requesting new token for client: ${config.clientId.substring(0, 20)}...`);
+  
   try {
+    const body = new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+    });
+    
     const response = await fetch(TRAVELLINE_AUTH_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-      }),
+      body: body,
     });
 
     if (!response.ok) {
-      console.error(`[TravelLine] Auth failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`[TravelLine] Auth failed: ${response.status} - ${errorText}`);
       return null;
     }
 

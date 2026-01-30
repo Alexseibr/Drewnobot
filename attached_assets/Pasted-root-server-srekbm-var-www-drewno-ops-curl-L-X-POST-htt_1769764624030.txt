@@ -1,0 +1,84 @@
+root@server-srekbm:/var/www/drewno-ops# curl -L -X POST "https://partner.tlintegration.com/auth/token" \
+>   -H "Content-Type: application/x-www-form-urlencoded" \
+>   -d "grant_type=client_credentials" \
+>   -d "client_id=api_connection_591d3_f8821b2920" \
+>   -d "client_secret=poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3" \
+>   -v
+Note: Unnecessary use of -X or --request, POST is already inferred.
+*   Trying 178.248.238.144:443...
+* Connected to partner.tlintegration.com (178.248.238.144) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+*  CAfile: /etc/ssl/certs/ca-certificates.crt
+*  CApath: /etc/ssl/certs
+* TLSv1.0 (OUT), TLS header, Certificate Status (22):
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS header, Certificate Status (22):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS header, Finished (20):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.2 (OUT), TLS header, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_128_GCM_SHA256
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: CN=*.tlintegration.com
+*  start date: Feb 26 00:00:00 2025 GMT
+*  expire date: Mar 28 23:59:59 2026 GMT
+*  subjectAltName: host "partner.tlintegration.com" matched cert's "*.tlintegration.com"
+*  issuer: C=LV; L=Riga; O=GoGetSSL; CN=GoGetSSL RSA DV CA
+*  SSL certificate verify ok.
+* Using HTTP2, server supports multiplexing
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+* Using Stream ID: 1 (easy handle 0x56343a40f9f0)
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+> POST /auth/token HTTP/2
+> Host: partner.tlintegration.com
+> user-agent: curl/7.81.0
+> accept: */*
+> content-type: application/x-www-form-urlencoded
+> content-length: 118
+>
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+* We are completely uploaded and fine
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* old SSL session ID is stale, removing
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* Connection state changed (MAX_CONCURRENT_STREAMS == 16)!
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+< HTTP/2 200
+< server: QRATOR
+< date: Fri, 30 Jan 2026 09:16:57 GMT
+< content-type: application/json
+< content-length: 1139
+< x-ratelimit-remaining-hour: 294
+< x-ratelimit-remaining-second: 2
+< x-ratelimit-remaining-minute: 14
+< cache-control: no-store
+< pragma: no-cache
+< referrer-policy: no-referrer
+< x-content-type-options: nosniff
+< set-cookie: SERVER=kc1; path=/
+< x-request-id: 5af14091-6504-4a41-af5c-e7f14f3149ed
+<
+{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI2OGZjOHRNUGFSUHRyRHYtVHV2WEpncUNGTE1CVGRheTBpQkdJSUE3amxvIn0.eyJleHAiOjE3Njk3NjU1MTcsImlhdCI6MTc2OTc2NDYxNywianRpIjoiOGMyNDgxOGYtZDZhYS00MTI1LThjMjktNDJiZjFjNDA2NjZmIiwiaXNzIjoiaHR0cHM6Ly9wYXJ0bmVyLnRsaW50ZWdyYXRpb24uY29tL2F1dGgvcmVhbG1zL1BhcnRuZXJBcGkiLCJhdWQiOiJUcmF2ZWxMaW5lLlBhcnRuZXJBUEkiLCJzdWIiOiIwZDUyZTE1OC00YTJlLTRiYmUtYTBkMC05M2Q4Mjk4OTZjODkiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhcGlfY29ubmVjdGlvbl81OTFkM19mODgyMWIyOTIwIiwic2NvcGUiOiIiLCJhcGlfYWNjZXNzZXMiOlsicmVwdXRhdGlvbl9yZXZpZXdzX2FwaSIsInJlc2VydmF0aW9uX2FwaSIsInJlZmVyZW5jZV9kYXRhX2FwaSIsInNlYXJjaF9hcGkiLCJjb250ZW50Il0sInJvbGVzIjpbImNvbnRlbnQ6ZnVsbF9pbmZvX3JlYWRlciJdfQ.qn2x2JTGXPz4anrDMRhxZpmsYoYiLeaT1hkj0ZoO8ucCKgRr3awaRlzi_tZXO3Id5F067BUJ8E5g-HHL6g9-gYN6JSIXN_GI3y1mlc1Iq1Xthiq-aR9JZmTOqFyz6AWPg8cTlxNCF42P2LRD8YwhtrWOLQFn8WIDCuTWYksUVikK6XBBXqgSpJFvnUbitFgQMOdkQ0309CbjWYPqApGTu09bDkDCyGIpbp3XZq8CJYaiTbBhhIcEaI0A2CPTHxWshF0yk0Lb2pKLk4XbTPl3TeojTFAp7kEpk_dcusVxTr6rUz6phSsny384X_6YpCRGrnqk* Connection #0 to host partner.tlintegration.com left intact
+s5yHgqhS86brZ4OARw","expires_in":900,"refresh_expires_in":0,"token_type":"Bearer","not-before-policy":0,"scope":""}root@server-srekbm:/var/www/drewno-ops#
