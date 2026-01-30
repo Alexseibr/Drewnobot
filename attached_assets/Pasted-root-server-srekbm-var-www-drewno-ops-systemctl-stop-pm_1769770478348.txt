@@ -1,0 +1,42 @@
+root@server-srekbm:/var/www/drewno-ops# systemctl stop pm2-root && systemctl disable pm2-root
+Removed /etc/systemd/system/multi-user.target.wants/pm2-root.service.
+root@server-srekbm:/var/www/drewno-ops# curl http://localhost:5000/api/health
+{"status":"ok","uptime":39,"timestamp":"2026-01-30T10:52:47.302Z","memory":{"rss":84291584,"heapTotal":16166912,"heapUsed":14557696,"external":3469645,"arrayBuffers":65670}}root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[PM2] Spawning PM2 daemon with pm2_home=/root/.pm2
+
+^C
+root@server-srekbm:/var/www/drewno-ops# ^C
+root@server-srekbm:/var/www/drewno-ops# (crontab -l 2>/dev/null; echo "@reboot cd /var/www/drewno-ops && NODE_ENV=production nohup node dist/index.cjs > /var/log/drewno.log 2>&1 &") | crontab -
+root@server-srekbm:/var/www/drewno-ops# tail -30 /var/log/drewno.log
+1:53:05 PM [express] GET /api/auth/me 200 in 7ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+1:53:06 PM [express] GET /api/admin/bookings/upcoming 200 in 50ms :: {"cottageBookings":[],"bathBookings":[]}
+[TravelLine] Manual sync triggered from admin panel
+[TravelLine] Requesting new token for client: api_connection_591d3...
+[TravelLine] Token obtained successfully
+[TravelLine] Fetching bookings from: https://partner.tlintegration.com/api/read-reservation/v1/properties/39140/bookings
+[TravelLine] Received 1000 booking summaries, 659 active
+[TravelLine] Found 0 check-ins for today (of 10 fetched)
+[TravelLine] Synced 0 bookings
+[Telegram Bot] Sending check-in notifications...
+[Telegram Bot] No check-ins for today
+1:53:13 PM [express] POST /api/admin/travelline/sync 200 in 6387ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+1:53:13 PM [express] GET /api/admin/bookings/upcoming 200 in 7ms :: {"cottageBookings":[],"bathBookings":[]}
+[TravelLine] Manual sync triggered from admin panel
+[TravelLine] Using cached token
+[TravelLine] Fetching bookings from: https://partner.tlintegration.com/api/read-reservation/v1/properties/39140/bookings
+[TravelLine] Received 1000 booking summaries, 659 active
+[TravelLine] Found 0 check-ins for today (of 10 fetched)
+[TravelLine] Synced 0 bookings
+[Telegram Bot] Sending check-in notifications...
+[Telegram Bot] No check-ins for today
+1:53:36 PM [express] POST /api/admin/travelline/sync 200 in 6065ms :: {"success":true,"message":"Синхронизация выполнена","configured":true,"syncedBookings":0}
+1:53:36 PM [express] GET /api/admin/bookings/upcoming 200 in 26ms :: {"cottageBookings":[],"bathBookings":[]}
+1:54:25 PM [express] GET /api/admin/bookings/upcoming 200 in 39ms :: {"cottageBookings":[],"bathBookings":[]}
+1:54:25 PM [express] GET /api/admin/spa-bookings/upcoming 200 in 34ms :: []
+1:54:25 PM [express] GET /api/auth/me 200 in 4ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+[TravelLine] Manual sync triggered from admin panel
+[TravelLine] Using cached token
+[TravelLine] Fetching bookings from: https://partner.tlintegration.com/api/read-reservation/v1/properties/39140/bookings
+[TravelLine] Received 1000 booking summaries, 659 active
+root@server-srekbm:/var/www/drewno-ops#
