@@ -248,26 +248,46 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     
     console.log(`[TravelLine] Received ${bookingSummaries.length} booking summaries, ${activeBookings.length} active`);
     
-    // Fetch details for active bookings (with rate limit protection)
-    const detailedBookings: TLReservation[] = [];
-    const maxRequests = 10; // Stay under rate limit (3/sec, 15/min)
+    // Log first few summaries to see structure
+    if (activeBookings.length > 0) {
+      console.log(`[TravelLine] Sample booking summary:`, JSON.stringify(activeBookings[0], null, 2));
+    }
     
-    for (let i = 0; i < Math.min(activeBookings.length, maxRequests); i++) {
-      const summary = activeBookings[i];
+    // Filter bookings with check-in today from summary (if arrivalDate is available)
+    const todaySummaries = activeBookings.filter((s: { arrivalDate?: string; checkIn?: string }) => {
+      const checkInDate = s.arrivalDate || s.checkIn;
+      return checkInDate && checkInDate.startsWith(today);
+    });
+    
+    console.log(`[TravelLine] Found ${todaySummaries.length} summaries with check-in today`);
+    
+    // If no summaries match, fall back to fetching details for first N
+    const summariesToFetch = todaySummaries.length > 0 ? todaySummaries : activeBookings;
+    
+    // Fetch details for bookings (with rate limit protection)
+    const detailedBookings: TLReservation[] = [];
+    const maxRequests = 15; // Increased limit
+    
+    for (let i = 0; i < Math.min(summariesToFetch.length, maxRequests); i++) {
+      const summary = summariesToFetch[i];
       const details = await fetchBookingDetails(config.propertyId, summary.number, token);
       if (details) {
         detailedBookings.push(details);
       }
       // Delay to respect rate limit
-      if (i < activeBookings.length - 1) {
+      if (i < summariesToFetch.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 350));
       }
     }
 
-    // Filter for today's check-ins
+    // Filter for today's check-ins (double-check from details)
     const todayCheckIns = detailedBookings.filter(r => {
       const checkIn = r.roomStays?.[0]?.checkIn;
-      return checkIn && checkIn.startsWith(today);
+      const isToday = checkIn && checkIn.startsWith(today);
+      if (isToday) {
+        console.log(`[TravelLine] Today check-in found: ${r.id}, checkIn: ${checkIn}`);
+      }
+      return isToday;
     });
 
     console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${detailedBookings.length} fetched)`);
