@@ -1,0 +1,82 @@
+s":true,"message":"Очистка выполнена - проверьте логи"}^C
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+npm run db:push
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/var/www/drewno-ops/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+[✓] Changes applied
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+sleep 3 && curl http://localhost:5000/api/test/bot-cleanup-now
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 8    │ online    │ 0%       │ 18.4mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+{"success":true,"message":"Очистка выполнена - проверьте логи"}root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# cd /path/to/your/app
+git pull origin main
+npm install
+npm run db:push
+-bash: cd: /path/to/your/app: No such file or directory
+remote: Enumerating objects: 40, done.
+remote: Counting objects: 100% (40/40), done.
+remote: Compressing objects: 100% (6/6), done.
+remote: Total 28 (delta 22), reused 27 (delta 21), pack-reused 0 (from 0)
+Unpacking objects: 100% (28/28), 15.96 KiB | 217.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   c43053c..9d67c54  main       -> origin/main
+Updating c43053c..9d67c54
+Fast-forward
+ .replit                                                 |   3 +
+ ...ding-server-dist-index-cjs-1-3mb-D_1769758970872.txt |  55 +++++
+ ...kbm-var-www-drewno-ops-root-server_1769758889804.txt | 115 ++++++++++
+ ...r-www-drewno-ops-pm2-logs-drewno-o_1769759124146.txt | 105 +++++++++
+ package-lock.json                                       | 213 ++++++++++++++++++
+ package.json                                            |   1 +
+ server/database-storage.ts                              | 143 +++++++++++-
+ server/scheduler.ts                                     |  27 ++- server/storage.ts                                       |  75 +++++++
+ server/telegram-bot.ts                                  | 148 +++++++++++++
+ server/travelline.ts                                    | 282 ++++++++++++++++++++++++
+ shared/schema.ts                                        |  80 +++++++
+ 12 files changed, 1244 insertions(+), 3 deletions(-)
+ create mode 100644 attached_assets/Pasted--built-in-26-56s-building-server-dist-index-cjs-1-3mb-D_1769758970872.txt
+ create mode 100644 attached_assets/Pasted--html-root-server-srekbm-var-www-drewno-ops-root-server_1769758889804.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-pm2-logs-drewno-o_1769759124146.txt
+ create mode 100644 server/travelline.ts
+
+added 19 packages, and audited 500 packages in 3s
+
+68 packages are looking for funding
+  run `npm fund` for details
+
+4 vulnerabilities (1 moderate, 3 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/var/www/drewno-ops/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+[✓] Changes applied
+root@server-srekbm:/var/www/drewno-ops# export DATABASE_URL="postgresql://user:password@localhost:5432/drewno"
+export SESSION_SECRET="your-session-secret-here"
+export TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
+export TRAVELLINE_CLIENT_ID="your-travelline-client-id"
+export TRAVELLINE_CLIENT_SECRET="your-travelline-client-secret"
+export TRAVELLINE_PROPERTY_ID="your-travelline-property-id"
+root@server-srekbm:/var/www/drewno-ops#
