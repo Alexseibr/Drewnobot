@@ -1308,6 +1308,54 @@ export async function sendCheckInNotifications(): Promise<void> {
   }
 }
 
+// Send notification about new booking from TravelLine webhook
+export async function sendNewBookingNotification(booking: any): Promise<void> {
+  console.log(`[Telegram Bot] Sending new booking notification for ${booking.id}`);
+  
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(u => 
+      ["ADMIN", "OWNER", "SUPER_ADMIN"].includes(u.role) && 
+      u.isActive && 
+      u.telegramId
+    );
+    
+    if (admins.length === 0) {
+      console.log("[Telegram Bot] No admins to notify about new booking");
+      return;
+    }
+    
+    const unitNames: Record<string, string> = {
+      "D1": "Домик 1",
+      "D2": "Домик 2", 
+      "D3": "Домик 3",
+      "D4": "Домик 4"
+    };
+    
+    const unitName = unitNames[booking.unitCode] || booking.unitCode;
+    const guestsCount = (booking.adultsCount || 0) + (booking.childrenCount || 0);
+    
+    const message = 
+      `<b>Новое бронирование TravelLine</b>\n\n` +
+      `<b>Домик:</b> ${unitName}\n` +
+      `<b>Гость:</b> ${booking.guestName}\n` +
+      `<b>Заезд:</b> ${booking.checkInDate}\n` +
+      `<b>Выезд:</b> ${booking.checkOutDate}\n` +
+      `<b>Гостей:</b> ${guestsCount}` +
+      (booking.guestPhone ? `\n<b>Телефон:</b> ${booking.guestPhone}` : "");
+    
+    for (const admin of admins) {
+      await sendMessage(parseInt(admin.telegramId!), message);
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log(`[Telegram Bot] Sent new booking notification to ${admins.length} admins`);
+    
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send new booking notification:", error);
+  }
+}
+
 // Perform nightly cleanup for all staff chats
 export async function performNightlyCleanup(): Promise<void> {
   console.log("[Telegram Bot] Starting nightly chat cleanup...");

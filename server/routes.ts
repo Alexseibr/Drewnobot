@@ -2633,6 +2633,52 @@ export async function registerRoutes(
     }
   });
 
+  // ============ TRAVELLINE WEBHOOK ============
+  app.post("/api/travelline/webhook", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith("Basic ")) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    const base64Credentials = authHeader.substring(6);
+    const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+    const [username, password] = credentials.split(":");
+    
+    const expectedUser = "alexseibr";
+    const expectedPass = "39903990aSs$";
+    
+    if (username !== expectedUser || password !== expectedPass) {
+      console.log("[TravelLine Webhook] Invalid credentials");
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+    
+    try {
+      const { syncTodayBookings } = await import("./travelline");
+      const { sendNewBookingNotification } = await import("./telegram-bot");
+      
+      console.log("[TravelLine Webhook] Received event:", JSON.stringify(req.body).substring(0, 200));
+      
+      const event = req.body;
+      
+      if (event.type === "reservation.created" || event.type === "reservation.modified") {
+        const syncedBookings = await syncTodayBookings(storage);
+        
+        if (event.type === "reservation.created" && syncedBookings.length > 0) {
+          const newBooking = syncedBookings.find((b: any) => b.id === event.reservationId);
+          if (newBooking) {
+            await sendNewBookingNotification(newBooking);
+          }
+        }
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[TravelLine Webhook] Error:", error);
+      res.status(500).json({ error: "Webhook processing failed" });
+    }
+  });
+
   // ============ BLOCKED DATES - INSTRUCTOR ============
   app.get("/api/instructor/blocked-dates", async (req, res) => {
     try {
