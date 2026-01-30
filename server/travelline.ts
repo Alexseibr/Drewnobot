@@ -219,11 +219,10 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
   const today = new Date().toISOString().split("T")[0];
 
   try {
-    // Use Read Reservation API v1 endpoint
-    // Get all bookings and filter locally by check-in date
-    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings`;
+    // Use Read Reservation API v1 endpoint with arrivalDate filter
+    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings?arrivalDate=${today}`;
     
-    console.log(`[TravelLine] Fetching bookings from: ${url}`);
+    console.log(`[TravelLine] Fetching bookings for today (${today}) from: ${url}`);
     
     const response = await fetch(url, {
       headers: {
@@ -241,54 +240,33 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     const data = await response.json();
     const bookingSummaries = data.bookingSummaries || [];
     
-    // Filter only Active/Confirmed/New bookings
+    // Filter only Active/Confirmed/New bookings (API already filtered by arrivalDate)
     const activeBookings = bookingSummaries.filter((s: { status: string }) => 
       s.status === "Active" || s.status === "Confirmed" || s.status === "New"
     );
     
-    console.log(`[TravelLine] Received ${bookingSummaries.length} booking summaries, ${activeBookings.length} active`);
+    console.log(`[TravelLine] Received ${bookingSummaries.length} booking summaries for ${today}, ${activeBookings.length} active`);
     
-    // Log first few summaries to see structure
-    if (activeBookings.length > 0) {
-      console.log(`[TravelLine] Sample booking summary:`, JSON.stringify(activeBookings[0], null, 2));
-    }
-    
-    // Filter bookings with check-in today from summary (if arrivalDate is available)
-    const todaySummaries = activeBookings.filter((s: { arrivalDate?: string; checkIn?: string }) => {
-      const checkInDate = s.arrivalDate || s.checkIn;
-      return checkInDate && checkInDate.startsWith(today);
-    });
-    
-    console.log(`[TravelLine] Found ${todaySummaries.length} summaries with check-in today`);
-    
-    // If no summaries match, fall back to fetching details for first N
-    const summariesToFetch = todaySummaries.length > 0 ? todaySummaries : activeBookings;
-    
-    // Fetch details for bookings (with rate limit protection)
+    // Fetch details for all today's bookings (with rate limit protection)
     const detailedBookings: TLReservation[] = [];
-    const maxRequests = 15; // Increased limit
+    const maxRequests = 20; // Enough for daily check-ins
     
-    for (let i = 0; i < Math.min(summariesToFetch.length, maxRequests); i++) {
-      const summary = summariesToFetch[i];
+    for (let i = 0; i < Math.min(activeBookings.length, maxRequests); i++) {
+      const summary = activeBookings[i];
+      console.log(`[TravelLine] Fetching details for booking: ${summary.number}`);
       const details = await fetchBookingDetails(config.propertyId, summary.number, token);
       if (details) {
         detailedBookings.push(details);
+        console.log(`[TravelLine] Booking ${summary.number}: checkIn=${details.roomStays?.[0]?.checkIn}, guest=${details.roomStays?.[0]?.guests?.[0]?.surname || 'N/A'}`);
       }
       // Delay to respect rate limit
-      if (i < summariesToFetch.length - 1) {
+      if (i < activeBookings.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 350));
       }
     }
 
-    // Filter for today's check-ins (double-check from details)
-    const todayCheckIns = detailedBookings.filter(r => {
-      const checkIn = r.roomStays?.[0]?.checkIn;
-      const isToday = checkIn && checkIn.startsWith(today);
-      if (isToday) {
-        console.log(`[TravelLine] Today check-in found: ${r.id}, checkIn: ${checkIn}`);
-      }
-      return isToday;
-    });
+    // All fetched bookings should be today's check-ins (API filtered by arrivalDate)
+    const todayCheckIns = detailedBookings;
 
     console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${detailedBookings.length} fetched)`);
 
