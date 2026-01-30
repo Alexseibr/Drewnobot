@@ -1,0 +1,43 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+root@server-srekbm:/var/www/drewno-ops# TRAVELLINE_CLIENT_ID="api_connection_591d3_f8821b2920" \
+> TRAVELLINE_CLIENT_SECRET="poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3" \
+> TRAVELLINE_PROPERTY_ID="39140" \
+> DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno" \
+> NODE_ENV="production" \
+> node dist/index.cjs &
+[1] 551323
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# sleep 5
+12:33:25 PM [express] serving on port 5000
+[Telegram Bot] Setting up webhook for production: https://d.drewno.by
+[Telegram Bot] Webhook set successfully
+[Telegram Bot] Notifications scheduled
+12:33:25 PM [scheduler] Scheduler initialized:
+12:33:25 PM [scheduler]   - Daily tasks: 06:00 daily
+12:33:25 PM [scheduler]   - Weekly tasks: 06:00 Monday
+12:33:25 PM [scheduler]   - Monthly tasks: 06:00 1st of month
+12:33:25 PM [scheduler]   - Weather check: 18:00 daily
+12:33:25 PM [scheduler]   - Scheduled task notifications: every minute
+12:33:25 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+12:33:25 PM [scheduler]   - Notifications:
+12:33:25 PM [scheduler]     - Bath summary: 09:00 daily
+12:33:25 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+12:33:25 PM [scheduler]     - Climate ON: 12:00 daily
+12:33:25 PM [scheduler]     - Climate OFF: 14:00 daily
+12:33:25 PM [scheduler]     - Laundry check-in: 15:00 daily
+12:33:25 PM [scheduler]   - Thermostat:
+12:33:25 PM [scheduler]     - Prompt: 12:00 daily
+12:33:25 PM [scheduler]     - Base temps: 12:05 daily
+12:33:25 PM [scheduler]     - Heating: 14:30 daily
+12:33:26 PM [scheduler] [ThermostatScheduler] Houses initialized
+root@server-srekbm:/var/www/drewno-ops# curl http://localhost:5000/api/test/travelline-sync
+[TravelLine] Manual sync trigger via test endpoint
+[TravelLine] Requesting new token for client: api_connection_591d3...
+[TravelLine] Token obtained successfully
+[TravelLine] API error: 404
+[TravelLine] Synced 0 bookings
+[Telegram Bot] Sending check-in notifications...
+[Telegram Bot] No check-ins for today
+{"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}root@server-srekbm:/var/www/drewno-ops# 12:33:39 PM [express] GET /api/test/travelline-sync 200 in 489ms :: {"success":true,"message":"TravelLine синхронизация выполнена","configured":true,"syncedBookings":0}
+
+root@server-srekbm:/var/www/drewno-ops#

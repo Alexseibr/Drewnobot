@@ -196,7 +196,8 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
   const today = new Date().toISOString().split("T")[0];
 
   try {
-    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/reservations?checkInFrom=${today}&checkInTo=${today}`;
+    // Use PMS API v2 endpoint
+    const url = `${TRAVELLINE_API_URL}/api/pms/v2/properties/${config.propertyId}/reservations`;
     
     const response = await fetch(url, {
       headers: {
@@ -206,17 +207,24 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     });
 
     if (!response.ok) {
-      console.error(`[TravelLine] API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`[TravelLine] API error: ${response.status} - ${errorText}`);
       return [];
     }
 
     const data = await response.json();
     const reservations: TLReservation[] = data.reservations || data.items || data || [];
 
-    console.log(`[TravelLine] Found ${reservations.length} check-ins for today`);
+    // Filter for today's check-ins
+    const todayCheckIns = reservations.filter(r => {
+      const checkIn = r.roomStays?.[0]?.checkIn;
+      return checkIn && checkIn.startsWith(today);
+    });
+
+    console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${reservations.length} total)`);
 
     const bookings: InsertTravelLineBooking[] = [];
-    for (const reservation of reservations) {
+    for (const reservation of todayCheckIns) {
       const booking = transformReservation(reservation);
       if (booking) {
         bookings.push(booking);
@@ -238,7 +246,8 @@ export async function fetchReservationById(reservationId: string): Promise<Inser
   if (!token) return null;
 
   try {
-    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/reservations/${reservationId}`;
+    // Use PMS API v2 endpoint
+    const url = `${TRAVELLINE_API_URL}/api/pms/v2/properties/${config.propertyId}/reservations/${reservationId}`;
     
     const response = await fetch(url, {
       headers: {
