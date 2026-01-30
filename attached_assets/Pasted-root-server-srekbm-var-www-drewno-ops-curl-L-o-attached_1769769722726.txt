@@ -1,0 +1,96 @@
+root@server-srekbm:/var/www/drewno-ops# curl -L -o attached_assets/drewno-logo.webp "https://raw.githubusercontent.com/Alexseibr/Drewnobot/main/dist/public/assets/drewno-logo-Bw8WbCk8.webp" && npm run build && pm2 restart drewno-ops
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100    14  100    14    0     0     49      0 --:--:-- --:--:-- --:--:--    50
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3217 modules transformed.
+../dist/public/index.html                     1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/index-B9-RVpwy.css     82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-DylSSs4K.js   1,293.39 kB │ gzip: 345.86 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 19.50s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 555ms
+Use --update-env to update environment variables
+[PM2][ERROR] Process or Namespace drewno-ops not found
+root@server-srekbm:/var/www/drewno-ops# pm2 start ecosystem.config.cjs && pm2 save && pm2 logs drewno-ops --lines 20
+[PM2][WARN] Applications drewno-ops not running, starting...
+[PM2] App [drewno-ops] launched (1 instances)
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 29.2mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+[TAILING] Tailing last 20 lines for [drewno-ops] process (change the value with --linesoption)
+/root/.pm2/logs/drewno-ops-error.log last 20 lines:
+0|drewno-o |     at node:internal/main/run_main_module:28:49 {
+0|drewno-o |   code: 'MODULE_NOT_FOUND',
+0|drewno-o |   requireStack: []
+0|drewno-o | }0|drewno-o |
+0|drewno-o | Node.js v20.19.6
+0|drewno-o | node:internal/modules/cjs/loader:1210
+0|drewno-o |   throw err;
+0|drewno-o |   ^
+0|drewno-o |
+0|drewno-o | Error: Cannot find module '/var/www/drewno-ops/dist/index.cjs'
+0|drewno-o |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+0|drewno-o |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+0|drewno-o |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+0|drewno-o |     at node:internal/main/run_main_module:28:49 {
+0|drewno-o |   code: 'MODULE_NOT_FOUND',
+0|drewno-o |   requireStack: []
+0|drewno-o | }
+0|drewno-o |
+0|drewno-o | Node.js v20.19.6
+
+/root/.pm2/logs/drewno-ops-out.log last 20 lines:
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+
+^C
+root@server-srekbm:/var/www/drewno-ops# ls -la dist/ && cat dist/index.cjs 2>&1 | head -5
+total 1332
+drwxr-xr-x  3 root root    4096 Jan 30 13:40 .
+drwxr-xr-x 10 root root    4096 Jan 30 13:40 ..
+-rw-r--r--  1 root root 1350118 Jan 30 13:40 index.cjs
+drwxr-xr-x  3 root root    4096 Jan 30 13:40 public
+"use strict";var EC=Object.create;var ho=Object.defineProperty;var BC=Object.getOwnPropertyDescriptor;var NC=Object.getOwnPropertyNames;var DC=Object.getPrototypeOf,RC=Object.prototype.hasOwnProperty;var R=(n,e)=>()=>(n&&(e=n(n=0)),e);var A=(n,e)=>()=>(e||n((e={exports:{}}).exports,e),e.exports),Ta=(n,e)=>{for(var t in e)ho(n,t,{get:e[t],enumerable:!0})},Kg=(n,e,t,r)=>{if(e&&typeof e=="object"||typeof e=="function")for(let i of NC(e))!RC.call(n,i)&&i!==t&&ho(n,i,{get:()=>e[i],enumerable:!(r=BC(e,i))||r.enumerable});returnn};var mi=(n,e,t)=>(t=n!=null?EC(DC(n)):{},Kg(e||!n||!n.__esModule?ho(t,"default",{value:n,enumerable:!0}):t,n)),jC=n=>Kg(ho({},"__esModule",{value:!0}),n);var mn=A((yL,Yg)=>{var MC=require("path").relative;Yg.exports=$C;var OC=process.cwd();function Gg(n,e){for(var t=n.split(/[ ,]+/),r=String(e).toLowerCase(),i=0;i<t.length;i++){var a=t[i];if(a&&(a==="*"||a.toLowerCase()===r))return!0}return!1}function qC(n,e,t){var r=Object.getOwnPropertyDescriptor(n,e),i=r.value;return r.get=function(){return i},r.writable&&(r.set=function(s){return i=s}),delete r.value,delete r.writable,Object.defineProperty(n,e,r),r}function LC(n){for(var e="",t=0;t<n;t++)e+=", arg"+t;return e.substr(2)}function UC(n){var e=this.name+": "+this.namespace;this.message&&(e+=" deprecated "+this.message);for(var t=0;t<n.length;t++)e+=`
+    at `+n[t].toString();return e}function $C(n){if(!n)throw new TypeError("argument namespace is required");var e=yo(),t=hi(e[1]),r=t[0];function i(a){go.call(i,a)}return i._file=r,i._ignored=FC(n),i._namespace=n,i._traced=QC(n),i._warned=Object.create(null),i.function=WC,i.property=GC,i}function zC(n,e){var t=typeof n.listenerCount!="function"?n.listeners(e).length:n.listenerCount(e);return t>0}function FC(n){if(process.noDeprecation)return!0;var e=process.env.NO_DEPRECATION||"";return Gg(e,n)}function QC(n){if(process.traceDeprecation)return!0;var e=process.env.TRACE_DEPRECATION||"";return Gg(e,n)}function go(n,e){var t=zC(process,"deprecation");if(!(!t&&this._ignored)){var r,i,a,s,o=0,f=!1,p=yo(),m=this._file;for(e?(s=e,a=hi(p[1]),a.name=s.name,m=a[0]):(o=2,s=hi(p[o]),a=s);o<p.length;o++)if(r=hi(p[o]),i=r[0],i===m)f=!0;else if(i===this._file)m=this._file;else if(f)break;var g=r?s.join(":")+"__"+r.join(":"):void 0;if(!(g!==void 0&&g in this._warned)){this._warned[g]=!0;var l=n;if(l||(l=a===s||!a.name?Wg(s):Wg(a)),t){var u=Zg(this._namespace,l,p.slice(o));process.emit("deprecation",u);return}var c=process.stderr.isTTY?VC:HC,h=c.call(this,l,r,p.slice(o));process.stderr.write(h+`
+`,"utf8")}}}function hi(n){var e=n.getFileName()||"<anonymous>",t=n.getLineNumber(),r=n.getColumnNumber();n.isEval()&&(e=n.getEvalOrigin()+", "+e);var i=[e,t,r];return i.callSite=n,i.name=n.getFunctionName(),i}function Wg(n){var e=n.callSite,t=n.name;t||(t="<anonymous@"+rl(n)+">");var r=e.getThis(),i=r&&e.getTypeName();return i==="Object"&&(i=void 0),i==="Function"&&(i=r.name||i),i&&e.getMethodName()?i+"."+t:t}function HC(n,e,t){var r=new Date().toUTCString(),i=r+" "+this._namespace+" deprecated "+n;if(this._traced){for(var a=0;a<t.length;a++)i+=`
+    at `+t[a].toString();return i}return e&&(i+=" at "+rl(e)),i}function VC(n,e,t){var r="\x1B[36;1m"+this._namespace+"\x1B[22;39m \x1B[33;1mdeprecated\x1B[22;39m \x1B[0m"+n+"\x1B[39m";if(this._traced){for(var i=0;i<t.length;i++)r+=`
+    \x1B[36mat `+t[i].toString()+"\x1B[39m";return r}return e&&(r+=" \x1B[36m"+rl(e)+"\x1B[39m"),r}function rl(n){return MC(OC,n[0])+":"+n[1]+":"+n[2]}function yo(){var n=Error.stackTraceLimit,e={},t=Error.prepareStackTrace;Error.prepareStackTrace=KC,Error.stackTraceLimit=Math.max(10,n),Error.captureStackTrace(e);var r=e.stack.slice(1);return Error.prepareStackTrace=t,Error.stackTraceLimit=n,r}function KC(n,e){return e}function WC(n,e){if(typeof n!="function")throw new TypeError("argument fn must be a function");var t=LC(n.length),r=yo(),i=hi(r[1]);i.name=n.name;var a=new Function("fn","log","deprecate","message","site",`"use strict"
+root@server-srekbm:/var/www/drewno-ops#
