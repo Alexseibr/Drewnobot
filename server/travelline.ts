@@ -293,8 +293,11 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
       }
     }
 
-    // All fetched bookings should be today's check-ins (API filtered by arrivalDate)
-    const todayCheckIns = detailedBookings;
+    // Filter for today's check-ins (API arrivalDate filter not working, so filter locally)
+    const todayCheckIns = detailedBookings.filter(d => {
+      const checkInDate = d.booking?.roomStays?.[0]?.stayDates?.arrivalDateTime?.split("T")[0];
+      return checkInDate === today;
+    });
 
     console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${detailedBookings.length} fetched)`);
 
