@@ -219,13 +219,14 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
   const today = new Date().toISOString().split("T")[0];
 
   try {
-    // Use Read Reservation API v1 endpoint with modifiedFrom filter to get recent bookings only
-    // Get bookings modified in the last 30 days to avoid fetching old data
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const modifiedFrom = thirtyDaysAgo.toISOString();
+    // Use Read Reservation API v1 endpoint
+    // Filter by createdFrom to get only recent bookings (last 24 hours by default)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(16, 59, 0, 0); // 16:59 yesterday
+    const createdFrom = yesterday.toISOString();
     
-    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings?modifiedFrom=${encodeURIComponent(modifiedFrom)}`;
+    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings?createdFrom=${encodeURIComponent(createdFrom)}`;
     
     const response = await fetch(url, {
       headers: {
@@ -243,32 +244,27 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     const data = await response.json();
     const bookingSummaries = data.bookingSummaries || [];
     
-    // Filter only Active bookings
+    // Filter only Active/Confirmed/New bookings
     const activeBookings = bookingSummaries.filter((s: { status: string }) => 
       s.status === "Active" || s.status === "Confirmed" || s.status === "New"
     );
     
     console.log(`[TravelLine] Received ${bookingSummaries.length} booking summaries, ${activeBookings.length} active`);
     
-    // Fetch details only for active bookings (with rate limit protection)
+    // Fetch details for active bookings (with rate limit protection)
     const detailedBookings: TLReservation[] = [];
-    let requestCount = 0;
-    const maxRequests = 15; // Stay under rate limit
+    const maxRequests = 10; // Stay under rate limit (3/sec, 15/min)
     
-    for (const summary of activeBookings) {
-      if (requestCount >= maxRequests) {
-        console.log(`[TravelLine] Rate limit protection: stopped after ${maxRequests} detail requests`);
-        break;
-      }
-      
+    for (let i = 0; i < Math.min(activeBookings.length, maxRequests); i++) {
+      const summary = activeBookings[i];
       const details = await fetchBookingDetails(config.propertyId, summary.number, token);
       if (details) {
         detailedBookings.push(details);
       }
-      requestCount++;
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Delay to respect rate limit
+      if (i < activeBookings.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
     }
 
     // Filter for today's check-ins
@@ -277,7 +273,7 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
       return checkIn && checkIn.startsWith(today);
     });
 
-    console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${detailedBookings.length} fetched bookings)`);
+    console.log(`[TravelLine] Found ${todayCheckIns.length} check-ins for today (of ${detailedBookings.length} fetched)`);
 
     const bookings: InsertTravelLineBooking[] = [];
     for (const reservation of todayCheckIns) {
