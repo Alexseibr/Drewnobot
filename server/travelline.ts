@@ -80,35 +80,47 @@ async function getAccessToken(): Promise<string | null> {
   }
 }
 
+// TravelLine API response structure (wrapped in "booking" object)
 interface TLReservation {
-  id: string;
-  propertyId: string;
-  roomStays: Array<{
-    roomCategory: {
-      name: string;
-      code?: string;
-    };
-    checkIn: string;
-    checkOut: string;
-    guests: Array<{
-      givenName?: string;
-      surname?: string;
+  booking: {
+    number: string;
+    propertyId: number;
+    status: string;
+    roomStays: Array<{
+      roomType: {
+        id: string;
+        name: string;
+      };
+      stayDates: {
+        arrivalDateTime: string;
+        departureDateTime: string;
+      };
+      guestCount: {
+        adultCount: number;
+        childAges?: number[];
+      };
+      guests: Array<{
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        email?: string;
+      }>;
+      total: {
+        priceBeforeTax: number;
+        priceAfterTax: number;
+      };
+      services?: Array<{
+        name: string;
+        code?: string;
+      }>;
+    }>;
+    customer?: {
+      firstName?: string;
+      lastName?: string;
       phone?: string;
       email?: string;
-    }>;
-    adultsCount: number;
-    childrenCount?: number;
-    totalAmount?: {
-      amount: number;
-      currency: string;
     };
-    services?: Array<{
-      name: string;
-      code?: string;
-    }>;
-  }>;
-  status: string;
-  notes?: string;
+  };
 }
 
 function mapRoomCategoryToUnitCode(roomCategoryName: string): string | undefined {
@@ -156,30 +168,38 @@ function mapTLStatus(status: string): TravelLineBooking["status"] {
   return statusMap[status] || "new";
 }
 
-function transformReservation(reservation: TLReservation): InsertTravelLineBooking | null {
-  const roomStay = reservation.roomStays?.[0];
+function transformReservation(data: TLReservation): InsertTravelLineBooking | null {
+  const booking = data.booking;
+  if (!booking) return null;
+  
+  const roomStay = booking.roomStays?.[0];
   if (!roomStay) return null;
 
-  const guest = roomStay.guests?.[0] || {};
-  const guestName = [guest.givenName, guest.surname].filter(Boolean).join(" ") || "Гость";
+  // Get guest from roomStay or customer
+  const guest = roomStay.guests?.[0] || booking.customer || {};
+  const guestName = [guest.firstName, guest.lastName].filter(Boolean).join(" ") || "Гость";
+
+  // Extract dates from stayDates
+  const checkInDate = roomStay.stayDates?.arrivalDateTime?.split("T")[0] || "";
+  const checkOutDate = roomStay.stayDates?.departureDateTime?.split("T")[0] || "";
 
   return {
-    id: reservation.id,
-    propertyId: reservation.propertyId,
-    roomCategoryName: roomStay.roomCategory?.name || "Unknown",
-    unitCode: mapRoomCategoryToUnitCode(roomStay.roomCategory?.name || ""),
-    checkInDate: roomStay.checkIn,
-    checkOutDate: roomStay.checkOut,
+    id: booking.number,
+    propertyId: String(booking.propertyId),
+    roomCategoryName: roomStay.roomType?.name || "Unknown",
+    unitCode: mapRoomCategoryToUnitCode(roomStay.roomType?.name || ""),
+    checkInDate,
+    checkOutDate,
     guestName,
     guestPhone: guest.phone,
     guestEmail: guest.email,
-    adultsCount: roomStay.adultsCount || 1,
-    childrenCount: roomStay.childrenCount || 0,
-    totalAmount: roomStay.totalAmount?.amount,
-    currency: roomStay.totalAmount?.currency || "BYN",
+    adultsCount: roomStay.guestCount?.adultCount || 1,
+    childrenCount: roomStay.guestCount?.childAges?.length || 0,
+    totalAmount: roomStay.total?.priceAfterTax,
+    currency: "BYN",
     additionalServices: roomStay.services?.map(s => s.name) || [],
-    status: mapTLStatus(reservation.status),
-    notes: reservation.notes,
+    status: mapTLStatus(booking.status),
+    notes: undefined,
   };
 }
 
@@ -263,7 +283,9 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
       const details = await fetchBookingDetails(config.propertyId, summary.number, token);
       if (details) {
         detailedBookings.push(details);
-        console.log(`[TravelLine] Booking ${summary.number}: checkIn=${details.roomStays?.[0]?.checkIn}, guest=${details.roomStays?.[0]?.guests?.[0]?.surname || 'N/A'}`);
+        const b = details.booking;
+        const rs = b?.roomStays?.[0];
+        console.log(`[TravelLine] Booking ${summary.number}: checkIn=${rs?.stayDates?.arrivalDateTime}, guest=${rs?.guests?.[0]?.lastName || b?.customer?.lastName || 'N/A'}, room=${rs?.roomType?.name}`);
       }
       // Delay to respect rate limit
       if (i < activeBookings.length - 1) {
