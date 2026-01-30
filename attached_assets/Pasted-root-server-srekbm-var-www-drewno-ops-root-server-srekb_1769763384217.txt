@@ -1,0 +1,55 @@
+root@server-srekbm:/var/www/drewno-ops# # Экспортируй переменные и запусти
+root@server-srekbm:/var/www/drewno-ops# source /var/www/drewno-ops/.env
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops --update-env
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 1    │ online    │ 0%       │ 26.2mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+cat > ecosystem.config.js << 'EOFCONFIG'
+module.exports = {
+  apps: [{
+    name: "drewno-ops",
+    script: "npm",
+    args: "start",
+    cwd: "/var/www/drewno-ops",
+    env: {
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://drewno:39903990aSs$@localhost:5432/drewno",
+      TRAVELLINE_CLIENT_ID: "39140",
+      TRAVELLINE_CLIENT_SECRET: "eM2oigxACsRGyBebVzUVOEY20HOFQGeO",
+      TRAVELLINE_PROPERTY_ID: "api_connection_591d3_f8821b2920"
+    }
+  }]
+}
+EOFCONFIG
+
+pm2 delete drewno-ops
+pm2 start ecosystem.config.js
+pm2 save
+pm2 logs drewno-ops --lines 10
+[PM2] Applying action deleteProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2][ERROR] File ecosystem.config.js malformated
+ReferenceError: module is not defined in ES module scope
+This file is being treated as an ES module because it has a '.js' file extension and '/var/www/drewno-ops/package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
+    at file:///var/www/drewno-ops/ecosystem.config.js:1:1
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:437:37)
+    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:389:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1363:24)
+    at Module._compile (node:internal/modules/cjs/loader:1503:5)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+[PM2] Saving current process list...
+[PM2][WARN] PM2 is not managing any process, skipping save...
+[PM2][WARN] To force saving use: pm2 save --force
+[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --linesoption)
