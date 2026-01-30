@@ -195,11 +195,17 @@ async function fetchBookingDetails(propertyId: string, bookingNumber: string, to
     });
 
     if (!response.ok) {
-      console.error(`[TravelLine] Failed to fetch booking ${bookingNumber}: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`[TravelLine] Failed to fetch booking ${bookingNumber}: ${response.status} - ${errorText}`);
       return null;
     }
 
-    return await response.json();
+    const data = await response.json();
+    // Log first booking structure for debugging
+    if (bookingNumber.includes("20231208")) {
+      console.log(`[TravelLine] Sample booking response:`, JSON.stringify(data, null, 2).substring(0, 2000));
+    }
+    return data;
   } catch (error) {
     console.error(`[TravelLine] Error fetching booking ${bookingNumber}:`, error);
     return null;
