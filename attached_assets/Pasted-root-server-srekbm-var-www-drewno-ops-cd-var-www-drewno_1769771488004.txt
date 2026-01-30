@@ -1,0 +1,144 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && git pull && npm run build && pkill -f "node dist/index.cjs"; sleep 2 && NODE_ENV=production nohup node dist/index.cjs > /var/log/drewno.log 2>&1 & sleep 5 && tail -20 /var/log/drewno.log
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 3.31 KiB | 1.66 MiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+   2cd90b0..5831ea9  main       -> origin/main
+Updating 2cd90b0..5831ea9
+Fast-forward
+ ...r-www-drewno-ops-cd-var-www-drewno_1769771336532.txt | 128 ++++++++++++++++++++++++
+ ...r-www-drewno-ops-tail-100-var-log-_1769771193256.txt | 102 -------------------
+ server/travelline.ts                                    |   7 +-
+ 3 files changed, 133 insertions(+), 104 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1769771336532.txt
+ delete mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-tail-100-var-log-_1769771193256.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3217 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-Bed7l7tQ.js          1,293.38 kB │ gzip: 345.85 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 18.92s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 491ms
+[6] 558335
+[5]-  Done                    sleep 2 && NODE_ENV=production nohup node dist/index.cjs > /var/log/drewno.log 2>&1
+[Telegram Bot] Notifications scheduled
+2:10:56 PM [scheduler] Scheduler initialized:
+2:10:56 PM [scheduler]   - Daily tasks: 06:00 daily
+2:10:56 PM [scheduler]   - Weekly tasks: 06:00 Monday
+2:10:56 PM [scheduler]   - Monthly tasks: 06:00 1st of month
+2:10:56 PM [scheduler]   - Weather check: 18:00 daily
+2:10:56 PM [scheduler]   - Scheduled task notifications: every minute
+2:10:56 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+2:10:56 PM [scheduler]   - Notifications:
+2:10:56 PM [scheduler]     - Bath summary: 09:00 daily
+2:10:56 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+2:10:56 PM [scheduler]     - TravelLine new bookings sync: 17:00 daily
+2:10:56 PM [scheduler]     - Climate ON: 12:00 daily
+2:10:56 PM [scheduler]     - Climate OFF: 14:00 daily
+2:10:56 PM [scheduler]     - Laundry check-in: 15:00 daily
+2:10:56 PM [scheduler]   - Thermostat:
+2:10:56 PM [scheduler]     - Prompt: 12:00 daily
+2:10:56 PM [scheduler]     - Base temps: 12:05 daily
+2:10:56 PM [scheduler]     - Heating: 14:30 daily
+2:10:56 PM [scheduler] [ThermostatScheduler] Houses initialized
+root@server-srekbm:/var/www/drewno-ops# sleep 5 && tail -80 /var/log/drewno.log
+    "propertyId": "39140",
+    "number": "20231208-39140-240086819",
+    "status": "Active",
+    "createdDateTime": "2023-12-04T18:11:56Z",
+    "modifiedDateTime": "2023-12-08T11:12:44Z",
+    "guaranteeInfo": {
+      "loyalty": null,
+      "totalPrepaid": 350
+    },
+    "currencyCode": "BYN",
+    "roomStays": [
+      {
+        "stayDates": {
+          "arrivalDateTime": "2023-12-08T14:00",
+          "departureDateTime": "2023-12-09T12:00"
+        },
+        "ratePlans": [
+          {
+            "id": "561470",
+            "name": "Стандарт"
+          }
+        ],
+        "roomType": {
+          "id": "251209",
+          "name": "Стандарт"
+        },
+        "guestCount": {
+          "adultCount": 1,
+          "childAges": []
+        },
+        "guests": [
+          {
+            "firstName": "Дарья",
+            "lastName": "Инстаграм дарья"
+          }
+        ],
+        "dailyRates": [
+          {
+            "ratePlanId": "561470",
+            "priceBeforeTax": 350,
+            "date": "2023-12-08T00:00:00"
+          }
+        ],
+        "total": {
+          "priceBeforeTax": 350,
+          "priceAfterTax": 350,
+          "taxAmount": 0,
+          "taxes": [],
+          "discounts": []
+        },
+        "services": [],
+        "extraStayCharges": {
+          "earlyArrival": null,
+          "lateDeparture": null
+        }
+      }
+    ],
+    "services": [],
+    "total": {
+      "priceBeforeTax": 350,
+      "priceAfterTax": 350,
+      "taxAmount": 0,
+      "taxes": [],
+      "discounts": []
+    },
+    "taxes": [],
+    "cancellation": null,
+    "source": {
+      "type": "PMS",
+      "code": null,
+      "sourceUrl": ""
+    },
+    "customer": {
+      "firstName": "Дарья",
+      "lastName": "Инстаграм дарья"
+    }
+  }
+}
+[TravelLine] Booking 20231208-39140-240086819: checkIn=2023-12-08T14:00, guest=Инстаграм дарья, room=Стандарт
+[TravelLine] Fetching details for booking: 20231210-39140-240625057
+root@server-srekbm:/var/www/drewno-ops#
