@@ -1,0 +1,73 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && pm2 start ecosystem.config.cjs
+[PM2][WARN] Applications drewno-ops not running, starting...
+[PM2] App [drewno-ops] launched (1 instances)
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 33.2mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 30
+[TAILING] Tailing last 30 lines for [drewno-ops] process (change the value with --linesoption)
+/root/.pm2/logs/drewno-ops-error.log last 30 lines:
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 429 - {
+0|drewno-o |   "message":"API rate limit exceeded"
+0|drewno-o | }
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+
+/root/.pm2/logs/drewno-ops-out.log last 30 lines:
+0|drewno-o |
+0|drewno-o | [Process] Received SIGTERM, shutting down gracefully...
+0|drewno-o | [Process] HTTP server closed
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o | 1:21:44 PM [express] serving on port 5000
+0|drewno-o | [Telegram Bot] Setting up webhook for production: https://d.drewno.by
+0|drewno-o | [Telegram Bot] Webhook set successfully
+0|drewno-o | [Telegram Bot] Notifications scheduled
+0|drewno-o | 1:21:45 PM [scheduler] Scheduler initialized:
+0|drewno-o | 1:21:45 PM [scheduler]   - Daily tasks: 06:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]   - Weekly tasks: 06:00 Monday
+0|drewno-o | 1:21:45 PM [scheduler]   - Monthly tasks: 06:00 1st of month
+0|drewno-o | 1:21:45 PM [scheduler]   - Weather check: 18:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 1:21:45 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]   - Notifications:
+0|drewno-o | 1:21:45 PM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]     - TravelLine new bookings sync: 17:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:21:45 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:21:45 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:21:45 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:21:45 PM [scheduler] [ThermostatScheduler] Houses initialized
