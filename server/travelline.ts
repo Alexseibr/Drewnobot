@@ -248,8 +248,13 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
   console.log(`[TravelLine] Today's date (Minsk): ${today}`);
 
   try {
-    // Use Read Reservation API v1 endpoint with arrivalDate filter
-    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings?arrivalDate=${today}`;
+    // Use Read Reservation API v1 endpoint - try with pagination to get recent bookings
+    // API seems to return oldest first, so we need to skip to recent ones
+    // Also try modifiedAfter to get recently modified bookings
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 7); // Last 7 days
+    const modifiedAfter = recentDate.toISOString().split("T")[0];
+    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings?modifiedAfter=${modifiedAfter}`;
     
     console.log(`[TravelLine] Fetching bookings for today (${today}) from: ${url}`);
     

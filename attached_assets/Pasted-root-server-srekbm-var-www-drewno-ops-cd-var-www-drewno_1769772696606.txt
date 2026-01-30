@@ -1,0 +1,71 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && git pull && npm run build && pkill -f "node dist/index.cjs"; sleep 2 && NODE_ENV=production nohup node dist/index.cjs > /var/log/drewno.log 2>&1 & sleep 3
+remote: Enumerating objects: 16, done.
+remote: Counting objects: 100% (16/16), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 12 (delta 10), reused 12 (delta 10), pack-reused 0 (from 0)
+Unpacking objects: 100% (12/12), 4.02 KiB | 411.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+   13b3bab..a0ff8e3  main       -> origin/main
+Updating 13b3bab..a0ff8e3
+Fast-forward
+ ...r-www-drewno-ops-cd-var-www-drewno_1769772478156.txt | 44 ++++++++++++
+ ...r-www-drewno-ops-pkill-f-node-dist_1769772379778.txt | 95 +++++++++++++++++++++++++
+ server/travelline.ts                                    | 30 ++++++--
+ 3 files changed, 163 insertions(+), 6 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1769772478156.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-pkill-f-node-dist_1769772379778.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3217 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-Bed7l7tQ.js          1,293.38 kB │ gzip: 345.85 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 21.86s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 443ms
+[12] 559008
+[11]-  Done                    sleep 2 && NODE_ENV=production nohup node dist/index.cjs> /var/log/drewno.log 2>&1
+root@server-srekbm:/var/www/drewno-ops# cat /var/log/drewno.log | grep -E "TravelLine|Sample"
+2:29:14 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+2:29:14 PM [scheduler]     - TravelLine new bookings sync: 17:00 daily
+[TravelLine] Manual sync triggered from admin panel
+[TravelLine] Requesting new token for client: api_connection_591d3...
+[TravelLine] Token obtained successfully
+[TravelLine] Today's date (Minsk): 2026-01-30
+[TravelLine] Fetching bookings for today (2026-01-30) from: https://partner.tlintegration.com/api/read-reservation/v1/properties/39140/bookings?arrivalDate=2026-01-30
+[TravelLine] Sample booking numbers:
+[TravelLine]   - 20231111-39140-234070817 (status: Cancelled)
+[TravelLine]   - 20231211-39140-240551465 (status: Cancelled)
+[TravelLine]   - 20231211-39140-240552114 (status: Cancelled)
+[TravelLine] All bookings for today (20260130): 0
+[TravelLine] Received 1000 summaries, 0 pending for today
+[TravelLine] Fetched 0 booking details for today
+[TravelLine] Synced 0 bookings
+[TravelLine] Manual sync triggered from admin panel
+[TravelLine] Using cached token
+[TravelLine] Today's date (Minsk): 2026-01-30
+[TravelLine] Fetching bookings for today (2026-01-30) from: https://partner.tlintegration.com/api/read-reservation/v1/properties/39140/bookings?arrivalDate=2026-01-30
+[TravelLine] Sample booking numbers:
+[TravelLine]   - 20231111-39140-234070817 (status: Cancelled)
+[TravelLine]   - 20231211-39140-240551465 (status: Cancelled)
+[TravelLine]   - 20231211-39140-240552114 (status: Cancelled)
+[TravelLine] All bookings for today (20260130): 0
+[TravelLine] Received 1000 summaries, 0 pending for today
+[TravelLine] Fetched 0 booking details for today
+[TravelLine] Synced 0 bookings
+root@server-srekbm:/var/www/drewno-ops#
