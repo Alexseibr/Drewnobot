@@ -2588,6 +2588,18 @@ export async function registerRoutes(
     }
   });
 
+  // Temporary test endpoint - remove after testing
+  app.get("/api/test/bot-cleanup-now", async (req, res) => {
+    console.log("[Bot Cleanup] Manual trigger via test endpoint");
+    try {
+      await performNightlyCleanup();
+      res.json({ success: true, message: "Очистка выполнена - проверьте логи" });
+    } catch (error) {
+      console.error("[Bot Cleanup] Error:", error);
+      res.status(500).json({ error: "Ошибка очистки" });
+    }
+  });
+
   // ============ BLOCKED DATES - INSTRUCTOR ============
   app.get("/api/instructor/blocked-dates", async (req, res) => {
     try {
