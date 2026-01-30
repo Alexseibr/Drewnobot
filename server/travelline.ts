@@ -248,15 +248,33 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
   console.log(`[TravelLine] Today's date (Minsk): ${today}`);
 
   try {
-    // Use Read Reservation API v1 endpoint - try with pagination to get recent bookings
-    // API seems to return oldest first, so we need to skip to recent ones
-    // Also try modifiedAfter to get recently modified bookings
-    const recentDate = new Date();
-    recentDate.setDate(recentDate.getDate() - 7); // Last 7 days
-    const modifiedAfter = recentDate.toISOString().split("T")[0];
-    const url = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings?modifiedAfter=${modifiedAfter}`;
+    // Use Read Reservation API v1 endpoint
+    // API returns oldest first, so we need pagination. First get count, then fetch from end.
+    const baseUrl = `${TRAVELLINE_API_URL}/api/read-reservation/v1/properties/${config.propertyId}/bookings`;
     
-    console.log(`[TravelLine] Fetching bookings for today (${today}) from: ${url}`);
+    // First request to get total count
+    console.log(`[TravelLine] Fetching total booking count...`);
+    const countResponse = await fetch(`${baseUrl}?limit=1`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    });
+    
+    if (!countResponse.ok) {
+      console.error(`[TravelLine] Count API error: ${countResponse.status}`);
+      return [];
+    }
+    
+    const countData = await countResponse.json();
+    const totalCount = countData.totalCount || 0;
+    console.log(`[TravelLine] Total bookings in system: ${totalCount}`);
+    
+    // Fetch recent bookings (last 200 to cover recent activity)
+    const offset = Math.max(0, totalCount - 200);
+    const url = `${baseUrl}?offset=${offset}&limit=200`;
+    console.log(`[TravelLine] Fetching recent bookings (offset=${offset}) from: ${url}`);
     
     const response = await fetch(url, {
       headers: {
