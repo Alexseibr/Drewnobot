@@ -4,7 +4,7 @@ import { useTheme } from "@/lib/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import drewnoLogo from "@assets/drewno-logo.svg";
+import drewnoLogo from "@assets/drewno-logo.webp";
 
 interface HeaderProps {
   title?: string;
