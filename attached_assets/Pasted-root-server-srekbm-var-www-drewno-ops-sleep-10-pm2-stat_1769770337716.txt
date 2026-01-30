@@ -1,0 +1,86 @@
+root@server-srekbm:/var/www/drewno-ops# sleep 10 && pm2 status && pm2 logs drewno-ops --lines 10
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --linesoption)
+^C
+root@server-srekbm:/var/www/drewno-ops# journalctl -u pm2-root --since "5 minutes ago" && dmesg | tail -20
+Jan 30 13:47:14 server-srekbm.localdomain systemd[1]: pm2-root.service: start operation>
+Jan 30 13:47:14 server-srekbm.localdomain systemd[1]: pm2-root.service: Failed with res>
+Jan 30 13:47:14 server-srekbm.localdomain systemd[1]: Failed to start PM2 process manag>
+Jan 30 13:47:14 server-srekbm.localdomain systemd[1]: pm2-root.service: Scheduled resta>
+Jan 30 13:47:14 server-srekbm.localdomain systemd[1]: Stopped PM2 process manager.
+Jan 30 13:47:14 server-srekbm.localdomain systemd[1]: Starting PM2 process manager...
+Jan 30 13:47:14 server-srekbm.localdomain pm2[556535]: [PM2] Spawning PM2 daemon with p>
+Jan 30 13:48:44 server-srekbm.localdomain systemd[1]: pm2-root.service: start operation>
+Jan 30 13:48:45 server-srekbm.localdomain systemd[1]: pm2-root.service: Failed with res>
+Jan 30 13:48:45 server-srekbm.localdomain systemd[1]: Failed to start PM2 process manag>
+Jan 30 13:48:45 server-srekbm.localdomain systemd[1]: pm2-root.service: Consumed 1.872s>
+Jan 30 13:48:45 server-srekbm.localdomain systemd[1]: pm2-root.service: Scheduled resta>
+Jan 30 13:48:45 server-srekbm.localdomain systemd[1]: Stopped PM2 process manager.
+Jan 30 13:48:45 server-srekbm.localdomain systemd[1]: pm2-root.service: Consumed 1.872s>
+Jan 30 13:48:45 server-srekbm.localdomain systemd[1]: Starting PM2 process manager...
+Jan 30 13:48:45 server-srekbm.localdomain pm2[556677]: [PM2] Spawning PM2 daemon with p>
+Jan 30 13:50:15 server-srekbm.localdomain systemd[1]: pm2-root.service: start operation>
+Jan 30 13:50:15 server-srekbm.localdomain systemd[1]: pm2-root.service: Failed with res>
+Jan 30 13:50:15 server-srekbm.localdomain systemd[1]: Failed to start PM2 process manag>
+Jan 30 13:50:15 server-srekbm.localdomain systemd[1]: pm2-root.service: Consumed 1.590s>
+Jan 30 13:50:15 server-srekbm.localdomain systemd[1]: pm2-root.service: Scheduled resta>
+Jan 30 13:50:15 server-srekbm.localdomain systemd[1]: Stopped PM2 process manager.
+Jan 30 13:50:15 server-srekbm.localdomain systemd[1]: pm2-root.service: Consumed 1.590s>
+Jan 30 13:50:15 server-srekbm.localdomain systemd[1]: Starting PM2 process manager...
+Jan 30 13:50:16 server-srekbm.localdomain pm2[557355]: [PM2] Spawning PM2 daemon with p>
+Jan 30 13:51:45 server-srekbm.localdomain systemd[1]: pm2-root.service: start operation>
+Jan 30 13:51:45 server-srekbm.localdomain systemd[1]: pm2-root.service: Failed with res>
+Jan 30 13:51:45 server-srekbm.localdomain systemd[1]: Failed to start PM2 process manag>
+Jan 30 13:51:46 server-srekbm.localdomain systemd[1]: pm2-root.service: Scheduled resta>
+Jan 30 13:51:46 server-srekbm.localdomain systemd[1]: Stopped PM2 process manager.
+Jan 30 13:51:46 server-srekbm.localdomain systemd[1]: Starting PM2 process manager...
+Jan 30 13:51:46 server-srekbm.localdomain pm2[557431]: [PM2] Spawning PM2 daemon with p>
+[    4.134303] audit: type=1400 audit(1768218394.012:4): apparmor="STATUS" operation="profile_load" profile="unconfined" name="nvidia_modprobe//kmod" pid=268 comm="apparmor_parser"
+[    4.172217] audit: type=1400 audit(1768218394.048:5): apparmor="STATUS" operation="profile_load" profile="unconfined" name="/usr/lib/NetworkManager/nm-dhcp-client.action" pid=269 comm="apparmor_parser"
+[    4.172226] audit: type=1400 audit(1768218394.052:6): apparmor="STATUS" operation="profile_load" profile="unconfined" name="/usr/lib/NetworkManager/nm-dhcp-helper" pid=269 comm="apparmor_parser"[    4.172229] audit: type=1400 audit(1768218394.052:7): apparmor="STATUS" operation="profile_load" profile="unconfined" name="/usr/lib/connman/scripts/dhclient-script" pid=269 comm="apparmor_parser"
+[    4.172232] audit: type=1400 audit(1768218394.052:8): apparmor="STATUS" operation="profile_load" profile="unconfined" name="/{,usr/}sbin/dhclient" pid=269 comm="apparmor_parser"
+[    4.187524] audit: type=1400 audit(1768218394.064:9): apparmor="STATUS" operation="profile_load" profile="unconfined" name="ubuntu_pro_apt_news" pid=270 comm="apparmor_parser"
+[    4.246954] audit: type=1400 audit(1768218394.124:10): apparmor="STATUS" operation="profile_load" profile="unconfined" name="ubuntu_pro_esm_cache" pid=271 comm="apparmor_parser"
+[    7.500609] RAPL PMU: API unit is 2^-32 Joules, 0 fixed counters, 10737418240 ms ovfl timer
+[    7.526257] cryptd: max_cpu_qlen set to 1000
+[    7.584884] bochs-drm 0000:00:02.0: vgaarb: deactivate vga console
+[    7.645521] AVX2 version of gcm_enc/dec engaged.
+[    7.645561] AES CTR mode by8 optimization enabled
+[    7.777530] Console: switching to colour dummy device 80x25
+[    7.777895] [drm] Found bochs VGA, ID 0xb0c5.
+[    7.777897] [drm] Framebuffer size 16384 kB @ 0xfc000000, mmio @ 0xfea50000.
+[    7.789097] [drm] Found EDID data blob.
+[    7.792717] [drm] Initialized bochs-drm 1.0.0 20130925 for 0000:00:02.0 on minor 0
+[    7.799834] fbcon: bochs-drmdrmfb (fb0) is primary device
+[    7.811006] Console: switching to colour frame buffer device 160x50
+[    7.811875] bochs-drm 0000:00:02.0: [drm] fb0: bochs-drmdrmfb frame buffer device
+root@server-srekbm:/var/www/drewno-ops# nohup node dist/index.cjs > /var/log/drewno.log2>&1 &
+sleep 5 && ps aux | grep node && tail -20 /var/log/drewno.log
+[1] 557462
+
+root      557431  0.8  2.6 993896 51068 ?        Ssl  13:51   0:00 node /usr/lib/node_modules/pm2/bin/pm2 resurrect
+root      557462 11.8  4.8 11737676 91628 pts/0  Sl   13:52   0:00 node dist/index.cjs
+[Telegram Bot] Notifications scheduled
+1:52:08 PM [scheduler] Scheduler initialized:
+1:52:08 PM [scheduler]   - Daily tasks: 06:00 daily
+1:52:08 PM [scheduler]   - Weekly tasks: 06:00 Monday
+1:52:08 PM [scheduler]   - Monthly tasks: 06:00 1st of month
+1:52:08 PM [scheduler]   - Weather check: 18:00 daily
+1:52:08 PM [scheduler]   - Scheduled task notifications: every minute
+1:52:08 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+1:52:08 PM [scheduler]   - Notifications:
+1:52:08 PM [scheduler]     - Bath summary: 09:00 daily
+1:52:08 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+1:52:08 PM [scheduler]     - TravelLine new bookings sync: 17:00 daily
+1:52:08 PM [scheduler]     - Climate ON: 12:00 daily
+1:52:08 PM [scheduler]     - Climate OFF: 14:00 daily
+1:52:08 PM [scheduler]     - Laundry check-in: 15:00 daily
+1:52:08 PM [scheduler]   - Thermostat:
+1:52:08 PM [scheduler]     - Prompt: 12:00 daily
+1:52:08 PM [scheduler]     - Base temps: 12:05 daily
+1:52:08 PM [scheduler]     - Heating: 14:30 daily
+1:52:08 PM [scheduler] [ThermostatScheduler] Houses initialized
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops#
