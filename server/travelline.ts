@@ -269,19 +269,17 @@ export async function fetchTodayCheckIns(): Promise<InsertTravelLineBooking[]> {
     const data = await response.json();
     const bookingSummaries = data.bookingSummaries || [];
     
-    // Filter only Active/Confirmed/New bookings
-    const activeBookings = bookingSummaries.filter((s: { status: string }) => 
-      s.status === "Active" || s.status === "Confirmed" || s.status === "New"
-    );
-    
     // Booking number format: YYYYMMDD-propertyId-bookingId (e.g., 20260130-39140-123456)
-    // Filter by today's date prefix BEFORE fetching details to avoid rate limits
+    // Filter by today's date prefix FIRST to reduce dataset
     const todayPrefix = today.replace(/-/g, ""); // "2026-01-30" -> "20260130"
-    const todaysBookings = activeBookings.filter((s: { number: string }) => 
-      s.number.startsWith(todayPrefix)
-    );
+    const todaysBookings = bookingSummaries.filter((s: { number: string; status: string }) => {
+      // Only match today's date and pending statuses (not already checked in/out)
+      const isToday = s.number.startsWith(todayPrefix);
+      const isPending = s.status === "New" || s.status === "Confirmed";
+      return isToday && isPending;
+    });
     
-    console.log(`[TravelLine] Received ${bookingSummaries.length} booking summaries, ${activeBookings.length} active, ${todaysBookings.length} for today (${todayPrefix})`);
+    console.log(`[TravelLine] Received ${bookingSummaries.length} summaries, ${todaysBookings.length} pending for today (${todayPrefix})`);
     
     // Fetch details only for today's bookings
     const detailedBookings: TLReservation[] = [];
