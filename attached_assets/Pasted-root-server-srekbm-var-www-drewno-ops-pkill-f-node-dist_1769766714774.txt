@@ -1,0 +1,437 @@
+root@server-srekbm:/var/www/drewno-ops# pkill -f "node dist/index.cjs"
+
+[Process] Received SIGTERM, shutting down gracefully...
+[Process] HTTP server closed
+[1]+  Done                    TRAVELLINE_CLIENT_ID="api_connection_591d3_f8821b2920" TRAVELLINE_CLIENT_SECRET="poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3" TRAVELLINE_PROPERTY_ID="39140"DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno" NODE_ENV="production" node dist/index.cjs
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+remote: Enumerating objects: 27, done.
+remote: Counting objects: 100% (27/27), done.
+remote: Compressing objects: 100% (7/7), done.
+remote: Total 23 (delta 16), reused 23 (delta 16), pack-reused 0 (from 0)
+Unpacking objects: 100% (23/23), 388.98 KiB | 2.86 MiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   b9b7c15..5eeec0b  main       -> origin/main
+Updating b9b7c15..5eeec0b
+Fast-forward
+ ...r-www-drewno-ops-TOKEN-curl-s-X-PO_1769766048547.txt |  36 +++++++
+ ...r-www-drewno-ops-curl-s-https-part_1769766284272.txt |  14 +++
+ ...r-www-drewno-ops-pkill-f-node-dist_1769765821529.txt | 131 ++++++++++++++++++++++++
+ ...r-www-drewno-ops-pkill-f-node-dist_1769766509644.txt |  79 ++++++++++++++
+ attached_assets/image_1769766498976.png                 | Bin 0 -> 201412 bytes
+ ...\260_2026-01-30_\320\262_12.42.50_1769766193382.png" | Bin 0 -> 255596 bytes
+ server/travelline.ts                                    |  50 +++++++--
+ 7 files changed, 303 insertions(+), 7 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-TOKEN-curl-s-X-PO_1769766048547.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-curl-s-https-part_1769766284272.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-pkill-f-node-dist_1769765821529.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-pkill-f-node-dist_1769766509644.txt
+ create mode 100644 attached_assets/image_1769766498976.png
+ create mode 100644 "attached_assets/\320\241\320\275\320\270\320\274\320\276\320\272_\321\215\320\272\321\200\320\260\320\275\320\260_2026-01-30_\320\262_12.42.50_1769766193382.png"
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3218 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-B9-RVpwy.css            82.66 kB │ gzip:  13.58 kB
+../dist/public/assets/index-B-XaFFTn.js          1,293.58 kB │ gzip: 346.22 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 19.48s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 412ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# TRAVELLINE_CLIENT_ID="api_connection_591d3_f8821b2920" \
+> TRAVELLINE_CLIENT_SECRET="poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3" \
+> TRAVELLINE_PROPERTY_ID="39140" \
+> DATABASE_URL="postgresql://drewno:39903990aSs\$@localhost:5432/drewno" \
+> NODE_ENV="production" \
+> node dist/index.cjs &
+[1] 552214
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# sleep 5
+12:50:47 PM [express] serving on port 5000
+[Telegram Bot] Setting up webhook for production: https://d.drewno.by
+[Telegram Bot] Webhook set successfully
+[Telegram Bot] Notifications scheduled
+12:50:48 PM [scheduler] Scheduler initialized:
+12:50:48 PM [scheduler]   - Daily tasks: 06:00 daily
+12:50:48 PM [scheduler]   - Weekly tasks: 06:00 Monday
+12:50:48 PM [scheduler]   - Monthly tasks: 06:00 1st of month
+12:50:48 PM [scheduler]   - Weather check: 18:00 daily
+12:50:48 PM [scheduler]   - Scheduled task notifications: every minute
+12:50:48 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+12:50:48 PM [scheduler]   - Notifications:
+12:50:48 PM [scheduler]     - Bath summary: 09:00 daily
+12:50:48 PM [scheduler]     - TravelLine check-ins: 09:00 daily
+12:50:48 PM [scheduler]     - Climate ON: 12:00 daily
+12:50:48 PM [scheduler]     - Climate OFF: 14:00 daily
+12:50:48 PM [scheduler]     - Laundry check-in: 15:00 daily
+12:50:48 PM [scheduler]   - Thermostat:
+12:50:48 PM [scheduler]     - Prompt: 12:00 daily
+12:50:48 PM [scheduler]     - Base temps: 12:05 daily
+12:50:48 PM [scheduler]     - Heating: 14:30 daily
+12:50:48 PM [scheduler] [ThermostatScheduler] Houses initialized
+root@server-srekbm:/var/www/drewno-ops# curl http://localhost:5000/api/test/travelline-sync
+[TravelLine] Manual sync trigger via test endpoint
+[TravelLine] Requesting new token for client: api_connection_591d3...
+[TravelLine] Token obtained successfully
+[TravelLine] Received 1000 booking summaries
+
+
+[TravelLine] Failed to fetch booking 20240531-39140-274043231: 429
+[TravelLine] Failed to fetch booking 20240531-39140-273040113: 429
+[TravelLine] Failed to fetch booking 20240601-39140-274668783: 429
+[TravelLine] Failed to fetch booking 20240601-39140-273999323: 429
+[TravelLine] Failed to fetch booking 20240602-39140-275290955: 429
+[TravelLine] Failed to fetch booking 20240603-39140-271169155: 429
+[TravelLine] Failed to fetch booking 20240603-39140-271634729: 429
+[TravelLine] Failed to fetch booking 20240603-39140-271977368: 429
+[TravelLine] Failed to fetch booking 20240605-39140-271541912: 429
+[TravelLine] Failed to fetch booking 20240605-39140-275764846: 429
+[TravelLine] Failed to fetch booking 20240616-39140-276803509: 429
+[TravelLine] Failed to fetch booking 20240608-39140-274182734: 429
+[TravelLine] Failed to fetch booking 20240609-39140-265524740: 429
+[TravelLine] Failed to fetch booking 20240609-39140-276661979: 429
+[TravelLine] Failed to fetch booking 20240611-39140-273071796: 429
+[TravelLine] Failed to fetch booking 20240613-39140-276920069: 429
+[TravelLine] Failed to fetch booking 20240613-39140-277708700: 429
+[TravelLine] Failed to fetch booking 20240614-39140-277018174: 429
+[TravelLine] Failed to fetch booking 20240614-39140-277898411: 429
+[TravelLine] Failed to fetch booking 20240615-39140-275139807: 429
+[TravelLine] Failed to fetch booking 20240615-39140-278331844: 429
+[TravelLine] Failed to fetch booking 20240615-39140-275751092: 429
+[TravelLine] Failed to fetch booking 20240616-39140-276072606: 429
+[TravelLine] Failed to fetch booking 20240616-39140-278486364: 429
+[TravelLine] Failed to fetch booking 20240618-39140-279115327: 429
+[TravelLine] Failed to fetch booking 20240618-39140-276798916: 429
+[TravelLine] Failed to fetch booking 20240619-39140-278874336: 429
+[TravelLine] Failed to fetch booking 20240623-39140-279612586: 429
+[TravelLine] Failed to fetch booking 20240623-39140-280275407: 429
+[TravelLine] Failed to fetch booking 20240624-39140-277520217: 429
+[TravelLine] Failed to fetch booking 20240624-39140-277999319: 429
+[TravelLine] Failed to fetch booking 20240624-39140-263211559: 429
+[TravelLine] Failed to fetch booking 20240626-39140-278575223: 429
+[TravelLine] Failed to fetch booking 20240626-39140-279998508: 429
+[TravelLine] Failed to fetch booking 20240626-39140-278092972: 429
+[TravelLine] Failed to fetch booking 20240627-39140-280147690: 429
+[TravelLine] Failed to fetch booking 20240627-39140-278554567: 429
+[TravelLine] Failed to fetch booking 20240628-39140-275167836: 429
+[TravelLine] Failed to fetch booking 20240629-39140-276903841: 429
+[TravelLine] Failed to fetch booking 20240629-39140-275140030: 429
+[TravelLine] Failed to fetch booking 20240629-39140-281725423: 429
+[TravelLine] Failed to fetch booking 20240630-39140-281898103: 429
+[TravelLine] Failed to fetch booking 20240630-39140-280914901: 429
+[TravelLine] Failed to fetch booking 20240701-39140-275284883: 429
+[TravelLine] Failed to fetch booking 20240702-39140-276093297: 429
+[TravelLine] Failed to fetch booking 20240702-39140-281618104: 429
+[TravelLine] Failed to fetch booking 20240703-39140-279880016: 429
+[TravelLine] Failed to fetch booking 20240703-39140-279880708: 429
+[TravelLine] Failed to fetch booking 20240705-39140-280262898: 429
+[TravelLine] Failed to fetch booking 20240706-39140-280231100: 429
+[TravelLine] Failed to fetch booking 20240705-39140-275912353: 429
+[TravelLine] Failed to fetch booking 20240705-39140-275912961: 429
+[TravelLine] Failed to fetch booking 20240707-39140-280907664: 429
+[TravelLine] Failed to fetch booking 20240707-39140-278388332: 429
+[TravelLine] Failed to fetch booking 20240707-39140-282047082: 429
+[TravelLine] Failed to fetch booking 20240708-39140-283907048: 429
+[TravelLine] Failed to fetch booking 20240708-39140-279911794: 429
+[TravelLine] Failed to fetch booking 20240708-39140-266581983: 429
+[TravelLine] Failed to fetch booking 20240709-39140-280677758: 429
+[TravelLine] Failed to fetch booking 20240709-39140-279334095: 429
+[TravelLine] Failed to fetch booking 20240718-39140-284523805: 429
+[TravelLine] Failed to fetch booking 20240714-39140-265972752: 429
+[TravelLine] Failed to fetch booking 20240711-39140-284786475: 429
+[TravelLine] Failed to fetch booking 20240711-39140-281317745: 429
+[TravelLine] Failed to fetch booking 20240814-39140-285163860: 429
+[TravelLine] Failed to fetch booking 20240711-39140-259070082: 429
+[TravelLine] Failed to fetch booking 20240712-39140-283110531: 429
+[TravelLine] Failed to fetch booking 20240712-39140-285188856: 429
+[TravelLine] Failed to fetch booking 20240713-39140-283788855: 429
+[TravelLine] Failed to fetch booking 20240713-39140-283032680: 429
+[TravelLine] Failed to fetch booking 20240713-39140-277449672: 429
+[TravelLine] Failed to fetch booking 20240714-39140-284244536: 429
+[TravelLine] Failed to fetch booking 20240714-39140-278370470: 429
+[TravelLine] Failed to fetch booking 20240715-39140-282319759: 429
+[TravelLine] Failed to fetch booking 20240715-39140-284942032: 429
+[TravelLine] Failed to fetch booking 20240716-39140-286317576: 429
+[TravelLine] Failed to fetch booking 20240716-39140-282599212: 429
+[TravelLine] Failed to fetch booking 20240717-39140-285162752: 429
+[TravelLine] Failed to fetch booking 20240717-39140-278774123: 429
+[TravelLine] Failed to fetch booking 20240718-39140-285577154: 429
+[TravelLine] Failed to fetch booking 20240729-39140-286905089: 429
+[TravelLine] Failed to fetch booking 20240718-39140-286395370: 429
+[TravelLine] Failed to fetch booking 20240719-39140-280069365: 429
+[TravelLine] Failed to fetch booking 20240719-39140-278546474: 429
+[TravelLine] Failed to fetch booking 20240719-39140-280620897: 429
+[TravelLine] Failed to fetch booking 20240720-39140-277375460: 429
+[TravelLine] Failed to fetch booking 20240720-39140-280235569: 429
+[TravelLine] Failed to fetch booking 20240720-39140-281460898: 429
+[TravelLine] Failed to fetch booking 20240725-39140-280967854: 429
+[TravelLine] Failed to fetch booking 20240818-39140-287457821: 429
+[TravelLine] Failed to fetch booking 20240721-39140-286221376: 429
+[TravelLine] Failed to fetch booking 20240721-39140-285175509: 429
+[TravelLine] Failed to fetch booking 20240721-39140-282150864: 429
+[TravelLine] Failed to fetch booking 20240722-39140-282954527: 429
+[TravelLine] Failed to fetch booking 20240730-39140-284711419: 429
+[TravelLine] Failed to fetch booking 20240723-39140-276972493: 429
+[TravelLine] Failed to fetch booking 20240718-39140-280905078: 429
+[TravelLine] Failed to fetch booking 20240722-39140-286916395: 429
+[TravelLine] Failed to fetch booking 20240724-39140-285173838: 429
+[TravelLine] Failed to fetch booking 20240724-39140-287395846: 429
+[TravelLine] Failed to fetch booking 20240725-39140-278776169: 429
+[TravelLine] Failed to fetch booking 20240725-39140-286263877: 429
+[TravelLine] Failed to fetch booking 20240730-39140-286637534: 429
+[TravelLine] Failed to fetch booking 20240728-39140-287596237: 429
+[TravelLine] Failed to fetch booking 20240726-39140-288682178: 429
+[TravelLine] Failed to fetch booking 20240726-39140-282542255: 429
+[TravelLine] Failed to fetch booking 20240727-39140-281498612: 429
+[TravelLine] Failed to fetch booking 20240727-39140-280443608: 429
+[TravelLine] Failed to fetch booking 20240801-39140-289511813: 429
+[TravelLine] Failed to fetch booking 20240729-39140-286170487: 429
+[TravelLine] Failed to fetch booking 20240729-39140-289381560: 429
+[TravelLine] Failed to fetch booking 20240730-39140-288097306: 429
+[TravelLine] Failed to fetch booking 20240731-39140-286786768: 429
+[TravelLine] Failed to fetch booking 20240731-39140-287939649: 429
+[TravelLine] Failed to fetch booking 20240804-39140-283383822: 429
+[TravelLine] Failed to fetch booking 20240801-39140-286692978: 429
+[TravelLine] Failed to fetch booking 20240731-39140-283953528: 429
+[TravelLine] Failed to fetch booking 20240802-39140-286862738: 429
+[TravelLine] Failed to fetch booking 20240802-39140-284141608: 429
+[TravelLine] Failed to fetch booking 20240804-39140-284365076: 429
+[TravelLine] Failed to fetch booking 20240807-39140-290717342: 429
+[TravelLine] Failed to fetch booking 20240803-39140-290310285: 429
+[TravelLine] Failed to fetch booking 20240803-39140-286799090: 429
+[TravelLine] Failed to fetch booking 20240803-39140-288968187: 429
+[TravelLine] Failed to fetch booking 20240804-39140-282112023: 429
+[TravelLine] Failed to fetch booking 20240805-39140-291273757: 429
+[TravelLine] Failed to fetch booking 20240805-39140-288448773: 429
+[TravelLine] Failed to fetch booking 20240806-39140-290079511: 429
+[TravelLine] Failed to fetch booking 20240805-39140-287838183: 429
+[TravelLine] Failed to fetch booking 20240806-39140-282545579: 429
+[TravelLine] Failed to fetch booking 20240807-39140-291618100: 429
+[TravelLine] Failed to fetch booking 20240810-39140-291630015: 429
+[TravelLine] Failed to fetch booking 20240810-39140-289070547: 429
+[TravelLine] Failed to fetch booking 20240812-39140-289848513: 429
+[TravelLine] Failed to fetch booking 20240810-39140-292139575: 429
+[TravelLine] Failed to fetch booking 20240811-39140-290673769: 429
+[TravelLine] Failed to fetch booking 20240811-39140-282949535: 429
+[TravelLine] Failed to fetch booking 20240811-39140-287579526: 429
+[TravelLine] Failed to fetch booking 20240812-39140-280618760: 429
+[TravelLine] Failed to fetch booking 20240812-39140-292292673: 429
+[TravelLine] Failed to fetch booking 20240813-39140-289328814: 429
+[TravelLine] Failed to fetch booking 20240813-39140-285220157: 429
+[TravelLine] Failed to fetch booking 20240814-39140-293286591: 429
+[TravelLine] Failed to fetch booking 20240813-39140-292764330: 429
+[TravelLine] Failed to fetch booking 20240814-39140-285851289: 429
+[TravelLine] Failed to fetch booking 20240815-39140-286784366: 429
+[TravelLine] Failed to fetch booking 20240816-39140-287908350: 429
+[TravelLine] Failed to fetch booking 20240815-39140-293441773: 429
+[TravelLine] Failed to fetch booking 20240816-39140-292719628: 429
+[TravelLine] Failed to fetch booking 20240816-39140-286961394: 429
+[TravelLine] Failed to fetch booking 20240817-39140-284941572: 429
+[TravelLine] Failed to fetch booking 20240817-39140-285645142: 429
+[TravelLine] Failed to fetch booking 20240818-39140-287259637: 429
+[TravelLine] Failed to fetch booking 20240818-39140-281271670: 429
+[TravelLine] Failed to fetch booking 20240819-39140-289739498: 429
+[TravelLine] Failed to fetch booking 20240819-39140-285311820: 429
+[TravelLine] Failed to fetch booking 20240820-39140-284223444: 429
+[TravelLine] Failed to fetch booking 20240820-39140-292954171: 429
+[TravelLine] Failed to fetch booking 20240820-39140-288154397: 429
+[TravelLine] Failed to fetch booking 20240821-39140-286101840: 429
+[TravelLine] Failed to fetch booking 20240821-39140-286560741: 429
+[TravelLine] Failed to fetch booking 20240822-39140-286025907: 429
+[TravelLine] Failed to fetch booking 20240822-39140-294056180: 429
+[TravelLine] Failed to fetch booking 20240823-39140-278653173: 429
+[TravelLine] Failed to fetch booking 20240823-39140-284525807: 429
+[TravelLine] Failed to fetch booking 20240824-39140-294154754: 429
+[TravelLine] Failed to fetch booking 20240824-39140-282954927: 429
+[TravelLine] Failed to fetch booking 20240825-39140-294180778: 429
+[TravelLine] Failed to fetch booking 20240825-39140-292835063: 429
+[TravelLine] Failed to fetch booking 20240825-39140-290193264: 429
+[TravelLine] Failed to fetch booking 20240826-39140-293231400: 429
+[TravelLine] Failed to fetch booking 20240826-39140-294883493: 429
+[TravelLine] Failed to fetch booking 20240827-39140-276035711: 429
+[TravelLine] Failed to fetch booking 20240906-39140-295845166: 429
+[TravelLine] Failed to fetch booking 20240828-39140-294324019: 429
+[TravelLine] Failed to fetch booking 20240828-39140-291557394: 429
+[TravelLine] Failed to fetch booking 20240828-39140-294767802: 429
+[TravelLine] Failed to fetch booking 20240829-39140-295662739: 429
+[TravelLine] Failed to fetch booking 20240829-39140-294217094: 429
+[TravelLine] Failed to fetch booking 20240829-39140-295286414: 429
+[TravelLine] Failed to fetch booking 20240830-39140-289040647: 429
+[TravelLine] Failed to fetch booking 20240830-39140-295766586: 429
+[TravelLine] Failed to fetch booking 20240928-39140-297318665: 429
+[TravelLine] Failed to fetch booking 20240831-39140-295839506: 429
+[TravelLine] Failed to fetch booking 20240831-39140-297234980: 429
+[TravelLine] Failed to fetch booking 20240831-39140-295507989: 429
+[TravelLine] Failed to fetch booking 20240903-39140-297293344: 429
+[TravelLine] Failed to fetch booking 20240901-39140-288216033: 429
+[TravelLine] Failed to fetch booking 20241008-39140-297974257: 429
+[TravelLine] Failed to fetch booking 20240908-39140-297869658: 429
+[TravelLine] Failed to fetch booking 20240903-39140-297224783: 429
+[TravelLine] Failed to fetch booking 20240904-39140-296876765: 429
+[TravelLine] Failed to fetch booking 20240905-39140-297955183: 429
+[TravelLine] Failed to fetch booking 20240906-39140-296585275: 429
+[TravelLine] Failed to fetch booking 20240910-39140-297883977: 429
+[TravelLine] Failed to fetch booking 20240907-39140-297150132: 429
+[TravelLine] Failed to fetch booking 20240908-39140-293218462: 429
+[TravelLine] Failed to fetch booking 20240920-39140-299272454: 429
+[TravelLine] Failed to fetch booking 20240909-39140-298626904: 429
+[TravelLine] Failed to fetch booking 20240910-39140-298917024: 429
+[TravelLine] Failed to fetch booking 20240916-39140-299816790: 429
+[TravelLine] Failed to fetch booking 20240911-39140-299126166: 429
+[TravelLine] Failed to fetch booking 20240912-39140-299783116: 429
+[TravelLine] Failed to fetch booking 20240912-39140-297507886: 429
+[TravelLine] Failed to fetch booking 20240913-39140-297700246: 429
+[TravelLine] Failed to fetch booking 20240927-39140-300493501: 429
+[TravelLine] Failed to fetch booking 20240914-39140-296501755: 429
+[TravelLine] Failed to fetch booking 20240923-39140-300513459: 429
+[TravelLine] Failed to fetch booking 20240913-39140-293158170: 429
+[TravelLine] Failed to fetch booking 20240913-39140-292997165: 429
+[TravelLine] Failed to fetch booking 20240915-39140-295668101: 429
+[TravelLine] Failed to fetch booking 20240915-39140-296238172: 429
+[TravelLine] Failed to fetch booking 20240915-39140-262260559: 429
+[TravelLine] Failed to fetch booking 20240921-39140-296630833: 429
+[TravelLine] Failed to fetch booking 20240916-39140-295014534: 429
+[TravelLine] Failed to fetch booking 20240916-39140-300484918: 429
+[TravelLine] Failed to fetch booking 20240921-39140-301080351: 429
+[TravelLine] Failed to fetch booking 20240924-39140-300246380: 429
+[TravelLine] Failed to fetch booking 20241007-39140-301235124: 429
+[TravelLine] Failed to fetch booking 20240919-39140-300646261: 429
+[TravelLine] Failed to fetch booking 20240921-39140-288645369: 429
+[TravelLine] Failed to fetch booking 20240921-39140-301165324: 429
+[TravelLine] Failed to fetch booking 20240922-39140-298264008: 429
+[TravelLine] Failed to fetch booking 20240922-39140-298627326: 429
+[TravelLine] Failed to fetch booking 20240923-39140-300523996: 429
+[TravelLine] Failed to fetch booking 20240925-39140-300741452: 429
+[TravelLine] Failed to fetch booking 20240925-39140-302806322: 429
+[TravelLine] Failed to fetch booking 20240927-39140-299940519: 429
+[TravelLine] Failed to fetch booking 20240926-39140-295250661: 429
+[TravelLine] Failed to fetch booking 20240928-39140-297941757: 429
+[TravelLine] Failed to fetch booking 20240928-39140-290451902: 429
+[TravelLine] Failed to fetch booking 20240929-39140-297979970: 429
+[TravelLine] Failed to fetch booking 20240929-39140-302885333: 429
+[TravelLine] Failed to fetch booking 20240929-39140-303119193: 429
+[TravelLine] Failed to fetch booking 20240930-39140-290592631: 429
+[TravelLine] Failed to fetch booking 20241001-39140-301595920: 429
+[TravelLine] Failed to fetch booking 20241001-39140-299763505: 429
+[TravelLine] Failed to fetch booking 20241003-39140-304179539: 429
+[TravelLine] Failed to fetch booking 20241004-39140-299722724: 429
+[TravelLine] Failed to fetch booking 20241004-39140-299632044: 429
+[TravelLine] Failed to fetch booking 20241004-39140-299631632: 429
+[TravelLine] Failed to fetch booking 20241005-39140-302570943: 429
+[TravelLine] Failed to fetch booking 20241005-39140-304833561: 429
+[TravelLine] Failed to fetch booking 20241005-39140-298227679: 429
+[TravelLine] Failed to fetch booking 20241006-39140-302966424: 429
+[TravelLine] Failed to fetch booking 20241018-39140-305798415: 429
+[TravelLine] Failed to fetch booking 20241009-39140-304873784: 429
+[TravelLine] Failed to fetch booking 20241009-39140-305043982: 429
+[TravelLine] Failed to fetch booking 20241010-39140-305293465: 429
+[TravelLine] Failed to fetch booking 20241001-39140-291239746: 429
+[TravelLine] Failed to fetch booking 20241011-39140-306197170: 429
+[TravelLine] Failed to fetch booking 20241011-39140-306275540: 429
+[TravelLine] Failed to fetch booking 20241012-39140-304757334: 429
+[TravelLine] Failed to fetch booking 20241012-39140-300435554: 429
+[TravelLine] Failed to fetch booking 20241014-39140-304603530: 429
+[TravelLine] Failed to fetch booking 20241014-39140-304600687: 429
+[TravelLine] Failed to fetch booking 20241015-39140-306748297: 429
+[TravelLine] Failed to fetch booking 20241016-39140-306562825: 429
+[TravelLine] Failed to fetch booking 20241015-39140-304381841: 429
+[TravelLine] Failed to fetch booking 20241017-39140-305935417: 429
+[TravelLine] Failed to fetch booking 20241018-39140-304982645: 429
+[TravelLine] Failed to fetch booking 20241018-39140-302240849: 429
+[TravelLine] Failed to fetch booking 20241019-39140-302902702: 429
+[TravelLine] Failed to fetch booking 20241019-39140-293699899: 429
+[TravelLine] Failed to fetch booking 20241019-39140-295600988: 429
+[TravelLine] Failed to fetch booking 20241020-39140-303962685: 429
+[TravelLine] Failed to fetch booking 20241020-39140-301575248: 429
+[TravelLine] Failed to fetch booking 20241020-39140-307950501: 429
+[TravelLine] Failed to fetch booking 20241221-39140-307492653: 429
+[TravelLine] Failed to fetch booking 20241221-39140-307493659: 429
+[TravelLine] Failed to fetch booking 20241221-39140-307493957: 429
+[TravelLine] Failed to fetch booking 20241022-39140-306099907: 429
+[TravelLine] Failed to fetch booking 20241023-39140-306546476: 429
+[TravelLine] Failed to fetch booking 20241024-39140-299131444: 429
+[TravelLine] Failed to fetch booking 20241029-39140-309064818: 429
+[TravelLine] Failed to fetch booking 20241025-39140-303584413: 429
+[TravelLine] Failed to fetch booking 20241025-39140-308032860: 429
+[TravelLine] Failed to fetch booking 20241025-39140-303872809: 429
+[TravelLine] Failed to fetch booking 20241026-39140-304148839: 429
+[TravelLine] Failed to fetch booking 20241026-39140-282996159: 429
+[TravelLine] Failed to fetch booking 20241026-39140-295283311: 429
+[TravelLine] Failed to fetch booking 20241027-39140-304224860: 429
+[TravelLine] Failed to fetch booking 20241027-39140-305754994: 429
+[TravelLine] Failed to fetch booking 20241028-39140-303403308: 429
+[TravelLine] Failed to fetch booking 20241029-39140-302925942: 429
+[TravelLine] Failed to fetch booking 20241028-39140-308464032: 429
+[TravelLine] Failed to fetch booking 20241029-39140-309933594: 429
+[TravelLine] Failed to fetch booking 20241111-39140-310291033: 429
+[TravelLine] Failed to fetch booking 20241031-39140-296523028: 429
+[TravelLine] Failed to fetch booking 20241031-39140-310286287: 429
+[TravelLine] Failed to fetch booking 20241027-39140-303182531: 429
+[TravelLine] Failed to fetch booking 20241101-39140-304434130: 429
+[TravelLine] Failed to fetch booking 20241101-39140-305706872: 429
+[TravelLine] Failed to fetch booking 20241102-39140-303804208: 429
+[TravelLine] Failed to fetch booking 20241109-39140-302540129: 429
+[TravelLine] Failed to fetch booking 20241103-39140-303982954: 429
+[TravelLine] Failed to fetch booking 20241103-39140-310363935: 429
+[TravelLine] Failed to fetch booking 20241103-39140-311082984: 429
+[TravelLine] Failed to fetch booking 20241105-39140-306569822: 429
+[TravelLine] Failed to fetch booking 20241105-39140-306569974: 429
+[TravelLine] Failed to fetch booking 20241105-39140-306570241: 429
+[TravelLine] Failed to fetch booking 20241106-39140-311558214: 429
+[TravelLine] Failed to fetch booking 20241106-39140-299765541: 429
+[TravelLine] Failed to fetch booking 20241106-39140-301765659: 429
+[TravelLine] Failed to fetch booking 20241107-39140-303892569: 429
+[TravelLine] Failed to fetch booking 20241107-39140-306189492: 429
+[TravelLine] Failed to fetch booking 20241108-39140-306201000: 429
+[TravelLine] Failed to fetch booking 20241108-39140-311494067: 429
+[TravelLine] Failed to fetch booking 20241109-39140-303201206: 429
+[TravelLine] Failed to fetch booking 20241109-39140-301241835: 429
+[TravelLine] Failed to fetch booking 20241108-39140-303857342: 429
+[TravelLine] Failed to fetch booking 20241110-39140-305011774: 429
+[TravelLine] Failed to fetch booking 20241110-39140-306719562: 429
+[TravelLine] Failed to fetch booking 20241111-39140-305031235: 429
+[TravelLine] Failed to fetch booking 20241111-39140-309800360: 429
+[TravelLine] Failed to fetch booking 20241112-39140-299222360: 429
+[TravelLine] Failed to fetch booking 20241112-39140-311931707: 429
+[TravelLine] Failed to fetch booking 20241112-39140-312820396: 429
+[TravelLine] Failed to fetch booking 20241114-39140-312715296: 429
+[TravelLine] Failed to fetch booking 20241114-39140-310310407: 429
+[TravelLine] Failed to fetch booking 20241115-39140-310182406: 429
+[TravelLine] Failed to fetch booking 20241113-39140-310984226: 429
+[TravelLine] Failed to fetch booking 20241116-39140-309792963: 429
+[TravelLine] Failed to fetch booking 20241116-39140-310292396: 429
+[TravelLine] Failed to fetch booking 20241117-39140-308568580: 429
+[TravelLine] Failed to fetch booking 20241119-39140-313586779: 429
+[TravelLine] Failed to fetch booking 20241124-39140-312167512: 429
+[TravelLine] Failed to fetch booking 20241120-39140-312731353: 429
+[TravelLine] Failed to fetch booking 20241120-39140-311780610: 429
+[TravelLine] Failed to fetch booking 20241122-39140-313766744: 429
+[TravelLine] Failed to fetch booking 20241122-39140-312460762: 429
+[TravelLine] Failed to fetch booking 20241122-39140-314967167: 429
+[TravelLine] Failed to fetch booking 20241123-39140-306914927: 429
+[TravelLine] Failed to fetch booking 20241123-39140-311036591: 429
+[TravelLine] Failed to fetch booking 20241124-39140-313313356: 429
+[TravelLine] Failed to fetch booking 20241126-39140-312773439: 429
+[TravelLine] Failed to fetch booking 20241129-39140-315820997: 429
+[TravelLine] Failed to fetch booking 20241129-39140-314385723: 429
+[TravelLine] Failed to fetch booking 20241129-39140-315834539: 429
+[TravelLine] Failed to fetch booking 20241130-39140-316293248: 429
+[TravelLine] Failed to fetch booking 20241130-39140-311031404: 429
+[TravelLine] Failed to fetch booking 20241130-39140-315950171: 429
