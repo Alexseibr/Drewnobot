@@ -1,0 +1,43 @@
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && pm2 start ecosystem.config.cjs && sleep 10 && pm2 status
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 2    │ online    │ 0%       │ 19.9mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# cat /root/.pm2/logs/drewno-ops-error.log | tail-30
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 429 - {
+  "message":"API rate limit exceeded"
+}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 429 - {
+  "message":"API rate limit exceeded"
+}
+[TravelLine] Auth failed: 429 - {
+  "message":"API rate limit exceeded"
+}
+[TravelLine] Auth failed: 429 - {
+  "message":"API rate limit exceeded"
+}
+[TravelLine] Auth failed: 429 - {
+  "message":"API rate limit exceeded"
+}
+[TravelLine] Auth failed: 429 - {
+  "message":"API rate limit exceeded"
+}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+[TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+root@server-srekbm:/var/www/drewno-ops#
