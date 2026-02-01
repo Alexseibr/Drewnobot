@@ -246,9 +246,11 @@ async function handleSpaBookingDeepLink(
   from: { id: number; first_name: string; last_name?: string; username?: string },
   date: string | null
 ) {
-  const webAppUrl = process.env.REPLIT_DEPLOYMENT_URL || process.env.REPLIT_DEV_DOMAIN 
-    ? `https://${process.env.REPLIT_DEPLOYMENT_URL || process.env.REPLIT_DEV_DOMAIN}`
-    : "https://drewno-ops.replit.app";
+  // Use WEBAPP_URL env var, or detect from Replit, or fallback to production domain
+  const webAppUrl = process.env.WEBAPP_URL 
+    || (process.env.REPLIT_DEPLOYMENT_URL ? `https://${process.env.REPLIT_DEPLOYMENT_URL}` : null)
+    || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null)
+    || "https://d.drewno.by";
   
   const bookingUrl = date 
     ? `${webAppUrl}/guest/spa?date=${date}`
