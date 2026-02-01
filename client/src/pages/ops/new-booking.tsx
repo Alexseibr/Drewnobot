@@ -2,16 +2,18 @@ import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, addHours } from "date-fns";
+import { format, addHours, startOfMonth, getMonth, getYear } from "date-fns";
 import { ru } from "date-fns/locale";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { 
   Bath,
   Sparkles,
   Calendar as CalendarIcon,
   Percent,
-  Info
+  Info,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
@@ -82,10 +84,33 @@ const BOOKING_TYPES: { value: SpaBookingType; label: string; description: string
   { value: "terrace_only", label: "Терраса", description: "90 BYN" },
 ];
 
+interface CalendarData {
+  year: number;
+  month: number;
+  dates: { [date: string]: { spa1: number; spa2: number; total: number } };
+}
+
 export default function NewBookingPage() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("spa");
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const { toast } = useToast();
+
+  // Fetch calendar availability data
+  const { data: calendarData } = useQuery<CalendarData>({
+    queryKey: ["/api/ops/spa-calendar", getYear(calendarMonth), getMonth(calendarMonth) + 1],
+    queryFn: async () => {
+      const res = await fetch(`/api/ops/spa-calendar?year=${getYear(calendarMonth)}&month=${getMonth(calendarMonth) + 1}`);
+      if (!res.ok) throw new Error("Failed to fetch calendar");
+      return res.json();
+    },
+  });
+
+  const getDateAvailability = (date: Date): { spa1: number; spa2: number; total: number } | undefined => {
+    if (!calendarData?.dates) return undefined;
+    const dateStr = format(date, "yyyy-MM-dd");
+    return calendarData.dates[dateStr];
+  };
 
   const form = useForm<SpaBookingFormData>({
     resolver: zodResolver(spaBookingFormSchema),
@@ -244,44 +269,107 @@ export default function NewBookingPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg">Дата и время</CardTitle>
+                      <CardDescription>
+                        Выберите дату. Цветные метки показывают занятость.
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {/* Legend for calendar */}
+                      <div className="flex flex-wrap gap-3 text-xs">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-green-500" />
+                          <span>Свободно</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-amber-500" />
+                          <span>Частично занято</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-red-500" />
+                          <span>Полностью занято</span>
+                        </div>
+                      </div>
+
                       <FormField
                         control={form.control}
                         name="date"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Дата</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
+                            <FormControl>
+                              <div className="flex flex-col items-center">
+                                <div className="flex items-center justify-between w-full mb-2">
                                   <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-full justify-start text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                    data-testid="button-date-picker"
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      const prev = new Date(calendarMonth);
+                                      prev.setMonth(prev.getMonth() - 1);
+                                      setCalendarMonth(prev);
+                                    }}
+                                    data-testid="button-prev-month"
                                   >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {field.value ? (
-                                      format(field.value, "PPP", { locale: ru })
-                                    ) : (
-                                      <span>Выберите дату</span>
-                                    )}
+                                    <ChevronLeft className="h-4 w-4" />
                                   </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                                  <span className="font-medium text-sm">
+                                    {format(calendarMonth, "LLLL yyyy", { locale: ru })}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      const next = new Date(calendarMonth);
+                                      next.setMonth(next.getMonth() + 1);
+                                      setCalendarMonth(next);
+                                    }}
+                                    data-testid="button-next-month"
+                                  >
+                                    <ChevronRight className="h-4 w-4" />
+                                  </Button>
+                                </div>
                                 <Calendar
                                   mode="single"
                                   selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) => date < new Date()}
-                                  initialFocus
+                                  onSelect={(date) => {
+                                    field.onChange(date);
+                                  }}
+                                  month={calendarMonth}
+                                  onMonthChange={setCalendarMonth}
+                                  disabled={(date) => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    return date < today;
+                                  }}
+                                  locale={ru}
+                                  modifiers={{
+                                    booked: (date) => {
+                                      const avail = getDateAvailability(date);
+                                      return avail?.total === 2;
+                                    },
+                                    partial: (date) => {
+                                      const avail = getDateAvailability(date);
+                                      return avail?.total === 1;
+                                    },
+                                  }}
+                                  modifiersClassNames={{
+                                    booked: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
+                                    partial: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300",
+                                  }}
+                                  className="rounded-md border"
                                 />
-                              </PopoverContent>
-                            </Popover>
+                                {field.value && (
+                                  <div className="mt-2 text-sm text-muted-foreground">
+                                    Выбрано: {format(field.value, "d MMMM yyyy", { locale: ru })}
+                                    {getDateAvailability(field.value) && (
+                                      <span className="ml-2">
+                                        (СПА1: {getDateAvailability(field.value)?.spa1 || 0}, СПА2: {getDateAvailability(field.value)?.spa2 || 0})
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}

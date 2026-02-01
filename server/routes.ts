@@ -2191,6 +2191,44 @@ export async function registerRoutes(
   });
 
   // ============ SPA BOOKINGS - ADMIN ============
+  
+  // Calendar availability - shows which days have bookings
+  app.get("/api/ops/spa-calendar", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { month, year } = req.query;
+      const targetYear = parseInt(year as string) || new Date().getFullYear();
+      const targetMonth = parseInt(month as string) || new Date().getMonth() + 1;
+      
+      // Get all upcoming SPA bookings
+      const allBookings = await storage.getSpaBookingsUpcoming();
+      
+      // Filter bookings for the target month and group by date
+      const calendarData: { [date: string]: { spa1: number; spa2: number; total: number } } = {};
+      
+      for (const booking of allBookings) {
+        if (booking.status === "cancelled") continue;
+        
+        const bookingDate = new Date(booking.date);
+        if (bookingDate.getFullYear() === targetYear && bookingDate.getMonth() + 1 === targetMonth) {
+          if (!calendarData[booking.date]) {
+            calendarData[booking.date] = { spa1: 0, spa2: 0, total: 0 };
+          }
+          if (booking.spaResource === "SPA1") {
+            calendarData[booking.date].spa1++;
+          } else {
+            calendarData[booking.date].spa2++;
+          }
+          calendarData[booking.date].total++;
+        }
+      }
+      
+      res.json({ year: targetYear, month: targetMonth, dates: calendarData });
+    } catch (error) {
+      console.error("[Routes] Failed to get SPA calendar:", error);
+      res.status(500).json({ error: "Не удалось получить данные календаря" });
+    }
+  });
+
   app.get("/api/admin/spa-bookings/upcoming", async (req, res) => {
     try {
       const bookings = await storage.getSpaBookingsUpcoming();
