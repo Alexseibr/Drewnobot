@@ -22,6 +22,16 @@ declare global {
         disableVerticalSwipes: () => void;
         enableVerticalSwipes: () => void;
         isVerticalSwipesEnabled: boolean;
+        requestContact: (callback: (sent: boolean, event?: {
+          responseUnsafe?: {
+            contact?: {
+              phone_number?: string;
+              first_name?: string;
+              last_name?: string;
+              user_id?: number;
+            };
+          };
+        }) => void) => void;
       };
     };
   }

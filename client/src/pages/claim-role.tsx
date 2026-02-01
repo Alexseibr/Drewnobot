@@ -1,68 +1,80 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { Shield, Phone } from "lucide-react";
+import { Shield, Phone, AlertCircle } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function ClaimRolePage() {
-  const [phone, setPhone] = useState("+375");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const formatPhone = (value: string) => {
-    // Keep only digits and +
-    let digits = value.replace(/[^\d+]/g, "");
-    if (!digits.startsWith("+")) {
-      digits = "+" + digits;
-    }
-    return digits;
-  };
+  const tgWebApp = window.Telegram?.WebApp;
+  const isTelegramAvailable = !!tgWebApp?.initData;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (phone.length < 12) {
-      toast({
-        title: "Ошибка",
-        description: "Введите корректный номер телефона",
-        variant: "destructive",
-      });
+  useEffect(() => {
+    if (!isTelegramAvailable && !import.meta.env.DEV) {
+      setError("Откройте приложение через Telegram бота @Drewno_bot");
+    }
+  }, [isTelegramAvailable]);
+
+  const handleRequestContact = async () => {
+    if (!tgWebApp) {
+      if (import.meta.env.DEV) {
+        await handleAuthWithPhone("+375291234567");
+        return;
+      }
+      setError("Telegram WebApp недоступен");
       return;
     }
-    
+
     setIsLoading(true);
-    
+    setError(null);
+
     try {
-      const tgWebApp = window.Telegram?.WebApp;
+      tgWebApp.requestContact((sent: boolean, event?: { responseUnsafe?: { contact?: { phone_number?: string } } }) => {
+        if (sent && event?.responseUnsafe?.contact?.phone_number) {
+          const phone = "+" + event.responseUnsafe.contact.phone_number.replace(/^\+/, "");
+          handleAuthWithPhone(phone);
+        } else {
+          setIsLoading(false);
+          setError("Вы отменили запрос на доступ к контакту");
+        }
+      });
+    } catch (err) {
+      console.error("[ClaimRole] Request contact error:", err);
+      setIsLoading(false);
+      setError("Ошибка при запросе контакта");
+    }
+  };
+
+  const handleAuthWithPhone = async (phone: string) => {
+    try {
       let initData = tgWebApp?.initData;
       
+      if (!initData && import.meta.env.DEV) {
+        initData = "user=" + encodeURIComponent(JSON.stringify({
+          id: Date.now(),
+          first_name: "Тест",
+          last_name: "Админ",
+        })) + "&auth_date=" + Math.floor(Date.now() / 1000) + "&hash=dev";
+      }
+      
       if (!initData) {
-        if (import.meta.env.DEV) {
-          initData = "user=" + encodeURIComponent(JSON.stringify({
-            id: Date.now(),
-            first_name: "Тест",
-            last_name: "Админ",
-          })) + "&auth_date=" + Math.floor(Date.now() / 1000) + "&hash=dev";
-        } else {
-          toast({
-            title: "Ошибка",
-            description: "Откройте приложение через Telegram",
-            variant: "destructive",
-          });
-          return;
-        }
+        setError("Данные Telegram недоступны");
+        setIsLoading(false);
+        return;
       }
       
       const response = await apiRequest("POST", "/api/auth/telegram", { 
         initData,
-        phone: formatPhone(phone),
+        phone,
       });
       const data = await response.json();
       
@@ -75,30 +87,31 @@ export default function ClaimRolePage() {
         if (data.user.role !== "GUEST") {
           toast({
             title: "Успешно",
-            description: `Вы авторизованы как ${data.user.role === "ADMIN" ? "Администратор" : data.user.role}`,
+            description: `Вы авторизованы как ${getRoleName(data.user.role)}`,
           });
           setLocation("/ops");
         } else {
-          toast({
-            title: "Номер не найден",
-            description: "Данный номер не зарегистрирован в системе персонала",
-            variant: "destructive",
-          });
+          setError("Ваш номер телефона не зарегистрирован в системе персонала. Обратитесь к владельцу для получения доступа.");
         }
         
-        // Reload to update auth state
         window.location.reload();
       }
     } catch (error) {
-      console.error("[ClaimRole] Error:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось авторизоваться",
-        variant: "destructive",
-      });
+      console.error("[ClaimRole] Auth error:", error);
+      setError("Не удалось авторизоваться. Попробуйте позже.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getRoleName = (role: string) => {
+    const names: Record<string, string> = {
+      SUPER_ADMIN: "Супер-админ",
+      OWNER: "Владелец",
+      ADMIN: "Администратор",
+      INSTRUCTOR: "Инструктор",
+    };
+    return names[role] || role;
   };
 
   return (
@@ -110,35 +123,44 @@ export default function ClaimRolePage() {
           </div>
           <CardTitle>Авторизация сотрудника</CardTitle>
           <CardDescription>
-            Введите номер телефона, зарегистрированный в системе
+            Подтвердите свой номер телефона через Telegram для входа в систему
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Номер телефона</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  placeholder="+375 (XX) XXX-XX-XX"
-                  className="pl-10"
-                  data-testid="input-phone"
-                />
-              </div>
+        <CardContent className="space-y-4">
+          {error && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
             </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-              data-testid="button-claim-role"
-            >
-              {isLoading ? "Проверка..." : "Войти"}
-            </Button>
-          </form>
+          )}
+          
+          <div className="text-center text-sm text-muted-foreground space-y-2">
+            <p>Нажмите кнопку ниже, чтобы поделиться своим контактом из Telegram.</p>
+            <p>Это гарантирует безопасную авторизацию.</p>
+          </div>
+          
+          <Button 
+            onClick={handleRequestContact}
+            className="w-full" 
+            disabled={isLoading || (!isTelegramAvailable && !import.meta.env.DEV)}
+            data-testid="button-request-contact"
+          >
+            {isLoading ? (
+              <>
+                <Spinner className="mr-2 h-4 w-4" />
+                Проверка...
+              </>
+            ) : (
+              <>
+                <Phone className="mr-2 h-4 w-4" />
+                Поделиться контактом
+              </>
+            )}
+          </Button>
+          
+          <p className="text-xs text-center text-muted-foreground">
+            Ваш номер телефона будет использован только для проверки доступа к системе персонала
+          </p>
         </CardContent>
       </Card>
     </div>
