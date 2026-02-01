@@ -520,6 +520,8 @@ export default function QuadBookingPage() {
                     >
                       Далее
                     </Button>
+                    
+                    <div className="h-20" />
                   </div>
                 )}
               </div>
@@ -641,6 +643,8 @@ export default function QuadBookingPage() {
                     "Отправить заявку"
                   )}
                 </Button>
+                
+                <div className="h-20" />
               </div>
             )}
           </form>
