@@ -1,0 +1,49 @@
+ | telegram_id
+--------------------------------------+----------------------------------------------+-------------+-------------
+ fa0a2c72-7b98-465e-a7b1-1346310465de | <D0><92><<D0><B0><D0><BB><D0><B5><D0><BD><D1><82><D0><B8><<D0><BD><D0><B0>                           | ADMIN       | 7511011608 9418a757-9ab2-49ea-9c96-597f82a804d8 | Akito Soma                                   | GUEST | 406639841 aed7c85c-87d2-463a-b507-6efef28ba8d6 | Dre                                    | GUEST | 5385361078
+ 66532595-0a4a-45f8-93eb-8205b9673460 | Valeria Nemchenko                            | GUEST | 526644870 | telegram_id--------------------------------------+---------- | telegram_id--------------------------------------+----------------------------------------------+-------------+-------------
+ fa0a2c72-7b98-465e-a7b1-1346310465de | <D0><92><<D0><B0><D0><BB><D0><B5><D0><BD><D1><82><D0><B8><<D0><BD><D0><B0>                           | ADMIN       | 7511011608 9418a757-9ab2-49ea-9c96-597f82a804d8 | Akito Soma                                   | GUEST | 406639841 aed7c85c-87d2-463a-b507-6efef28ba8d6 | Dre
+                                    | GUEST
+ | 5385361078
+ 66532595-0a4a-45f8-93eb-8205b9673460 | Valeria N
+emchenko                            | GUEST
+ | 526644870
+ e16690c2-337b-410c-aa34-9e6870479f4b | Marina
+                                    | GUEST
+ | 357220693
+ a6d8cd9e-fe42-4f4d-99bc-b16069f7d477 | claksa ^_
+-                                   | GUEST
+ | 6565550035
+ cfbd9287-432a-45b8-a287-3ba1b38d87a1 | <D0><95><
+<D0><B2><D0><B3><D0><B5><D0><BD><D0><B8><D0><B9>
+                              | GUEST       | 758
+161048
+ 1e468ce0-4d84-47ce-bd80-d40d166701a2 | <F0><9F><
+<95><B4>- <D0><BC><D0><BE><D0><B6><D0><BD><D0><BE
+<BE> <D0><BF><D1><80><D0><BE><D1><81><D1><82><D0>
+<BE> <D0><BF><D1><80><D0><BE><D1><81><D1><82><D0>
+<BE> <D0><AD><D0><BB><D0><B0><D0><B9><D0><B4><D0>
+<B6><D0><B0> | GUEST       | 1917497493
+ 370271d3-0cfb-4722-837f-3bbe87ae0938 | <D0><A1><
+<D0><B0><D1><88><D1><83><D0><BB><D0><B8><D0><BA>
+                              | GUEST       | 210
+7197313
+ 13862cd3-3363-42bb-aa29-7b3fb9b08c13 | <F0><9D><
+<99><B0><F0><9D><9A><97><F0><9D><9A><8A><F0><9D><
+<9A><9C><F0><9D><9A><9D><F0><9D><9A><8A><F0><9D><
+<9A><9C><F0><9D><9A><92><F0><9D><9A><8A>
+| GUEST       | 941577330
+ 88710c83-65b7-4554-98ac-8834d2b9f41f | <D0><A2><
+<D0><BE><D0><BB><D0><B8><D0><BA> <D0><A2><D1><83>
+<D0><B7><D0><BE><D0><B2>                        | GUEST       | 939174951
+ a7e286d5-6ce3-4ffd-8e17-54e7d763f1b2 | <D0><98><<D1><80><D0><B8><D0><BD><D0><B0>                  | GUEST       | 5047809911
+ 00e97cc3-9398-4b68-8040-54ff6d504f00 | <D0><92><<D0><B0><D0><B4><D0><B8><D0><BC> <D0><AF><D1><80><D0><BC><D0><BE><D1><88><D1><83><D0><BA>           | INSTRUCTOR  | 425182418
+ a220f13b-d274-402e-ab95-23d0c84ef6f8 | AA<D0><9F<9F>                                         | OWNER       | 2109523139
+ 9354fddc-eb32-4d80-8856-ebce7c48c663 | <D0><90>.<D0><90>                                        | SUPER_ADMIN | 374243315
+(15 rows)
+
+root@server-srekbm:~# cd /var/www/drewno-ops
+source .env-srekbm:~# cd /var/www/drewno-ops
+psql "$DATABASE_URL" -c "SELECT id, name, role, "
+root@server-srekbm:/var/www/drewno-ops# , role, e
+root@server-srekbm:/var/www/drewno-ops#
