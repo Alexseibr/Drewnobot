@@ -11,7 +11,9 @@ import {
   sendThermostatPrompt,
   sendThermostatAlert,
   performNightlyCleanup,
-  sendCheckInNotifications
+  sendCheckInNotifications,
+  sendSpaGuestReminders,
+  sendSpaAccessInstructions
 } from "./telegram-bot";
 import { setThermostatTemp, refreshThermostatStatus } from "./thermostat-provider";
 import type { ThermostatPlanType } from "@shared/schema";
@@ -20,6 +22,8 @@ const DAILY_TASKS_CRON = "0 6 * * *";
 const WEEKLY_TASKS_CRON = "0 6 * * 1";
 const MONTHLY_TASKS_CRON = "0 6 1 * *";
 const NIGHTLY_CLEANUP_CRON = "0 3 * * *"; // 03:00 - Nightly chat cleanup
+const SPA_REMINDER_CRON = "0 9 * * *";   // 09:00 - Morning SPA reminders to guests
+const SPA_ACCESS_CRON = "*/5 * * * *";   // Every 5 min - Check for SPA access instructions
 
 // Notification schedules (Minsk time)
 const SHIFT_REMINDER_CRON = "30 8 * * *";       // 08:30 - Shift reminder (disabled)
@@ -489,6 +493,21 @@ export function initScheduler(): void {
     timezone: "Europe/Minsk"
   });
 
+  // ============ SPA GUEST NOTIFICATIONS ============
+  
+  cron.schedule(SPA_REMINDER_CRON, async () => {
+    log("Sending SPA guest reminders (09:00)", "scheduler");
+    await sendSpaGuestReminders();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
+  cron.schedule(SPA_ACCESS_CRON, async () => {
+    await sendSpaAccessInstructions();
+  }, {
+    timezone: "Europe/Minsk"
+  });
+
   log("Scheduler initialized:", "scheduler");
   log("  - Daily tasks: 06:00 daily", "scheduler");
   log("  - Weekly tasks: 06:00 Monday", "scheduler");
@@ -505,6 +524,9 @@ export function initScheduler(): void {
   log("    - Prompt: 12:00 daily", "scheduler");
   log("    - Base temps: 12:05 daily", "scheduler");
   log("    - Heating: 14:30 daily", "scheduler");
+  log("  - SPA Guest Notifications:", "scheduler");
+  log("    - Morning reminder: 09:00 daily", "scheduler");
+  log("    - Access instructions: every 5 min", "scheduler");
 }
 
 export { createDailyTasks, createWeeklyTasks, createMonthlyTasks };

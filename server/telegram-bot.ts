@@ -370,10 +370,59 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
         await handleCheckInCallback(data, from, message.chat.id);
       }
       
+      // Handle SPA temperature selection
+      if (data?.startsWith("spa_temp:")) {
+        await handleSpaTemperatureCallback(data, from, message.chat.id);
+      }
+      
       await answerCallbackQuery(update.callback_query.id);
     }
   } catch (error) {
     console.error("[Telegram Bot] Error handling update:", error);
+  }
+}
+
+// Handle SPA temperature selection callback
+async function handleSpaTemperatureCallback(
+  data: string,
+  from: { id: number; first_name: string; last_name?: string },
+  chatId: number
+) {
+  // Format: spa_temp:BOOKINGID:TEMP
+  const parts = data.split(":");
+  if (parts.length < 3) return;
+  
+  const bookingId = parts[1];
+  const temperature = parseInt(parts[2], 10);
+  
+  if (isNaN(temperature)) return;
+  
+  try {
+    const booking = await storage.getSpaBooking(bookingId);
+    if (!booking) {
+      await sendMessage(chatId, "Бронирование не найдено.");
+      return;
+    }
+    
+    // Update booking with temperature preference
+    await storage.updateSpaBooking(bookingId, {
+      comment: `${booking.comment || ""}\nПредпочтительная температура: ${temperature}°C`.trim()
+    });
+    
+    // Confirm to guest
+    let confirmMessage = `Отлично! Мы нагреем баню до <b>${temperature}°C</b>.\n\n`;
+    confirmMessage += `За час до приезда мы пришлём вам код для входа и контакты администратора.\n\n`;
+    confirmMessage += `До встречи!`;
+    
+    await sendMessage(chatId, confirmMessage);
+    
+    // Notify admins about temperature preference
+    await notifyAdminAboutSpaTemperature(bookingId, temperature);
+    
+    console.log(`[Telegram Bot] Guest selected ${temperature}°C for SPA booking ${bookingId}`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to handle SPA temperature selection:", error);
+    await sendMessage(chatId, "Произошла ошибка. Попробуйте ещё раз или свяжитесь с администратором.");
   }
 }
 
@@ -1350,20 +1399,18 @@ export async function sendSpaGuestReminders(): Promise<void> {
           ],
         };
         
-        await bot.sendMessage(parseInt(telegramId, 10), message, {
-          parse_mode: "HTML",
+        await sendMessage(parseInt(telegramId, 10), message, {
           reply_markup: keyboard,
         });
       } else {
-        await bot.sendMessage(parseInt(telegramId, 10), message, { parse_mode: "HTML" });
+        await sendMessage(parseInt(telegramId, 10), message);
       }
       
       // Add info about tub temperature
       if (booking.bookingType === "tub_only" || booking.bookingType === "bath_with_tub") {
-        await bot.sendMessage(
+        await sendMessage(
           parseInt(telegramId, 10),
-          `<b>Купель</b>\nМы греем её до 38-40°C. Если хотите другую температуру, напишите администратору.`,
-          { parse_mode: "HTML" }
+          `<b>Купель</b>\nМы греем её до 38-40°C. Если хотите другую температуру, напишите администратору.`
         );
       }
       
@@ -1421,7 +1468,7 @@ export async function sendSpaAccessInstructions(): Promise<void> {
         message += `Если мангал - мы принесём его за 30 минут до начала.\n`;
         message += `Приятного отдыха!`;
         
-        await bot.sendMessage(parseInt(telegramId, 10), message, { parse_mode: "HTML" });
+        await sendMessage(parseInt(telegramId, 10), message);
         console.log(`[Telegram Bot] Sent access instructions to guest ${telegramId}`);
       }
     }
@@ -1452,7 +1499,7 @@ async function notifyAdminAboutSpaTemperature(bookingId: string, temperature: nu
       `Начинайте топить за 2 часа до заезда!`;
     
     for (const admin of activeAdmins) {
-      await bot.sendMessage(parseInt(admin.telegramId!, 10), message, { parse_mode: "HTML" });
+      await sendMessage(parseInt(admin.telegramId!, 10), message);
     }
   } catch (error) {
     console.error("[Telegram Bot] Failed to notify admin about temperature:", error);
