@@ -716,18 +716,6 @@ export default function SpaBookingPage() {
                         data-testid="input-fullname"
                       />
                     </div>
-                    {!phone && (
-                      <div>
-                        <Label htmlFor="phone">Телефон</Label>
-                        <Input
-                          id="phone"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="+375 (__) ___-__-__"
-                          data-testid="input-phone"
-                        />
-                      </div>
-                    )}
                     <div>
                       <Label htmlFor="comment">Комментарий (необязательно)</Label>
                       <Input

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays, isToday, addHours, isBefore, parse, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Bike, Clock, User, Check, Minus, Plus, Loader2, MapPin, MessageCircle, Phone, Percent } from "lucide-react";
+import { CalendarIcon, Bike, Clock, User, Check, Minus, Plus, Loader2, MapPin, MessageCircle, Phone, Percent, Share2 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -59,7 +59,7 @@ const bookingFormSchema = z.object({
   startTime: z.string().min(1, "Выберите время"),
   quadsCount: z.number().min(1).max(4),
   fullName: z.string().min(2, "Укажите имя"),
-  phone: z.string().min(10, "Укажите номер телефона").regex(/^[\d\s+()-]+$/, "Неверный формат телефона"),
+  phone: z.string().optional(),
   comment: z.string().optional(),
 });
 
@@ -105,6 +105,8 @@ export default function QuadBookingPage() {
   const [step, setStep] = useState<Step>("time");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(startOfDay(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<SlotInfo | undefined>();
+  const [contactPhone, setContactPhone] = useState("");
+  const [isRequestingContact, setIsRequestingContact] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -193,6 +195,40 @@ export default function QuadBookingPage() {
     return { total, discount: 0, original: total };
   };
 
+  const handleRequestContact = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg?.requestContact) {
+      toast({
+        title: "Откройте в Telegram",
+        description: "Для авторизации откройте приложение через Telegram бота @Drewno_bot",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRequestingContact(true);
+    tg.requestContact((success: boolean, result?: any) => {
+      setIsRequestingContact(false);
+      if (success && result?.responseUnsafe?.contact) {
+        const contact = result.responseUnsafe.contact;
+        setContactPhone(contact.phone_number || "");
+        if (contact.first_name) {
+          bookingForm.setValue("fullName", `${contact.first_name} ${contact.last_name || ""}`.trim());
+        }
+        toast({
+          title: "Контакт получен",
+          description: "Номер телефона подтверждён",
+        });
+      } else {
+        toast({
+          title: "Не удалось получить контакт",
+          description: "Попробуйте ещё раз",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
   const bookingMutation = useMutation({
     mutationFn: async (data: BookingFormData) => {
       const bookingData = {
@@ -202,7 +238,7 @@ export default function QuadBookingPage() {
         quadsCount: data.quadsCount,
         customer: {
           fullName: data.fullName,
-          phone: data.phone,
+          phone: contactPhone || data.phone,
           telegramId: user?.telegramId,
         },
         comment: data.comment,
@@ -552,22 +588,33 @@ export default function QuadBookingPage() {
                       )}
                     />
 
-                    <FormField
-                      control={bookingForm.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Номер телефона</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input {...field} placeholder="+375 29 123-45-67" className="pl-10" data-testid="input-phone" />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                    <div>
+                      <label className="text-sm font-medium">Номер телефона</label>
+                      {!contactPhone ? (
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          className="w-full mt-1.5" 
+                          onClick={handleRequestContact}
+                          disabled={isRequestingContact}
+                          data-testid="button-share-contact"
+                        >
+                          {isRequestingContact ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Share2 className="h-4 w-4 mr-2" />
+                          )}
+                          Поделиться контактом
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-3 p-3 mt-1.5 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                          <Check className="h-5 w-5 text-green-600" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">{contactPhone}</p>
+                          </div>
+                        </div>
                       )}
-                    />
+                    </div>
 
                     <FormField
                       control={bookingForm.control}
@@ -631,7 +678,7 @@ export default function QuadBookingPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={bookingMutation.isPending}
+                  disabled={bookingMutation.isPending || !contactPhone}
                   data-testid="button-submit-booking"
                 >
                   {bookingMutation.isPending ? (
@@ -639,6 +686,8 @@ export default function QuadBookingPage() {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Отправка...
                     </>
+                  ) : !contactPhone ? (
+                    "Поделитесь контактом"
                   ) : (
                     "Отправить заявку"
                   )}

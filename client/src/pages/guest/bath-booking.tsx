@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays, isToday, addHours, isBefore, parse, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, Clock, Bath, Flame, Package, Phone, User, Check } from "lucide-react";
+import { CalendarIcon, Clock, Bath, Flame, Package, Phone, User, Check, Loader2, Share2 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -37,7 +37,7 @@ const bookingFormSchema = z.object({
   grill: z.boolean(),
   charcoal: z.boolean(),
   fullName: z.string().min(2, "Укажите имя"),
-  phone: z.string().min(6, "Укажите номер телефона"),
+  phone: z.string().optional(),
 });
 
 type BookingFormData = z.infer<typeof bookingFormSchema>;
@@ -69,6 +69,8 @@ const PRICES = {
 export default function BathBookingPage() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<"select" | "details" | "confirm" | "success">("select");
+  const [contactPhone, setContactPhone] = useState("");
+  const [isRequestingContact, setIsRequestingContact] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<BookingFormData>({
@@ -112,6 +114,40 @@ export default function BathBookingPage() {
     },
   });
 
+  const handleRequestContact = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg?.requestContact) {
+      toast({
+        title: "Откройте в Telegram",
+        description: "Для авторизации откройте приложение через Telegram бота @Drewno_bot",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRequestingContact(true);
+    tg.requestContact((success: boolean, result?: any) => {
+      setIsRequestingContact(false);
+      if (success && result?.responseUnsafe?.contact) {
+        const contact = result.responseUnsafe.contact;
+        setContactPhone(contact.phone_number || "");
+        if (contact.first_name) {
+          form.setValue("fullName", `${contact.first_name} ${contact.last_name || ""}`.trim());
+        }
+        toast({
+          title: "Контакт получен",
+          description: "Номер телефона подтверждён",
+        });
+      } else {
+        toast({
+          title: "Не удалось получить контакт",
+          description: "Попробуйте ещё раз",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
   const calculatePrice = () => {
     const { duration, tub, grill, charcoal } = watchedValues;
     let total = PRICES.base_3h;
@@ -154,7 +190,7 @@ export default function BathBookingPage() {
       endTime,
       customer: {
         fullName: data.fullName,
-        phone: data.phone,
+        phone: contactPhone || data.phone || "",
       },
       options: {
         tub: data.tub,
@@ -535,27 +571,31 @@ export default function BathBookingPage() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Телефон</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  placeholder="+375 XX XXX XX XX"
-                                  className="pl-10"
-                                  {...field}
-                                  data-testid="input-phone"
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                      <div>
+                        <label className="text-sm font-medium">Телефон</label>
+                        {!contactPhone ? (
+                          <Button 
+                            type="button"
+                            variant="outline"
+                            className="w-full mt-1.5" 
+                            onClick={handleRequestContact}
+                            disabled={isRequestingContact}
+                            data-testid="button-share-contact"
+                          >
+                            {isRequestingContact ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Share2 className="h-4 w-4 mr-2" />
+                            )}
+                            Поделиться контактом
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-3 p-3 mt-1.5 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                            <Check className="h-5 w-5 text-green-600" />
+                            <p className="text-sm text-muted-foreground">{contactPhone}</p>
+                          </div>
                         )}
-                      />
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -670,10 +710,10 @@ export default function BathBookingPage() {
                   <Button
                     type="submit"
                     className="flex-1"
-                    disabled={bookingMutation.isPending}
+                    disabled={bookingMutation.isPending || !contactPhone}
                     data-testid="button-submit"
                   >
-                    {bookingMutation.isPending ? "Отправка..." : "Отправить заявку"}
+                    {bookingMutation.isPending ? "Отправка..." : !contactPhone ? "Поделитесь контактом" : "Отправить заявку"}
                   </Button>
                 </div>
                 
