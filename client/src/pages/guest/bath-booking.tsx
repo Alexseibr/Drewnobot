@@ -587,7 +587,7 @@ export default function BathBookingPage() {
                             ) : (
                               <Share2 className="h-4 w-4 mr-2" />
                             )}
-                            Поделиться контактом
+                            Подгрузить номер из Telegram
                           </Button>
                         ) : (
                           <div className="flex items-center gap-3 p-3 mt-1.5 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
@@ -713,7 +713,7 @@ export default function BathBookingPage() {
                     disabled={bookingMutation.isPending || !contactPhone}
                     data-testid="button-submit"
                   >
-                    {bookingMutation.isPending ? "Отправка..." : !contactPhone ? "Поделитесь контактом" : "Отправить заявку"}
+                    {bookingMutation.isPending ? "Отправка..." : !contactPhone ? "Подгрузите номер" : "Отправить заявку"}
                   </Button>
                 </div>
                 

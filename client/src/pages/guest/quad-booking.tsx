@@ -604,7 +604,7 @@ export default function QuadBookingPage() {
                           ) : (
                             <Share2 className="h-4 w-4 mr-2" />
                           )}
-                          Поделиться контактом
+                          Подгрузить номер из Telegram
                         </Button>
                       ) : (
                         <div className="flex items-center gap-3 p-3 mt-1.5 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
@@ -687,7 +687,7 @@ export default function QuadBookingPage() {
                       Отправка...
                     </>
                   ) : !contactPhone ? (
-                    "Поделитесь контактом"
+                    "Подгрузите номер"
                   ) : (
                     "Отправить заявку"
                   )}
