@@ -271,6 +271,40 @@ export async function registerRoutes(
     }
   });
   
+  // Get all users (for staff management page)
+  app.get("/api/admin/users", authMiddleware, requireRole("SUPER_ADMIN"), async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      const guests = users.filter(u => u.role === "GUEST");
+      const staff = users.filter(u => u.role !== "GUEST");
+      
+      res.json({
+        totalUsers: users.length,
+        guestCount: guests.length,
+        staffCount: staff.length,
+        staff: staff.map(u => ({
+          id: u.id,
+          telegramId: u.telegramId,
+          name: u.name,
+          phone: u.phone,
+          role: u.role,
+          isActive: u.isActive,
+          createdAt: u.createdAt,
+        })),
+        guests: guests.map(u => ({
+          id: u.id,
+          telegramId: u.telegramId,
+          name: u.name,
+          phone: u.phone,
+          isActive: u.isActive,
+          createdAt: u.createdAt,
+        })),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка получения списка пользователей" });
+    }
+  });
+
   // ============ STAFF INVITATIONS (Phone-based role pre-assignment) ============
   app.get("/api/admin/invitations", authMiddleware, requireRole("SUPER_ADMIN", "OWNER"), async (req, res) => {
     try {
