@@ -1,23 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { format, addDays, isToday, addHours, isBefore, parse, startOfDay } from "date-fns";
+import { format, addDays, isToday, addHours, isBefore, parse, startOfDay, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, Minus, Plus, MessageCircle, Phone, Flame } from "lucide-react";
+import { 
+  CalendarIcon, User, Check, Loader2, Users, Droplets, Sun, Bath, 
+  Minus, Plus, MessageCircle, Flame, ArrowLeft, ArrowRight, Clock,
+  Share2, Phone
+} from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -26,23 +23,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";
 
 type BookingType = "bath_only" | "terrace_only" | "tub_only" | "bath_with_tub";
-type Step = "select" | "details" | "success";
-
-const bookingFormSchema = z.object({
-  bookingType: z.enum(["bath_only", "terrace_only", "tub_only", "bath_with_tub"]),
-  spaResource: z.string().min(1, "Выберите СПА"),
-  date: z.date({ required_error: "Выберите дату" }),
-  startTime: z.string().min(1, "Выберите время начала"),
-  durationHours: z.number().min(3).max(5).default(3),
-  guestsCount: z.number().min(1, "Укажите количество гостей").max(12, "Максимум 12 гостей"),
-  grill: z.boolean().default(false),
-  charcoal: z.boolean().default(false),
-  fullName: z.string().min(2, "Укажите имя"),
-  phone: z.string().min(10, "Укажите номер телефона").regex(/^[\d\s+()-]+$/, "Неверный формат телефона"),
-  comment: z.string().optional(),
-});
-
-type BookingFormData = z.infer<typeof bookingFormSchema>;
+type Step = "calendar" | "service" | "time" | "details" | "confirm" | "success";
 
 const CLOSE_HOUR = 22;
 const MIN_HOURS_ADVANCE_SPA = 3;
@@ -59,25 +40,20 @@ const isSlotAvailableForToday = (timeSlot: string, minHoursAdvance: number): boo
 };
 
 const BOOKING_TYPES: { value: BookingType; label: string; description: string; icon: typeof Flame }[] = [
-  { value: "bath_only", label: "Только СПА", description: "3 часа, до 6 гостей", icon: Flame },
-  { value: "terrace_only", label: "Только терраса", description: "3 часа, до 12 гостей (лето)", icon: Sun },
-  { value: "tub_only", label: "Только купель", description: "3 часа, 4-6 гостей", icon: Droplets },
-  { value: "bath_with_tub", label: "СПА + Купель", description: "3 часа, 6-10 гостей", icon: Flame },
+  { value: "bath_only", label: "Баня", description: "3 часа, до 6 гостей", icon: Flame },
+  { value: "tub_only", label: "Купель", description: "3 часа, 4-6 гостей", icon: Droplets },
+  { value: "terrace_only", label: "Терраса", description: "3 часа, до 12 гостей", icon: Sun },
+  { value: "bath_with_tub", label: "Баня + Купель", description: "3 часа, 6-10 гостей", icon: Flame },
 ];
 
 const getMaxGuests = (bookingType: BookingType, spaResource: string): number => {
   const isComplex1 = spaResource === "SPA1";
   switch (bookingType) {
-    case "bath_only":
-      return 6;
-    case "terrace_only":
-      return 12;
-    case "tub_only":
-      return isComplex1 ? 6 : 4;
-    case "bath_with_tub":
-      return isComplex1 ? 10 : 6;
-    default:
-      return 6;
+    case "bath_only": return 6;
+    case "terrace_only": return 12;
+    case "tub_only": return isComplex1 ? 6 : 4;
+    case "bath_with_tub": return isComplex1 ? 10 : 6;
+    default: return 6;
   }
 };
 
@@ -96,38 +72,28 @@ const ADDITIONAL_SERVICES = {
 
 export default function SpaBookingPage() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<Step>("select");
+  const [step, setStep] = useState<Step>("calendar");
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const bookingForm = useForm<BookingFormData>({
-    resolver: zodResolver(bookingFormSchema),
-    defaultValues: {
-      bookingType: "bath_only",
-      spaResource: "",
-      startTime: "",
-      durationHours: 3,
-      guestsCount: 2,
-      grill: false,
-      charcoal: false,
-      fullName: user?.name || "",
-      phone: "",
-      comment: "",
-    },
-  });
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedType, setSelectedType] = useState<BookingType>("bath_only");
+  const [selectedResource, setSelectedResource] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [durationHours, setDurationHours] = useState(3);
+  const [guestsCount, setGuestsCount] = useState(2);
+  const [grill, setGrill] = useState(false);
+  const [charcoal, setCharcoal] = useState(false);
+  const [fullName, setFullName] = useState(user?.name || "");
+  const [phone, setPhone] = useState("");
+  const [comment, setComment] = useState("");
+  const [isRequestingContact, setIsRequestingContact] = useState(false);
 
-  const selectedDate = bookingForm.watch("date");
-  const selectedType = bookingForm.watch("bookingType");
-  const selectedResource = bookingForm.watch("spaResource");
-  const selectedStartTime = bookingForm.watch("startTime");
-  const selectedDuration = bookingForm.watch("durationHours");
-  const watchedValues = bookingForm.watch();
-  
-  const getMaxDuration = (startTime: string): number => {
-    if (!startTime) return 5;
-    const startHour = parseInt(startTime.split(":")[0]);
-    return Math.min(5, CLOSE_HOUR - startHour);
-  };
+  useEffect(() => {
+    if (user?.name && !fullName) {
+      setFullName(user.name);
+    }
+  }, [user]);
 
   const { data: availability, isLoading: loadingAvailability } = useQuery<Array<{
     spaResource: string;
@@ -137,12 +103,24 @@ export default function SpaBookingPage() {
     available: boolean;
   }>>({
     queryKey: ["/api/guest/spa/availability", selectedDate ? format(selectedDate, "yyyy-MM-dd") : null],
-    enabled: !!selectedDate && step === "select",
+    enabled: !!selectedDate,
+  });
+
+  const { data: allAvailability } = useQuery<Array<{
+    date: string;
+    hasBookings: boolean;
+    fullyBooked: boolean;
+  }>>({
+    queryKey: ["/api/guest/spa/calendar-availability"],
   });
 
   const bookingMutation = useMutation({
-    mutationFn: async (data: BookingFormData) => {
-      const endHour = parseInt(data.startTime.split(":")[0]) + data.durationHours;
+    mutationFn: async () => {
+      if (!selectedDate || !selectedTime || !selectedResource) {
+        throw new Error("Заполните все обязательные поля");
+      }
+
+      const endHour = parseInt(selectedTime.split(":")[0]) + durationHours;
       const endTime = `${endHour.toString().padStart(2, "0")}:00`;
       
       const storedAuth = localStorage.getItem("drewno-auth");
@@ -159,23 +137,20 @@ export default function SpaBookingPage() {
         method: "POST",
         headers,
         body: JSON.stringify({
-          spaResource: data.spaResource,
-          bookingType: data.bookingType,
-          date: format(data.date, "yyyy-MM-dd"),
-          startTime: data.startTime,
+          spaResource: selectedResource,
+          bookingType: selectedType,
+          date: format(selectedDate, "yyyy-MM-dd"),
+          startTime: selectedTime,
           endTime,
-          durationHours: data.durationHours,
-          guestsCount: data.guestsCount,
-          options: {
-            grill: data.grill,
-            charcoal: data.charcoal,
-          },
+          durationHours,
+          guestsCount,
+          options: { grill, charcoal },
           customer: {
-            fullName: data.fullName,
-            phone: data.phone,
+            fullName,
+            phone,
             telegramId: user?.telegramId,
           },
-          comment: data.comment || undefined,
+          comment: comment || undefined,
         }),
       });
       
@@ -189,6 +164,7 @@ export default function SpaBookingPage() {
     onSuccess: () => {
       setStep("success");
       queryClient.invalidateQueries({ queryKey: ["/api/guest/spa/availability"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/guest/spa/calendar-availability"] });
     },
     onError: (error: Error) => {
       toast({
@@ -200,36 +176,87 @@ export default function SpaBookingPage() {
   });
 
   const calculatePrice = () => {
-    const { bookingType, guestsCount, durationHours, grill, charcoal } = watchedValues;
-    const priceConfig = PRICES[bookingType];
-    
+    const priceConfig = PRICES[selectedType];
     let basePrice = priceConfig.base;
     if (priceConfig.guestThreshold && guestsCount > priceConfig.guestThreshold) {
       basePrice = priceConfig.higherPrice || priceConfig.base;
     }
-    
-    // Add extra hours (base is 3 hours)
     const extraHours = Math.max(0, durationHours - 3);
     const extraHoursPrice = extraHours * EXTRA_HOUR_PRICE;
-    
-    // Add additional services
     let servicesPrice = 0;
     if (grill) servicesPrice += ADDITIONAL_SERVICES.grill.price;
     if (charcoal) servicesPrice += ADDITIONAL_SERVICES.charcoal.price;
-    
     return basePrice + extraHoursPrice + servicesPrice;
   };
 
   const calculateEndTime = () => {
-    const { startTime, durationHours } = watchedValues;
-    if (!startTime) return "";
-    const [hours, minutes] = startTime.split(":").map(Number);
-    const endHour = hours + (durationHours || 3);
+    if (!selectedTime) return "";
+    const [hours, minutes] = selectedTime.split(":").map(Number);
+    const endHour = hours + durationHours;
     return `${endHour.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
   };
 
-  const handleBookingSubmit = (data: BookingFormData) => {
-    bookingMutation.mutate(data);
+  const getMaxDuration = (startTime: string): number => {
+    if (!startTime) return 5;
+    const startHour = parseInt(startTime.split(":")[0]);
+    return Math.min(5, CLOSE_HOUR - startHour);
+  };
+
+  const handleRequestContact = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg?.requestContact) {
+      toast({
+        title: "Откройте в Telegram",
+        description: "Для авторизации откройте приложение через Telegram бота @Drewno_bot",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRequestingContact(true);
+    tg.requestContact((success: boolean, result?: any) => {
+      setIsRequestingContact(false);
+      if (success && result?.responseUnsafe?.contact) {
+        const contact = result.responseUnsafe.contact;
+        setPhone(contact.phone_number || "");
+        if (contact.first_name) {
+          setFullName(`${contact.first_name} ${contact.last_name || ""}`.trim());
+        }
+        toast({
+          title: "Контакт получен",
+          description: "Номер телефона подтверждён",
+        });
+        setStep("confirm");
+      } else {
+        toast({
+          title: "Не удалось получить контакт",
+          description: "Попробуйте ещё раз",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const getDateClassName = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    const dayData = allAvailability?.find(d => d.date === dateStr);
+    
+    if (dayData?.fullyBooked) {
+      return "bg-red-500 text-white hover:bg-red-600";
+    }
+    if (dayData?.hasBookings) {
+      return "bg-orange-200 dark:bg-orange-800 hover:bg-orange-300 dark:hover:bg-orange-700";
+    }
+    return "";
+  };
+
+  const stepTitles: Record<Step, string> = {
+    calendar: "Выберите дату",
+    service: "Выберите услугу",
+    time: "Выберите время",
+    details: "Детали бронирования",
+    confirm: "Подтверждение",
+    success: "Готово",
   };
 
   if (step === "success") {
@@ -238,60 +265,43 @@ export default function SpaBookingPage() {
         <Header title="Заявка отправлена" showBack />
         <PageContainer>
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="rounded-full bg-status-confirmed/10 p-6 mb-6">
-              <Check className="h-12 w-12 text-status-confirmed" />
+            <div className="rounded-full bg-green-100 dark:bg-green-900 p-6 mb-6">
+              <Check className="h-12 w-12 text-green-600 dark:text-green-400" />
             </div>
             <h2 className="text-2xl font-semibold mb-2" data-testid="text-success-title">
-              Заявка отправлена
+              Заявка отправлена!
             </h2>
             <p className="text-muted-foreground max-w-xs mb-6" data-testid="text-success-description">
-              Мы скоро позвоним вам для подтверждения бронирования и оплаты.
+              Мы скоро свяжемся с вами для подтверждения бронирования.
             </p>
-            <div className="space-y-2 text-sm text-left w-full max-w-xs">
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Тип</span>
-                <span className="font-medium">
-                  {BOOKING_TYPES.find(t => t.value === watchedValues.bookingType)?.label}
-                </span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Дата</span>
-                <span className="font-medium">
-                  {selectedDate && format(selectedDate, "d MMMM yyyy", { locale: ru })}
-                </span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Время</span>
-                <span className="font-medium">{watchedValues.startTime} - {calculateEndTime()} ({watchedValues.durationHours} ч.)</span>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Гости</span>
-                <span className="font-medium">{watchedValues.guestsCount} чел.</span>
-              </div>
-              {(watchedValues.grill || watchedValues.charcoal) && (
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Доп. услуги</span>
-                  <span className="font-medium">
-                    {[
-                      watchedValues.grill && "Мангал",
-                      watchedValues.charcoal && "Угли"
-                    ].filter(Boolean).join(", ")}
-                  </span>
+            <Card className="w-full max-w-sm">
+              <CardContent className="p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Услуга</span>
+                  <span className="font-medium">{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
                 </div>
-              )}
-              <div className="flex justify-between py-2">
-                <span className="text-muted-foreground">Стоимость</span>
-                <span className="font-semibold text-primary">{calculatePrice()} BYN</span>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground text-center mt-4">
-              Мы свяжемся с вами для подтверждения и оплаты.
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Дата</span>
+                  <span className="font-medium">{selectedDate && format(selectedDate, "d MMMM yyyy", { locale: ru })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Время</span>
+                  <span className="font-medium">{selectedTime} - {calculateEndTime()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Гости</span>
+                  <span className="font-medium">{guestsCount} чел.</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="font-medium">Стоимость</span>
+                  <span className="font-bold text-primary">{calculatePrice()} BYN</span>
+                </div>
+              </CardContent>
+            </Card>
+            <p className="text-sm text-muted-foreground mt-4">
+              В день заезда вам придёт напоминание с инструкциями.
             </p>
-            <Button
-              className="mt-8 w-full max-w-xs"
-              onClick={() => setLocation("/")}
-              data-testid="button-back-home"
-            >
+            <Button className="mt-6 w-full max-w-sm" onClick={() => setLocation("/")} data-testid="button-back-home">
               На главную
             </Button>
           </div>
@@ -302,502 +312,483 @@ export default function SpaBookingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header
-        title="Забронировать СПА"
-        showBack
-      />
+      <Header title={stepTitles[step]} showBack />
       <PageContainer>
-        {step === "select" && (
-          <Form {...bookingForm}>
-            <form className="space-y-6">
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                  Выберите тип и дату
-                </h2>
+        <div className="space-y-6">
+          <div className="flex items-center justify-center gap-1">
+            {["calendar", "service", "time", "details", "confirm"].map((s, i) => (
+              <div 
+                key={s} 
+                className={cn(
+                  "h-1.5 rounded-full transition-all",
+                  s === step ? "w-8 bg-primary" : "w-4 bg-muted",
+                  ["calendar", "service", "time", "details", "confirm"].indexOf(step) > i && "bg-primary/50"
+                )} 
+              />
+            ))}
+          </div>
 
-                <FormField
-                  control={bookingForm.control}
-                  name="bookingType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Тип бронирования</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          className="grid grid-cols-2 gap-3"
-                        >
-                          {BOOKING_TYPES.map(({ value, label, description, icon: Icon }) => (
-                            <Label
-                              key={value}
-                              htmlFor={`type-${value}`}
-                              className={cn(
-                                "flex flex-col items-center justify-center rounded-lg border-2 border-muted p-4 cursor-pointer hover-elevate text-center",
-                                field.value === value && "border-primary bg-primary/5"
-                              )}
-                            >
-                              <RadioGroupItem value={value} id={`type-${value}`} className="sr-only" />
-                              <Icon className={cn(
-                                "h-6 w-6 mb-2",
-                                field.value === value ? "text-primary" : "text-muted-foreground"
-                              )} />
-                              <span className="text-sm font-medium">{label}</span>
-                              <span className="text-xs text-muted-foreground">{description}</span>
-                            </Label>
-                          ))}
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={bookingForm.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Дата</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              data-testid="button-date-picker"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, "PPP", { locale: ru }) : "Выберите дату"}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => {
-                              const today = startOfDay(new Date());
-                              const dateStart = startOfDay(date);
-                              return dateStart.getTime() < today.getTime() || date > addDays(new Date(), 60);
-                            }}
-                            locale={ru}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {selectedDate && (
-                  <FormField
-                    control={bookingForm.control}
-                    name="spaResource"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Выберите СПА</FormLabel>
-                        <div className="grid grid-cols-2 gap-4">
-                          {["SPA1", "SPA2"].map((code) => (
-                            <Card
-                              key={code}
-                              className={cn(
-                                "cursor-pointer transition-all hover-elevate",
-                                field.value === code && "ring-2 ring-primary"
-                              )}
-                              onClick={() => field.onChange(code)}
-                              data-testid={`card-spa-${code}`}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <div className={cn(
-                                    "rounded-full p-2",
-                                    field.value === code ? "bg-primary/10" : "bg-muted"
-                                  )}>
-                                    <Droplets className={cn(
-                                      "h-5 w-5",
-                                      field.value === code ? "text-primary" : "text-muted-foreground"
-                                    )} />
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Комплекс {code.slice(3)}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {code === "SPA1" ? "Большая купель (до 6 чел.)" : "Малая купель (до 4 чел.)"}
-                                    </p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+          {step === "calendar" && (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CalendarIcon className="h-5 w-5" />
+                    Выберите дату
+                  </CardTitle>
+                  <CardDescription>
+                    Оранжевый — есть брони, красный — всё занято
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
+                      if (date) {
+                        setStep("service");
+                      }
+                    }}
+                    disabled={(date) => {
+                      const today = startOfDay(new Date());
+                      const dateStart = startOfDay(date);
+                      return dateStart.getTime() < today.getTime() || date > addDays(new Date(), 60);
+                    }}
+                    locale={ru}
+                    className="w-full"
+                    classNames={{
+                      months: "flex flex-col",
+                      month: "space-y-4 w-full",
+                      table: "w-full border-collapse",
+                      head_row: "flex w-full",
+                      head_cell: "text-muted-foreground rounded-md flex-1 font-normal text-[0.8rem]",
+                      row: "flex w-full mt-2",
+                      cell: "flex-1 text-center text-sm p-0 relative",
+                      day: cn(
+                        "h-10 w-full p-0 font-normal rounded-md",
+                        "hover:bg-accent hover:text-accent-foreground",
+                        "focus:bg-accent focus:text-accent-foreground"
+                      ),
+                      day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                      day_today: "border-2 border-primary",
+                      day_outside: "text-muted-foreground opacity-50",
+                      day_disabled: "text-muted-foreground opacity-50",
+                    }}
+                    modifiers={{
+                      hasBookings: (date: Date) => {
+                        const dateStr = format(date, "yyyy-MM-dd");
+                        const dayData = allAvailability?.find(d => d.date === dateStr);
+                        return !!(dayData?.hasBookings && !dayData?.fullyBooked);
+                      },
+                      fullyBooked: (date: Date) => {
+                        const dateStr = format(date, "yyyy-MM-dd");
+                        const dayData = allAvailability?.find(d => d.date === dateStr);
+                        return !!dayData?.fullyBooked;
+                      },
+                    }}
+                    modifiersClassNames={{
+                      hasBookings: "bg-orange-200 dark:bg-orange-800",
+                      fullyBooked: "bg-red-500 text-white",
+                    }}
                   />
-                )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                {selectedResource && selectedDate && (
-                  <FormField
-                    control={bookingForm.control}
-                    name="startTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Время начала</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-start-time">
-                              <SelectValue placeholder="Выберите время" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {timeSlots.map((time) => {
-                              const slot = availability?.find(
-                                s => s.spaResource === selectedResource && s.startTime === time
-                              );
-                              const isAvailable = slot?.available ?? true;
-                              const isTooSoon = selectedDate && isToday(selectedDate) && !isSlotAvailableForToday(time, MIN_HOURS_ADVANCE_SPA);
-                              const isDisabled = !isAvailable || isTooSoon;
-                              return (
-                                <SelectItem
-                                  key={time}
-                                  value={time}
-                                  disabled={isDisabled}
-                                >
-                                  {time} {!isAvailable ? "(занято)" : isTooSoon ? "(слишком рано)" : ""}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+          {step === "service" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarIcon className="h-4 w-4" />
+                <span>{selectedDate && format(selectedDate, "d MMMM yyyy", { locale: ru })}</span>
               </div>
 
-              {watchedValues.startTime && (
-                <Button
-                  type="button"
-                  className="w-full"
-                  onClick={() => setStep("details")}
-                  data-testid="button-next"
-                >
-                  Продолжить
-                </Button>
-              )}
-            </form>
-          </Form>
-        )}
-
-        {step === "details" && (
-          <Form {...bookingForm}>
-            <form onSubmit={bookingForm.handleSubmit(handleBookingSubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold" data-testid="text-step-title">
-                  Детали бронирования
-                </h2>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Продолжительность</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={bookingForm.control}
-                      name="durationHours"
-                      render={({ field }) => {
-                        const maxDuration = getMaxDuration(selectedStartTime);
-                        return (
-                          <FormItem>
-                            <div className="flex items-center justify-center gap-3">
-                              {[3, 4, 5].map((hours) => {
-                                const isDisabled = hours > maxDuration;
-                                return (
-                                  <Button
-                                    key={hours}
-                                    type="button"
-                                    variant={field.value === hours ? "default" : "outline"}
-                                    className={cn("flex-1", isDisabled && "opacity-50")}
-                                    onClick={() => !isDisabled && field.onChange(hours)}
-                                    disabled={isDisabled}
-                                    data-testid={`button-duration-${hours}`}
-                                  >
-                                    {hours} часа
-                                  </Button>
-                                );
-                              })}
-                            </div>
-                            <p className="text-sm text-muted-foreground text-center mt-2">
-                              {watchedValues.startTime} - {calculateEndTime()} (комплекс закрывается в 22:00)
-                            </p>
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Количество гостей</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={bookingForm.control}
-                      name="guestsCount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="flex items-center justify-center gap-4">
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="outline"
-                              onClick={() => field.onChange(Math.max(1, field.value - 1))}
-                              disabled={field.value <= 1}
-                              data-testid="button-guests-minus"
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <div className="flex items-center gap-2">
-                              <Users className="h-5 w-5 text-muted-foreground" />
-                              <span className="text-3xl font-bold w-12 text-center">
-                                {field.value}
-                              </span>
-                            </div>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="outline"
-                              onClick={() => {
-                                const maxGuests = getMaxGuests(selectedType, selectedResource);
-                                field.onChange(Math.min(maxGuests, field.value + 1));
-                              }}
-                              disabled={field.value >= getMaxGuests(selectedType, selectedResource)}
-                              data-testid="button-guests-plus"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-sm text-muted-foreground text-center mt-2">
-                            Максимум для этого типа: {getMaxGuests(selectedType, selectedResource)} гостей
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Дополнительные услуги</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <FormField
-                      control={bookingForm.control}
-                      name="grill"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                          <div className="flex items-center gap-3">
-                            <Flame className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <FormLabel className="text-sm font-medium cursor-pointer">
-                                {ADDITIONAL_SERVICES.grill.name}
-                              </FormLabel>
-                              <p className="text-xs text-muted-foreground">
-                                {ADDITIONAL_SERVICES.grill.price} BYN
-                              </p>
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-grill"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={bookingForm.control}
-                      name="charcoal"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                          <div className="flex items-center gap-3">
-                            <Flame className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <FormLabel className="text-sm font-medium cursor-pointer">
-                                {ADDITIONAL_SERVICES.charcoal.name}
-                              </FormLabel>
-                              <p className="text-xs text-muted-foreground">
-                                {ADDITIONAL_SERVICES.charcoal.price} BYN
-                              </p>
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-charcoal"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Контактные данные</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      control={bookingForm.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Имя</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                placeholder="Ваше имя"
-                                className="pl-10"
-                                {...field}
-                                data-testid="input-fullname"
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={bookingForm.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Телефон</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="+375 (__) ___-__-__"
-                              {...field}
-                              data-testid="input-phone"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={bookingForm.control}
-                      name="comment"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Комментарий (необязательно)</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Пожелания, уточнения..."
-                              {...field}
-                              data-testid="input-comment"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Тип</span>
-                      <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Дата</span>
-                      <span>{selectedDate && format(selectedDate, "d MMMM", { locale: ru })}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Время</span>
-                      <span>{watchedValues.startTime} - {calculateEndTime()} ({watchedValues.durationHours} ч.)</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Гости</span>
-                      <span>{watchedValues.guestsCount} чел.</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t">
-                      <span className="font-medium">Итого:</span>
-                      <span className="text-2xl font-bold text-primary">
-                        {calculatePrice()} BYN
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                {!user ? (
-                  <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <MessageCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium">Подтверждение через Telegram</p>
-                          <p className="text-xs text-muted-foreground">
-                            После отправки заявки мы свяжемся с вами по телефону для подтверждения брони и оплаты.
-                          </p>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => window.open("https://t.me/Drewno_bot?start=verify", "_blank")}
-                            data-testid="button-telegram-verify"
-                          >
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            Открыть бот для уведомлений
-                          </Button>
-                        </div>
-                      </div>
+              <div className="grid grid-cols-2 gap-3">
+                {BOOKING_TYPES.map(({ value, label, description, icon: Icon }) => (
+                  <Card
+                    key={value}
+                    className={cn(
+                      "cursor-pointer transition-all hover-elevate",
+                      selectedType === value && "ring-2 ring-primary"
+                    )}
+                    onClick={() => {
+                      setSelectedType(value);
+                      setStep("time");
+                    }}
+                    data-testid={`card-type-${value}`}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <Icon className={cn(
+                        "h-8 w-8 mx-auto mb-2",
+                        selectedType === value ? "text-primary" : "text-muted-foreground"
+                      )} />
+                      <p className="font-medium text-sm">{label}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{description}</p>
                     </CardContent>
                   </Card>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center">
-                    После подтверждения брони вам придёт уведомление в Telegram.
-                  </p>
-                )}
+                ))}
               </div>
 
-              <div className="space-y-2">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={bookingMutation.isPending}
-                  data-testid="button-submit"
-                >
-                  {bookingMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Забронировать
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setStep("select")}
-                >
+              <Button variant="ghost" className="w-full" onClick={() => setStep("calendar")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Назад к календарю
+              </Button>
+            </div>
+          )}
+
+          {step === "time" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  <span>{selectedDate && format(selectedDate, "d MMM", { locale: ru })}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Flame className="h-4 w-4" />
+                  <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                </div>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Выберите СПА комплекс</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {["SPA1", "SPA2"].map((code) => (
+                    <div
+                      key={code}
+                      className={cn(
+                        "p-3 rounded-lg border cursor-pointer transition-all",
+                        selectedResource === code ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                      )}
+                      onClick={() => setSelectedResource(code)}
+                      data-testid={`card-spa-${code}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Droplets className={cn(
+                          "h-5 w-5",
+                          selectedResource === code ? "text-primary" : "text-muted-foreground"
+                        )} />
+                        <div>
+                          <p className="font-medium">Комплекс {code.slice(3)}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {code === "SPA1" ? "Большая купель (до 6 чел.)" : "Малая купель (до 4 чел.)"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {selectedResource && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Время начала
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingAvailability ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2">
+                        {timeSlots.map((time) => {
+                          const slot = availability?.find(
+                            s => s.spaResource === selectedResource && s.startTime === time
+                          );
+                          const isAvailable = slot?.available ?? true;
+                          const isTooSoon = selectedDate && isToday(selectedDate) && !isSlotAvailableForToday(time, MIN_HOURS_ADVANCE_SPA);
+                          const isDisabled = !isAvailable || isTooSoon;
+
+                          return (
+                            <Button
+                              key={time}
+                              variant={selectedTime === time ? "default" : "outline"}
+                              size="sm"
+                              disabled={isDisabled}
+                              onClick={() => {
+                                setSelectedTime(time);
+                                setStep("details");
+                              }}
+                              className={cn(isDisabled && "opacity-50")}
+                              data-testid={`button-time-${time}`}
+                            >
+                              {time}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              <Button variant="ghost" className="w-full" onClick={() => setStep("service")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Назад
+              </Button>
+            </div>
+          )}
+
+          {step === "details" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                <span>{selectedDate && format(selectedDate, "d MMM", { locale: ru })}</span>
+                <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                <span>{selectedTime}</span>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Продолжительность</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-center gap-3">
+                    {[3, 4, 5].map((hours) => {
+                      const maxDuration = getMaxDuration(selectedTime);
+                      const isDisabled = hours > maxDuration;
+                      return (
+                        <Button
+                          key={hours}
+                          variant={durationHours === hours ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => !isDisabled && setDurationHours(hours)}
+                          disabled={isDisabled}
+                          data-testid={`button-duration-${hours}`}
+                        >
+                          {hours} ч
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center mt-2">
+                    {selectedTime} - {calculateEndTime()}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Количество гостей</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => setGuestsCount(Math.max(1, guestsCount - 1))}
+                      disabled={guestsCount <= 1}
+                      data-testid="button-guests-minus"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-3xl font-bold w-12 text-center">{guestsCount}</span>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => {
+                        const maxGuests = getMaxGuests(selectedType, selectedResource);
+                        setGuestsCount(Math.min(maxGuests, guestsCount + 1));
+                      }}
+                      disabled={guestsCount >= getMaxGuests(selectedType, selectedResource)}
+                      data-testid="button-guests-plus"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Дополнительные услуги</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <Flame className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">{ADDITIONAL_SERVICES.grill.name}</p>
+                        <p className="text-xs text-muted-foreground">{ADDITIONAL_SERVICES.grill.price} BYN</p>
+                      </div>
+                    </div>
+                    <Checkbox checked={grill} onCheckedChange={(c) => setGrill(!!c)} data-testid="checkbox-grill" />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <Flame className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">{ADDITIONAL_SERVICES.charcoal.name}</p>
+                        <p className="text-xs text-muted-foreground">{ADDITIONAL_SERVICES.charcoal.price} BYN</p>
+                      </div>
+                    </div>
+                    <Checkbox checked={charcoal} onCheckedChange={(c) => setCharcoal(!!c)} data-testid="checkbox-charcoal" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Услуга</span>
+                    <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Время</span>
+                    <span>{selectedTime} - {calculateEndTime()} ({durationHours} ч.)</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Гости</span>
+                    <span>{guestsCount} чел.</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="font-medium">Итого:</span>
+                    <span className="text-2xl font-bold text-primary">{calculatePrice()} BYN</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setStep("time")}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
                   Назад
                 </Button>
+                <Button className="flex-1" onClick={() => setStep("confirm")} data-testid="button-next">
+                  Далее
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
               </div>
-            </form>
-          </Form>
-        )}
+            </div>
+          )}
+
+          {step === "confirm" && (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Подтверждение через Telegram</CardTitle>
+                  <CardDescription>
+                    Поделитесь контактом для подтверждения бронирования
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!phone ? (
+                    <Button 
+                      className="w-full" 
+                      onClick={handleRequestContact}
+                      disabled={isRequestingContact}
+                      data-testid="button-share-contact"
+                    >
+                      {isRequestingContact ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Share2 className="h-4 w-4 mr-2" />
+                      )}
+                      Поделиться контактом
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                        <Check className="h-5 w-5 text-green-600" />
+                        <div>
+                          <p className="font-medium">{fullName}</p>
+                          <p className="text-sm text-muted-foreground">{phone}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="fullName">Имя</Label>
+                      <Input
+                        id="fullName"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Ваше имя"
+                        data-testid="input-fullname"
+                      />
+                    </div>
+                    {!phone && (
+                      <div>
+                        <Label htmlFor="phone">Телефон</Label>
+                        <Input
+                          id="phone"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="+375 (__) ___-__-__"
+                          data-testid="input-phone"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <Label htmlFor="comment">Комментарий (необязательно)</Label>
+                      <Input
+                        id="comment"
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        placeholder="Пожелания..."
+                        data-testid="input-comment"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Дата</span>
+                    <span>{selectedDate && format(selectedDate, "d MMMM yyyy", { locale: ru })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Услуга</span>
+                    <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Время</span>
+                    <span>{selectedTime} - {calculateEndTime()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Гости</span>
+                    <span>{guestsCount} чел.</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t font-medium">
+                    <span>Итого</span>
+                    <span className="text-primary">{calculatePrice()} BYN</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setStep("details")}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Назад
+                </Button>
+                <Button 
+                  className="flex-1" 
+                  onClick={() => bookingMutation.mutate()}
+                  disabled={bookingMutation.isPending || !fullName || !phone}
+                  data-testid="button-submit"
+                >
+                  {bookingMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  Забронировать
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </PageContainer>
       <BottomNav />
     </div>

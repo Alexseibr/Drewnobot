@@ -2033,6 +2033,41 @@ export async function registerRoutes(
   });
 
   // ============ SPA BOOKINGS - GUEST ============
+  
+  // Calendar availability for the next 60 days
+  app.get("/api/guest/spa/calendar-availability", async (req, res) => {
+    try {
+      const result: Array<{ date: string; hasBookings: boolean; fullyBooked: boolean }> = [];
+      const today = new Date();
+      
+      for (let i = 0; i < 60; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split("T")[0];
+        
+        const bookings = await storage.getSpaBookingsForDate(dateStr);
+        const activeBookings = bookings.filter(b => 
+          !["cancelled", "expired", "completed"].includes(b.status)
+        );
+        
+        // Check how many time slots are taken
+        const spa1Bookings = activeBookings.filter(b => b.spaResource === "SPA1");
+        const spa2Bookings = activeBookings.filter(b => b.spaResource === "SPA2");
+        
+        // Simple heuristic: if both SPAs have 3+ bookings, consider fully booked
+        const fullyBooked = spa1Bookings.length >= 3 && spa2Bookings.length >= 3;
+        const hasBookings = activeBookings.length > 0;
+        
+        result.push({ date: dateStr, hasBookings, fullyBooked });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching calendar availability:", error);
+      res.status(500).json({ error: "Ошибка получения календаря" });
+    }
+  });
+  
   app.get("/api/guest/spa/availability", async (req, res) => {
     try {
       const date = req.query.date as string;
