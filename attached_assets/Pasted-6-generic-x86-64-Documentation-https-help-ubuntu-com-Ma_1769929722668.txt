@@ -1,0 +1,60 @@
+6-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+Failed to automatically attach to an Ubuntu Pro subscription 3 time(s).
+The failure was due to: "Unable to determine cloud platform.".
+The next attempt is scheduled for 2026-02-01T10:35:00+03:00.
+You can try manually with `sudo pro auto-attach`.
+
+New release '24.04.3 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+Last login: Sun Feb  1 10:04:07 2026 from 194.158.219.105
+root@server-srekbm:~# cd /var/www/drewno-ops && pm2 start ecosystem.config.cjs
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 7    │ online    │ 0%       │ 22.2mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+ µнир логов в реальном врем/drewno-ops# # Прос
+root@server-srekbm:/var/www/drewno-ops# pm2 logsdrewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops]process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o | Node.js v20.19.6
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [TravelLine] Auth failed: 401 - {"error":"invalid_client","error_description":"Invalid client or Invalid client credentials"}
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+0|drewno-o | [Telegram Bot] No bot token configured
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 10:08:04 AM [scheduler]   - Weekly tasks: 06:00 Monday
+0|drewno-o | 10:08:04 AM [scheduler]   - Monthlytasks: 06:00 1st of month
+0|drewno-o | 10:08:04 AM [scheduler]   - Weathercheck: 18:00 daily
+0|drewno-o | 10:08:04 AM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 10:08:04 AM [scheduler]   - Nightlychat cleanup: 03:00 daily
+0|drewno-o | 10:08:04 AM [scheduler]   - Notifications:
+0|drewno-o | 10:08:04 AM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 10:08:04 AM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 10:08:04 AM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 10:08:04 AM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 10:08:04 AM [scheduler]   - Thermostat:
+0|drewno-o | 10:08:04 AM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 10:08:04 AM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 10:08:04 AM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 10:08:04 AM [scheduler] [ThermostatScheduler] Houses initialized
+
