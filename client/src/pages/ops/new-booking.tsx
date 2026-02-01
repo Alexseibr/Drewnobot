@@ -87,7 +87,7 @@ const BOOKING_TYPES: { value: SpaBookingType; label: string; description: string
 interface CalendarData {
   year: number;
   month: number;
-  dates: { [date: string]: { spa1: number; spa2: number; total: number } };
+  dates: { [date: string]: { spa1: boolean; spa2: boolean; spa1Count: number; spa2Count: number } };
 }
 
 export default function NewBookingPage() {
@@ -97,19 +97,27 @@ export default function NewBookingPage() {
   const { toast } = useToast();
 
   // Fetch calendar availability data
-  const { data: calendarData } = useQuery<CalendarData>({
+  const { data: calendarData, isLoading: calendarLoading } = useQuery<CalendarData>({
     queryKey: ["/api/ops/spa-calendar", getYear(calendarMonth), getMonth(calendarMonth) + 1],
-    queryFn: async () => {
-      const res = await fetch(`/api/ops/spa-calendar?year=${getYear(calendarMonth)}&month=${getMonth(calendarMonth) + 1}`);
-      if (!res.ok) throw new Error("Failed to fetch calendar");
-      return res.json();
-    },
   });
 
-  const getDateAvailability = (date: Date): { spa1: number; spa2: number; total: number } | undefined => {
+  const getDateAvailability = (date: Date): { spa1: boolean; spa2: boolean; spa1Count: number; spa2Count: number } | undefined => {
     if (!calendarData?.dates) return undefined;
     const dateStr = format(date, "yyyy-MM-dd");
     return calendarData.dates[dateStr];
+  };
+
+  // Check if date is fully booked (both SPAs have bookings)
+  const isFullyBooked = (date: Date): boolean => {
+    const avail = getDateAvailability(date);
+    return avail?.spa1 === true && avail?.spa2 === true;
+  };
+
+  // Check if date is partially booked (one SPA has booking)
+  const isPartiallyBooked = (date: Date): boolean => {
+    const avail = getDateAvailability(date);
+    if (!avail) return false;
+    return (avail.spa1 === true || avail.spa2 === true) && !(avail.spa1 === true && avail.spa2 === true);
   };
 
   const form = useForm<SpaBookingFormData>({
@@ -343,14 +351,8 @@ export default function NewBookingPage() {
                                   }}
                                   locale={ru}
                                   modifiers={{
-                                    booked: (date) => {
-                                      const avail = getDateAvailability(date);
-                                      return avail?.total === 2;
-                                    },
-                                    partial: (date) => {
-                                      const avail = getDateAvailability(date);
-                                      return avail?.total === 1;
-                                    },
+                                    booked: (date) => isFullyBooked(date),
+                                    partial: (date) => isPartiallyBooked(date),
                                   }}
                                   modifiersClassNames={{
                                     booked: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
@@ -363,9 +365,14 @@ export default function NewBookingPage() {
                                     Выбрано: {format(field.value, "d MMMM yyyy", { locale: ru })}
                                     {getDateAvailability(field.value) && (
                                       <span className="ml-2">
-                                        (СПА1: {getDateAvailability(field.value)?.spa1 || 0}, СПА2: {getDateAvailability(field.value)?.spa2 || 0})
+                                        (СПА1: {getDateAvailability(field.value)?.spa1Count || 0} брон., СПА2: {getDateAvailability(field.value)?.spa2Count || 0} брон.)
                                       </span>
                                     )}
+                                  </div>
+                                )}
+                                {calendarLoading && (
+                                  <div className="mt-2 text-sm text-muted-foreground">
+                                    Загрузка данных...
                                   </div>
                                 )}
                               </div>

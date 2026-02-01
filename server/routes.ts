@@ -2199,11 +2199,12 @@ export async function registerRoutes(
       const targetYear = parseInt(year as string) || new Date().getFullYear();
       const targetMonth = parseInt(month as string) || new Date().getMonth() + 1;
       
-      // Get all upcoming SPA bookings
-      const allBookings = await storage.getSpaBookingsUpcoming();
+      // Get all SPA bookings (not just upcoming)
+      const allBookings = await storage.getSpaBookings();
       
       // Filter bookings for the target month and group by date
-      const calendarData: { [date: string]: { spa1: number; spa2: number; total: number } } = {};
+      // Track if each SPA resource has ANY booking on that date
+      const calendarData: { [date: string]: { spa1: boolean; spa2: boolean; spa1Count: number; spa2Count: number } } = {};
       
       for (const booking of allBookings) {
         if (booking.status === "cancelled") continue;
@@ -2211,14 +2212,15 @@ export async function registerRoutes(
         const bookingDate = new Date(booking.date);
         if (bookingDate.getFullYear() === targetYear && bookingDate.getMonth() + 1 === targetMonth) {
           if (!calendarData[booking.date]) {
-            calendarData[booking.date] = { spa1: 0, spa2: 0, total: 0 };
+            calendarData[booking.date] = { spa1: false, spa2: false, spa1Count: 0, spa2Count: 0 };
           }
           if (booking.spaResource === "SPA1") {
-            calendarData[booking.date].spa1++;
+            calendarData[booking.date].spa1 = true;
+            calendarData[booking.date].spa1Count++;
           } else {
-            calendarData[booking.date].spa2++;
+            calendarData[booking.date].spa2 = true;
+            calendarData[booking.date].spa2Count++;
           }
-          calendarData[booking.date].total++;
         }
       }
       

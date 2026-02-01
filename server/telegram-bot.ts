@@ -539,8 +539,7 @@ export async function sendBathBookingsSummary() {
       return; // No bookings
     }
     
-    let message = `<b>Бани на сегодня (${today})</b>\n\n`;
-    message += `Всего бронирований: ${activeBookings.length}\n\n`;
+    let message = `<b>Бани на сегодня</b>\n\n`;
     
     const sortedBookings = activeBookings.sort((a, b) => a.startTime.localeCompare(b.startTime));
     
@@ -556,15 +555,39 @@ export async function sendBathBookingsSummary() {
         if (booking.options.grill) services.push("Мангал");
         if (booking.options.charcoal) services.push("+уголь");
       }
-      const servicesStr = services.length > 0 ? ` (${services.join(", ")})` : "";
+      const servicesStr = services.length > 0 ? ` + ${services.join(", ")}` : "";
       
-      message += `${statusIcon} ${booking.startTime}-${booking.endTime} ${booking.bathCode}${servicesStr}\n`;
+      // Build tasks list for this booking
+      const tasks: string[] = [];
+      tasks.push("Протопить баню");
+      if (booking.options?.tub) {
+        tasks.push("Нагреть купель");
+      }
+      if (booking.options?.terrace) {
+        tasks.push("Подготовить террасу");
+      }
+      if (booking.options?.grill) {
+        tasks.push("Подготовить мангал");
+        if (booking.options?.charcoal) {
+          tasks.push("Выдать уголь");
+        }
+      }
+      tasks.push("Проверить полотенца/веники");
+      
+      message += `${statusIcon} <b>${booking.bathCode}</b> ${booking.startTime}-${booking.endTime}${servicesStr}\n`;
+      message += `   Гости: ${booking.customer?.fullName || "Не указано"}\n`;
+      message += `   Тел: ${booking.customer?.phone || "Нет"}\n`;
+      message += `   Задачи:\n`;
+      for (const task of tasks) {
+        message += `   • ${task}\n`;
+      }
+      message += `\n`;
     }
     
     // Send to ADMIN and OWNER only, not SUPER_ADMIN
     await notifyOpsAdmins(message, { deepLink: "/ops/spa" });
     
-    console.log("[Telegram Bot] Sent bath bookings summary");
+    console.log("[Telegram Bot] Sent bath bookings summary with tasks");
   } catch (error) {
     console.error("[Telegram Bot] Failed to send bath summary:", error);
   }
