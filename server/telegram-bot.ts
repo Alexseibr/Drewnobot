@@ -365,28 +365,14 @@ async function handleCheckInCallback(
 
     const adminName = user.name || [from.first_name, from.last_name].filter(Boolean).join(" ");
 
-    // Get the booking to find unit code
-    const booking = await storage.getTravelLineBooking(bookingId);
-    const unitCode = booking?.unitCode || "unknown";
-
-    // Log the action
-    await storage.createCheckInActionLog({
-      bookingId,
-      unitCode,
-      actionType: action === "contact" ? "contacted" : "accepted",
-      adminId: telegramId,
-      adminName,
-    });
-
     const actionText = action === "contact" 
       ? `связался с гостем` 
       : `принял заселение`;
     
-    const guestInfo = booking?.guestName || bookingId;
-    const confirmMessage = `Вы ${actionText}: ${guestInfo} (${unitCode})`;
+    const confirmMessage = `Вы ${actionText}: ${bookingId}`;
 
     await sendMessage(chatId, confirmMessage);
-    console.log(`[Telegram Bot] Check-in ${action} logged for ${bookingId} by ${adminName}`);
+    console.log(`[Telegram Bot] Check-in ${action} for ${bookingId} by ${adminName}`);
   } catch (error) {
     console.error(`[Telegram Bot] Failed to log check-in action:`, error);
     await sendMessage(chatId, "Ошибка при записи действия. Попробуйте ещё раз.");
@@ -1227,133 +1213,9 @@ export async function pinAdminPanelForAllStaff(): Promise<{ pinned: number; skip
   return { pinned, skipped, errors };
 }
 
-// Send check-in notifications for today's TravelLine bookings
+// Stub for backward compatibility - no longer used
 export async function sendCheckInNotifications(): Promise<void> {
-  console.log("[Telegram Bot] Sending check-in notifications...");
-  
-  try {
-    // Get today's date
-    const today = new Date().toISOString().split("T")[0];
-    
-    // Get bookings for today
-    const bookings = await storage.getTravelLineBookingsForDate(today);
-    
-    if (bookings.length === 0) {
-      console.log("[Telegram Bot] No check-ins for today");
-      return;
-    }
-    
-    console.log(`[Telegram Bot] Found ${bookings.length} check-ins for today`);
-    
-    // Get all admins to notify
-    const users = await storage.getUsers();
-    const admins = users.filter(u => 
-      (u.role === "ADMIN" || u.role === "OWNER" || u.role === "SUPER_ADMIN") && 
-      u.isActive && 
-      u.telegramId
-    );
-    
-    if (admins.length === 0) {
-      console.log("[Telegram Bot] No admins to notify");
-      return;
-    }
-    
-    // Send notification for each booking
-    for (const booking of bookings) {
-      const unitName = booking.unitCode || booking.roomCategoryName;
-      const guestsCount = booking.adultsCount + booking.childrenCount;
-      
-      // Format additional services
-      let servicesText = "";
-      if (booking.additionalServices && booking.additionalServices.length > 0) {
-        servicesText = `\n\n<b>Доп. услуги:</b>\n${booking.additionalServices.map(s => `• ${s}`).join("\n")}`;
-      }
-      
-      // Format phone
-      let phoneText = "";
-      if (booking.guestPhone) {
-        phoneText = `\n<b>Телефон:</b> ${booking.guestPhone}`;
-      }
-      
-      const message = 
-        `<b>Заселение сегодня</b>\n\n` +
-        `<b>Домик:</b> ${unitName}\n` +
-        `<b>Гость:</b> ${booking.guestName}\n` +
-        `<b>Гостей:</b> ${guestsCount}` +
-        phoneText +
-        servicesText;
-      
-      // Inline keyboard with Contact and Accept buttons
-      const keyboard = {
-        inline_keyboard: [
-          [
-            { text: "Связался", callback_data: `checkin_contact_${booking.id}` },
-            { text: "Принял", callback_data: `checkin_accept_${booking.id}` }
-          ]
-        ]
-      };
-      
-      // Send to all admins
-      for (const admin of admins) {
-        await sendMessage(parseInt(admin.telegramId!), message, { reply_markup: keyboard });
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-    
-    console.log(`[Telegram Bot] Sent ${bookings.length} check-in notifications to ${admins.length} admins`);
-    
-  } catch (error) {
-    console.error("[Telegram Bot] Failed to send check-in notifications:", error);
-  }
-}
-
-// Send notification about new booking from TravelLine webhook
-export async function sendNewBookingNotification(booking: any): Promise<void> {
-  console.log(`[Telegram Bot] Sending new booking notification for ${booking.id}`);
-  
-  try {
-    const users = await storage.getUsers();
-    const admins = users.filter(u => 
-      ["ADMIN", "OWNER", "SUPER_ADMIN"].includes(u.role) && 
-      u.isActive && 
-      u.telegramId
-    );
-    
-    if (admins.length === 0) {
-      console.log("[Telegram Bot] No admins to notify about new booking");
-      return;
-    }
-    
-    const unitNames: Record<string, string> = {
-      "D1": "Домик 1",
-      "D2": "Домик 2", 
-      "D3": "Домик 3",
-      "D4": "Домик 4"
-    };
-    
-    const unitName = unitNames[booking.unitCode] || booking.unitCode;
-    const guestsCount = (booking.adultsCount || 0) + (booking.childrenCount || 0);
-    
-    const message = 
-      `<b>Новое бронирование TravelLine</b>\n\n` +
-      `<b>Домик:</b> ${unitName}\n` +
-      `<b>Гость:</b> ${booking.guestName}\n` +
-      `<b>Заезд:</b> ${booking.checkInDate}\n` +
-      `<b>Выезд:</b> ${booking.checkOutDate}\n` +
-      `<b>Гостей:</b> ${guestsCount}` +
-      (booking.guestPhone ? `\n<b>Телефон:</b> ${booking.guestPhone}` : "");
-    
-    for (const admin of admins) {
-      await sendMessage(parseInt(admin.telegramId!), message);
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    console.log(`[Telegram Bot] Sent new booking notification to ${admins.length} admins`);
-    
-  } catch (error) {
-    console.error("[Telegram Bot] Failed to send new booking notification:", error);
-  }
+  console.log("[Telegram Bot] Check-in notifications disabled (TravelLine removed)");
 }
 
 // Perform nightly cleanup for all staff chats

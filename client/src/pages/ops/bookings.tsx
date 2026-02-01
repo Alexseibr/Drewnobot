@@ -225,25 +225,6 @@ export default function BookingsPage() {
     },
   });
 
-  const syncTravelLineMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/admin/travelline/sync");
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings/upcoming"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/ops/today"] });
-      toast({ 
-        title: data.configured 
-          ? `Синхронизировано: ${data.syncedBookings} бронирований` 
-          : "TravelLine не настроен"
-      });
-    },
-    onError: () => {
-      toast({ title: "Ошибка синхронизации TravelLine", variant: "destructive" });
-    },
-  });
-
   const handleOpenDiscountDialog = (booking: SpaBooking) => {
     setSelectedBookingForDiscount(booking);
     setDiscountPercent(String(booking.pricing.discountPercent || 0));
@@ -579,18 +560,6 @@ export default function BookingsPage() {
           </TabsContent>
 
           <TabsContent value="cottages" className="space-y-4">
-            <div className="flex justify-end">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => syncTravelLineMutation.mutate()}
-                disabled={syncTravelLineMutation.isPending}
-                data-testid="button-sync-travelline"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncTravelLineMutation.isPending ? 'animate-spin' : ''}`} />
-                {syncTravelLineMutation.isPending ? 'Загрузка...' : 'Обновить из TravelLine'}
-              </Button>
-            </div>
             {isLoading ? (
               <div className="space-y-3">
                 <BookingCardSkeleton />

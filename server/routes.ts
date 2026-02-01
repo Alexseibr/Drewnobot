@@ -760,43 +760,12 @@ export async function registerRoutes(
   // ============ BATH BOOKINGS - ADMIN ============
   app.get("/api/admin/bookings/upcoming", async (req, res) => {
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const now = new Date();
-      const hour = now.getHours();
-      
-      // Only show TravelLine bookings between 09:00 and 23:00
-      const showTravelLine = hour >= 9 && hour < 23;
-      
-      const [cottageBookings, bathBookings, travelLineBookings] = await Promise.all([
+      const [cottageBookings, bathBookings] = await Promise.all([
         storage.getCottageBookingsUpcoming(),
         storage.getBathBookingsUpcoming(),
-        showTravelLine ? storage.getTravelLineBookingsForDate(today) : Promise.resolve([]),
       ]);
       
-      // Convert TravelLine bookings to cottage booking format for display
-      const tlAsCottages = travelLineBookings.map(tl => ({
-        id: tl.id,
-        unitCode: tl.unitCode || tl.roomCategoryName,
-        dateCheckIn: tl.checkInDate,
-        dateCheckOut: tl.checkOutDate,
-        status: "awaiting_checkin" as const,
-        customer: {
-          fullName: tl.guestName,
-          phone: tl.guestPhone || "",
-          email: tl.guestEmail || "",
-        },
-        guestsCount: tl.guestsCount,
-        source: "travelline" as const,
-        tubSmall: false,
-        notes: tl.notes || "",
-        createdAt: tl.createdAt,
-      }));
-      
-      // Return TravelLine bookings for cottages (only today's check-ins between 09:00-23:00)
-      res.json({ 
-        cottageBookings: tlAsCottages, 
-        bathBookings 
-      });
+      res.json({ cottageBookings, bathBookings });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch bookings" });
     }
@@ -2629,119 +2598,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[Bot Cleanup] Error:", error);
       res.status(500).json({ error: "Ошибка очистки" });
-    }
-  });
-
-  // Test endpoint for TravelLine sync and check-in notifications
-  app.get("/api/test/travelline-sync", async (req, res) => {
-    console.log("[TravelLine] Manual sync trigger via test endpoint");
-    try {
-      const { syncTodayBookings, isTravelLineConfigured } = await import("./travelline");
-      const { sendCheckInNotifications } = await import("./telegram-bot");
-      
-      if (!isTravelLineConfigured()) {
-        return res.json({ 
-          success: false, 
-          message: "TravelLine не настроен - отсутствуют переменные окружения",
-          configured: false
-        });
-      }
-      
-      const syncResult = await syncTodayBookings(storage);
-      await sendCheckInNotifications();
-      
-      res.json({ 
-        success: true, 
-        message: "TravelLine синхронизация выполнена",
-        configured: true,
-        syncedBookings: syncResult.length
-      });
-    } catch (error) {
-      console.error("[TravelLine] Sync error:", error);
-      res.status(500).json({ 
-        error: "Ошибка синхронизации TravelLine",
-        details: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // Manual TravelLine sync for admin panel (sends notifications to admins)
-  app.post("/api/admin/travelline/sync", async (req, res) => {
-    console.log("[TravelLine] Manual sync triggered from admin panel");
-    try {
-      const { syncTodayBookings, isTravelLineConfigured } = await import("./travelline");
-      const { sendCheckInNotifications } = await import("./telegram-bot");
-      
-      if (!isTravelLineConfigured()) {
-        return res.json({ 
-          success: false, 
-          message: "TravelLine не настроен",
-          configured: false,
-          syncedBookings: 0
-        });
-      }
-      
-      const syncResult = await syncTodayBookings(storage);
-      await sendCheckInNotifications();
-      
-      res.json({ 
-        success: true, 
-        message: "Синхронизация выполнена",
-        configured: true,
-        syncedBookings: syncResult.length
-      });
-    } catch (error) {
-      console.error("[TravelLine] Manual sync error:", error);
-      res.status(500).json({ 
-        error: "Ошибка синхронизации",
-        details: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // ============ TRAVELLINE WEBHOOK ============
-  app.post("/api/travelline/webhook", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    
-    const base64Credentials = authHeader.substring(6);
-    const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
-    const [username, password] = credentials.split(":");
-    
-    const expectedUser = "alexseibr";
-    const expectedPass = "39903990aSs$";
-    
-    if (username !== expectedUser || password !== expectedPass) {
-      console.log("[TravelLine Webhook] Invalid credentials");
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-    
-    try {
-      const { syncTodayBookings } = await import("./travelline");
-      const { sendNewBookingNotification } = await import("./telegram-bot");
-      
-      console.log("[TravelLine Webhook] Received event:", JSON.stringify(req.body).substring(0, 200));
-      
-      const event = req.body;
-      
-      if (event.type === "reservation.created" || event.type === "reservation.modified") {
-        const syncedBookings = await syncTodayBookings(storage);
-        
-        if (event.type === "reservation.created" && syncedBookings.length > 0) {
-          const newBooking = syncedBookings.find((b: any) => b.id === event.reservationId);
-          if (newBooking) {
-            await sendNewBookingNotification(newBooking);
-          }
-        }
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("[TravelLine Webhook] Error:", error);
-      res.status(500).json({ error: "Webhook processing failed" });
     }
   });
 

@@ -13,7 +13,6 @@ import {
   performNightlyCleanup,
   sendCheckInNotifications
 } from "./telegram-bot";
-import { syncTodayBookings, isTravelLineConfigured } from "./travelline";
 import { setThermostatTemp, refreshThermostatStatus } from "./thermostat-provider";
 import type { ThermostatPlanType } from "@shared/schema";
 
@@ -25,8 +24,6 @@ const NIGHTLY_CLEANUP_CRON = "0 3 * * *"; // 03:00 - Nightly chat cleanup
 // Notification schedules (Minsk time)
 const SHIFT_REMINDER_CRON = "30 8 * * *";       // 08:30 - Shift reminder (disabled)
 const BATH_SUMMARY_CRON = "0 9 * * *";          // 09:00 - Bath bookings
-const CHECKIN_NOTIFICATION_CRON = "0 9 * * *";  // 09:00 - TravelLine check-in notifications
-const NEW_BOOKINGS_SYNC_CRON = "0 17 * * *";    // 17:00 - Sync new TravelLine bookings (last 24h)
 const CLIMATE_ON_CRON = "0 12 * * *";           // 12:00 - Climate control ON
 const CLIMATE_OFF_CRON = "0 14 * * *";          // 14:00 - Climate control OFF
 const LAUNDRY_REMINDER_CRON = "0 15 * * *";     // 15:00 - Laundry check-in reminder
@@ -407,42 +404,6 @@ export function initScheduler(): void {
     timezone: "Europe/Minsk"
   });
 
-  // TravelLine check-in notifications at 09:00
-  cron.schedule(CHECKIN_NOTIFICATION_CRON, async () => {
-    if (!isTravelLineConfigured()) {
-      log("TravelLine not configured, skipping check-in notifications", "scheduler");
-      return;
-    }
-    log("Syncing TravelLine bookings and sending check-in notifications (09:00)", "scheduler");
-    try {
-      // First sync today's bookings from TravelLine
-      await syncTodayBookings(storage);
-      // Then send notifications
-      await sendCheckInNotifications();
-    } catch (error) {
-      console.error("[Scheduler] Check-in notification error:", error);
-    }
-  }, {
-    timezone: "Europe/Minsk"
-  });
-
-  // Sync new TravelLine bookings at 17:00 (last 24h)
-  cron.schedule(NEW_BOOKINGS_SYNC_CRON, async () => {
-    if (!isTravelLineConfigured()) {
-      log("TravelLine not configured, skipping 17:00 sync", "scheduler");
-      return;
-    }
-    log("Syncing new TravelLine bookings (17:00 - last 24h)", "scheduler");
-    try {
-      await syncTodayBookings(storage);
-      log("TravelLine 17:00 sync completed", "scheduler");
-    } catch (error) {
-      console.error("[Scheduler] TravelLine 17:00 sync error:", error);
-    }
-  }, {
-    timezone: "Europe/Minsk"
-  });
-
   cron.schedule(CLIMATE_ON_CRON, async () => {
     log("Sending climate control reminder - ON (12:00)", "scheduler");
     await sendClimateControlReminder("on");
@@ -537,8 +498,6 @@ export function initScheduler(): void {
   log("  - Nightly chat cleanup: 03:00 daily", "scheduler");
   log("  - Notifications:", "scheduler");
   log("    - Bath summary: 09:00 daily", "scheduler");
-  log("    - TravelLine check-ins: 09:00 daily", "scheduler");
-  log("    - TravelLine new bookings sync: 17:00 daily", "scheduler");
   log("    - Climate ON: 12:00 daily", "scheduler");
   log("    - Climate OFF: 14:00 daily", "scheduler");
   log("    - Laundry check-in: 15:00 daily", "scheduler");

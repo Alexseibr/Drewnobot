@@ -52,7 +52,6 @@ import type {
   ElectricityReading, InsertElectricityReading,
   NotificationConfig, InsertNotificationConfig,
   BotMessage, InsertBotMessage,
-  TravelLineBooking, InsertTravelLineBooking,
   CheckInActionLog, InsertCheckInActionLog,
 } from "@shared/schema";
 
@@ -365,12 +364,6 @@ export interface IStorage {
   getPinnedBotMessage(chatId: string): Promise<BotMessage | undefined>;
   deleteBotMessagesForChat(chatId: string, excludePinned?: boolean): Promise<number>;
   setPinnedBotMessage(chatId: string, messageId: number): Promise<void>;
-  
-  // TravelLine bookings
-  getTravelLineBooking(id: string): Promise<TravelLineBooking | undefined>;
-  getTravelLineBookingsForDate(checkInDate: string): Promise<TravelLineBooking[]>;
-  createTravelLineBooking(booking: InsertTravelLineBooking): Promise<TravelLineBooking>;
-  updateTravelLineBooking(id: string, updates: Partial<TravelLineBooking>): Promise<TravelLineBooking | undefined>;
   
   // Check-in action logs
   getCheckInActionLogs(bookingId: string): Promise<CheckInActionLog[]>;
@@ -2249,47 +2242,7 @@ export class MemStorage implements IStorage {
     }
   }
 
-  // TravelLine bookings
-  private travelLineBookings: Map<string, TravelLineBooking> = new Map();
   private checkInActionLogs: Map<string, CheckInActionLog> = new Map();
-
-  async getTravelLineBooking(id: string): Promise<TravelLineBooking | undefined> {
-    return this.travelLineBookings.get(id);
-  }
-
-  async getTravelLineBookingsForDate(checkInDate: string): Promise<TravelLineBooking[]> {
-    const result: TravelLineBooking[] = [];
-    this.travelLineBookings.forEach((booking) => {
-      if (booking.checkInDate === checkInDate && booking.status !== "cancelled") {
-        result.push(booking);
-      }
-    });
-    return result;
-  }
-
-  async createTravelLineBooking(booking: InsertTravelLineBooking): Promise<TravelLineBooking> {
-    const now = new Date().toISOString();
-    const newBooking: TravelLineBooking = {
-      ...booking,
-      status: booking.status || "new",
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.travelLineBookings.set(newBooking.id, newBooking);
-    return newBooking;
-  }
-
-  async updateTravelLineBooking(id: string, updates: Partial<TravelLineBooking>): Promise<TravelLineBooking | undefined> {
-    const existing = this.travelLineBookings.get(id);
-    if (!existing) return undefined;
-    const updated: TravelLineBooking = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    this.travelLineBookings.set(id, updated);
-    return updated;
-  }
 
   async getCheckInActionLogs(bookingId: string): Promise<CheckInActionLog[]> {
     const result: CheckInActionLog[] = [];

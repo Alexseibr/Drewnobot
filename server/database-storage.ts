@@ -54,7 +54,6 @@ import type {
   ElectricityMeter, InsertElectricityMeter,
   ElectricityReading, InsertElectricityReading,
   NotificationConfig, InsertNotificationConfig,
-  TravelLineBooking, InsertTravelLineBooking,
   CheckInActionLog, InsertCheckInActionLog,
 } from "@shared/schema";
 import {
@@ -68,7 +67,7 @@ import {
   textileStockTable, textileCheckInsTable, textileEventsTable, guestsTable,
   suppliesTable, supplyTransactionsTable, incidentsTable, staffShiftsTable, unitInfoTable,
   thermostatHousesTable, thermostatDailyPlansTable, thermostatActionLogsTable,
-  notificationConfigsTable, botMessagesTable, travelLineBookingsTable, checkInActionLogsTable,
+  notificationConfigsTable, botMessagesTable, checkInActionLogsTable,
   BotMessage,
 } from "@shared/schema";
 
@@ -3793,109 +3792,6 @@ export class DatabaseStorage implements IStorage {
       // Create new pinned message entry
       await this.trackBotMessage(chatId, messageId, true);
     }
-  }
-
-  // TravelLine bookings
-  async getTravelLineBooking(id: string): Promise<TravelLineBooking | undefined> {
-    const rows = await db.select().from(travelLineBookingsTable)
-      .where(eq(travelLineBookingsTable.id, id))
-      .limit(1);
-    if (rows.length === 0) return undefined;
-    const r = rows[0];
-    return {
-      id: r.id,
-      propertyId: r.propertyId,
-      roomCategoryName: r.roomCategoryName,
-      unitCode: r.unitCode || undefined,
-      checkInDate: r.checkInDate,
-      checkOutDate: r.checkOutDate,
-      guestName: r.guestName,
-      guestPhone: r.guestPhone || undefined,
-      guestEmail: r.guestEmail || undefined,
-      adultsCount: r.adultsCount,
-      childrenCount: r.childrenCount,
-      totalAmount: r.totalAmount || undefined,
-      currency: r.currency || "BYN",
-      additionalServices: (r.additionalServices as string[]) || [],
-      status: r.status as TravelLineBooking["status"],
-      notes: r.notes || undefined,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-    };
-  }
-
-  async getTravelLineBookingsForDate(checkInDate: string): Promise<TravelLineBooking[]> {
-    const rows = await db.select().from(travelLineBookingsTable)
-      .where(and(
-        eq(travelLineBookingsTable.checkInDate, checkInDate),
-        sql`${travelLineBookingsTable.status} != 'cancelled'`
-      ));
-    return rows.map(r => ({
-      id: r.id,
-      propertyId: r.propertyId,
-      roomCategoryName: r.roomCategoryName,
-      unitCode: r.unitCode || undefined,
-      checkInDate: r.checkInDate,
-      checkOutDate: r.checkOutDate,
-      guestName: r.guestName,
-      guestPhone: r.guestPhone || undefined,
-      guestEmail: r.guestEmail || undefined,
-      adultsCount: r.adultsCount,
-      childrenCount: r.childrenCount,
-      totalAmount: r.totalAmount || undefined,
-      currency: r.currency || "BYN",
-      additionalServices: (r.additionalServices as string[]) || [],
-      status: r.status as TravelLineBooking["status"],
-      notes: r.notes || undefined,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
-    }));
-  }
-
-  async createTravelLineBooking(booking: InsertTravelLineBooking): Promise<TravelLineBooking> {
-    const now = new Date().toISOString();
-    await db.insert(travelLineBookingsTable).values({
-      id: booking.id,
-      propertyId: booking.propertyId,
-      roomCategoryName: booking.roomCategoryName,
-      unitCode: booking.unitCode || null,
-      checkInDate: booking.checkInDate,
-      checkOutDate: booking.checkOutDate,
-      guestName: booking.guestName,
-      guestPhone: booking.guestPhone || null,
-      guestEmail: booking.guestEmail || null,
-      adultsCount: booking.adultsCount,
-      childrenCount: booking.childrenCount,
-      totalAmount: booking.totalAmount || null,
-      currency: booking.currency || "BYN",
-      additionalServices: booking.additionalServices || [],
-      status: booking.status || "new",
-      notes: booking.notes || null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return {
-      ...booking,
-      status: booking.status || "new",
-      additionalServices: booking.additionalServices || [],
-      createdAt: now,
-      updatedAt: now,
-    };
-  }
-
-  async updateTravelLineBooking(id: string, updates: Partial<TravelLineBooking>): Promise<TravelLineBooking | undefined> {
-    const existing = await this.getTravelLineBooking(id);
-    if (!existing) return undefined;
-    
-    const now = new Date().toISOString();
-    await db.update(travelLineBookingsTable)
-      .set({
-        ...updates,
-        updatedAt: now,
-      })
-      .where(eq(travelLineBookingsTable.id, id));
-    
-    return { ...existing, ...updates, updatedAt: now };
   }
 
   async getCheckInActionLogs(bookingId: string): Promise<CheckInActionLog[]> {
