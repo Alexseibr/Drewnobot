@@ -2240,6 +2240,21 @@ export async function registerRoutes(
     }
   });
 
+  // Get SPA bookings for a specific date
+  app.get("/api/ops/spa-bookings/by-date", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { date } = req.query;
+      if (!date || typeof date !== "string") {
+        return res.status(400).json({ error: "Дата обязательна" });
+      }
+      const bookings = await storage.getSpaBookingsForDate(date);
+      res.json(bookings);
+    } catch (error) {
+      console.error("[Routes] Failed to get SPA bookings by date:", error);
+      res.status(500).json({ error: "Не удалось получить бронирования" });
+    }
+  });
+
   app.post("/api/admin/spa-bookings/:id/accept", async (req, res) => {
     try {
       const booking = await storage.updateSpaBooking(req.params.id, { 

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { format, isSameDay, isAfter, parseISO } from "date-fns";
+import { format, isSameDay, isAfter, parseISO, getYear, getMonth, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isBefore } from "date-fns";
 import { ru } from "date-fns/locale";
+import { DayPicker } from "react-day-picker";
 import { 
   Home, 
   Bath, 
@@ -14,7 +15,11 @@ import {
   Banknote,
   Droplets,
   Percent,
-  RefreshCw
+  RefreshCw,
+  Share2,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -39,12 +44,16 @@ interface BookingsData {
   bathBookings: BathBooking[];
 }
 
-// Helper to format SPA booking options
+interface CalendarData {
+  year: number;
+  month: number;
+  dates: { [date: string]: { spa1: boolean; spa2: boolean; spa1Count: number; spa2Count: number } };
+}
+
 function formatSpaOptions(options: { tub?: string; terrace?: boolean; grill?: boolean; charcoal?: boolean } | undefined): string[] {
   if (!options) return [];
   const items: string[] = [];
   
-  // Always include bath for SPA bookings (except terrace-only)
   if (options.tub === "none" && !options.terrace) {
     items.push("Баня");
   } else if (options.tub === "small") {
@@ -72,6 +81,10 @@ export default function BookingsPage() {
   const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
   const [selectedBookingForDiscount, setSelectedBookingForDiscount] = useState<SpaBooking | null>(null);
   const [discountPercent, setDiscountPercent] = useState("");
+  
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [showCalendarView, setShowCalendarView] = useState(true);
 
   const { data: bookingsData, isLoading } = useQuery<BookingsData>({
     queryKey: ["/api/admin/bookings/upcoming"],
@@ -80,6 +93,62 @@ export default function BookingsPage() {
   const { data: spaBookings = [], isLoading: loadingSpa } = useQuery<SpaBooking[]>({
     queryKey: ["/api/admin/spa-bookings/upcoming"],
   });
+
+  const { data: calendarData, isLoading: calendarLoading } = useQuery<CalendarData>({
+    queryKey: [`/api/ops/spa-calendar?year=${getYear(calendarMonth)}&month=${getMonth(calendarMonth) + 1}`],
+  });
+
+  // Fetch bookings for selected date specifically
+  const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+  const { data: bookingsForSelectedDate = [], isLoading: loadingDateBookings } = useQuery<SpaBooking[]>({
+    queryKey: [`/api/ops/spa-bookings/by-date?date=${selectedDateStr}`],
+  });
+
+  const getDateAvailability = (date: Date): { spa1: boolean; spa2: boolean } | undefined => {
+    if (!calendarData?.dates) return undefined;
+    const dateStr = format(date, "yyyy-MM-dd");
+    return calendarData.dates[dateStr];
+  };
+
+  const hasBookingsOnDate = (date: Date): boolean => {
+    const avail = getDateAvailability(date);
+    return avail?.spa1 === true || avail?.spa2 === true;
+  };
+
+  const isFullyBooked = (date: Date): boolean => {
+    const avail = getDateAvailability(date);
+    return avail?.spa1 === true && avail?.spa2 === true;
+  };
+
+  const shareBookingLink = (booking: SpaBooking) => {
+    const botUsername = "Drewno_bot";
+    const dateStr = booking.date;
+    const deepLink = `https://t.me/${botUsername}?start=book_spa_${dateStr}`;
+    const formattedDate = format(parseISO(booking.date), "d MMMM", { locale: ru });
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(`Забронируйте СПА на ${formattedDate} в Village Drewno!`)}`;
+    
+    if (window.Telegram?.WebApp) {
+      (window.Telegram.WebApp as any).openTelegramLink?.(shareUrl) || window.open(shareUrl, "_blank");
+    } else {
+      navigator.clipboard.writeText(deepLink);
+      toast({ title: "Ссылка скопирована", description: "Отправьте ее гостю в Telegram" });
+    }
+  };
+
+  const shareBookingDate = (date: Date) => {
+    const botUsername = "Drewno_bot";
+    const dateStr = format(date, "yyyy-MM-dd");
+    const deepLink = `https://t.me/${botUsername}?start=book_spa_${dateStr}`;
+    const formattedDate = format(date, "d MMMM yyyy", { locale: ru });
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(deepLink)}&text=${encodeURIComponent(`Забронируйте СПА на ${formattedDate} в Village Drewno!`)}`;
+    
+    if (window.Telegram?.WebApp) {
+      (window.Telegram.WebApp as any).openTelegramLink?.(shareUrl) || window.open(shareUrl, "_blank");
+    } else {
+      navigator.clipboard.writeText(deepLink);
+      toast({ title: "Ссылка скопирована", description: "Отправьте ее гостю в Telegram" });
+    }
+  };
 
   const acceptBathMutation = useMutation({
     mutationFn: async (bookingId: string) => {
@@ -129,7 +198,6 @@ export default function BookingsPage() {
     },
   });
 
-  // Mark guest as arrived - creates/links guest profile
   const arriveBathMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       const response = await apiRequest("POST", `/api/admin/bath-bookings/${bookingId}/arrive`);
@@ -145,7 +213,6 @@ export default function BookingsPage() {
     },
   });
 
-  // Mark booking as no-show
   const noShowBathMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       const response = await apiRequest("POST", `/api/admin/bath-bookings/${bookingId}/no-show`);
@@ -161,13 +228,22 @@ export default function BookingsPage() {
     },
   });
 
+  const invalidateSpaQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/spa-bookings/upcoming"] });
+    queryClient.invalidateQueries({ predicate: (query) => 
+      typeof query.queryKey[0] === 'string' && 
+      (query.queryKey[0].startsWith('/api/ops/spa-calendar') || 
+       query.queryKey[0].startsWith('/api/ops/spa-bookings/by-date'))
+    });
+  };
+
   const acceptSpaMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       const response = await apiRequest("POST", `/api/admin/spa-bookings/${bookingId}/accept`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/spa-bookings/upcoming"] });
+      invalidateSpaQueries();
       toast({ title: "SPA бронирование принято" });
     },
     onError: () => {
@@ -181,7 +257,7 @@ export default function BookingsPage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/spa-bookings/upcoming"] });
+      invalidateSpaQueries();
       toast({ title: "SPA бронирование отменено" });
     },
     onError: () => {
@@ -197,7 +273,7 @@ export default function BookingsPage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/spa-bookings/upcoming"] });
+      invalidateSpaQueries();
       queryClient.invalidateQueries({ queryKey: ["/api/cash/shift/current"] });
       toast({ title: "Оплата SPA закрыта" });
     },
@@ -214,7 +290,7 @@ export default function BookingsPage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/spa-bookings/upcoming"] });
+      invalidateSpaQueries();
       setDiscountDialogOpen(false);
       setSelectedBookingForDiscount(null);
       setDiscountPercent("");
@@ -270,13 +346,154 @@ export default function BookingsPage() {
     bath_with_tub: "СПА + Купель",
   };
 
+  const renderSpaBookingCard = (booking: SpaBooking, showDate: boolean = false) => (
+    <Card key={booking.id} className={booking.status === "pending_call" ? "border-status-pending/30" : ""}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-2 gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline">{booking.spaResource}</Badge>
+            <StatusBadge status={booking.status} />
+          </div>
+          <div className="text-right">
+            <p className="font-mono text-sm">
+              {booking.startTime} - {booking.endTime}
+            </p>
+            {showDate && (
+              <p className="text-xs text-muted-foreground">
+                {format(parseISO(booking.date), "d MMM", { locale: ru })}
+              </p>
+            )}
+          </div>
+        </div>
+        <p className="font-medium">{booking.customer.fullName}</p>
+        <p className="text-sm text-muted-foreground flex items-center gap-1">
+          <Phone className="h-3 w-3" />
+          {booking.customer.phone}
+        </p>
+        <div className="flex items-center gap-2 my-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs">
+            {SPA_TYPE_LABELS[booking.bookingType] || booking.bookingType}
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {booking.guestsCount} гост.
+          </Badge>
+        </div>
+        {formatSpaOptions(booking.options).length > 0 && (
+          <p className="text-sm text-muted-foreground mb-2">
+            {formatSpaOptions(booking.options).join(" / ")}
+          </p>
+        )}
+        <div className="flex items-center justify-between pt-2 border-t gap-2">
+          <div>
+            <span className="font-semibold">
+              {booking.pricing.total} BYN
+            </span>
+            {booking.pricing.discountPercent > 0 && (
+              <span className="text-xs text-status-confirmed ml-1">
+                (-{booking.pricing.discountPercent}%)
+              </span>
+            )}
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => shareBookingLink(booking)}
+              data-testid={`button-share-spa-${booking.id}`}
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+            {isOwner && booking.status !== "completed" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleOpenDiscountDialog(booking)}
+                data-testid={`button-discount-spa-${booking.id}`}
+              >
+                <Percent className="h-4 w-4" />
+              </Button>
+            )}
+            {booking.status === "pending_call" && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => cancelSpaMutation.mutate(booking.id)}
+                  disabled={cancelSpaMutation.isPending}
+                  data-testid={`button-cancel-spa-${booking.id}`}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => acceptSpaMutation.mutate(booking.id)}
+                  disabled={acceptSpaMutation.isPending}
+                  data-testid={`button-accept-spa-${booking.id}`}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Принять
+                </Button>
+              </>
+            )}
+            {booking.status !== "pending_call" && booking.status !== "completed" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => cancelSpaMutation.mutate(booking.id)}
+                disabled={cancelSpaMutation.isPending}
+                data-testid={`button-cancel-spa-${booking.id}`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        {booking.status === "confirmed" && (
+          <div className="mt-3 pt-3 border-t space-y-2">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => closeSpaPaymentMutation.mutate({ 
+                  bookingId: booking.id, 
+                  method: "erip" 
+                })}
+                disabled={closeSpaPaymentMutation.isPending}
+                data-testid={`button-erip-spa-${booking.id}`}
+              >
+                <CreditCard className="h-4 w-4 mr-1" />
+                ЕРИП
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => closeSpaPaymentMutation.mutate({ 
+                  bookingId: booking.id, 
+                  method: "cash" 
+                })}
+                disabled={closeSpaPaymentMutation.isPending}
+                data-testid={`button-cash-spa-${booking.id}`}
+              >
+                <Banknote className="h-4 w-4 mr-1" />
+                Наличные
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header title="Бронирования" />
       
       <PageContainer>
         <Tabs defaultValue="spa" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="spa" className="gap-2" data-testid="tab-spa">
               <Droplets className="h-4 w-4" />
               СПА
@@ -293,269 +510,168 @@ export default function BookingsPage() {
           </TabsList>
 
           <TabsContent value="spa" className="space-y-4">
-            {loadingSpa ? (
-              <div className="space-y-3">
-                <BookingCardSkeleton />
-                <BookingCardSkeleton />
+            {/* Today's date header */}
+            <div className="text-center py-2">
+              <p className="text-lg font-semibold">
+                {format(new Date(), "d MMMM yyyy", { locale: ru })}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {format(new Date(), "EEEE", { locale: ru })}
+              </p>
+            </div>
+
+            {/* Calendar with availability */}
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1))}
+                    data-testid="button-prev-month"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="font-medium">
+                    {format(calendarMonth, "LLLL yyyy", { locale: ru })}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1))}
+                    data-testid="button-next-month"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {calendarLoading ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    Загрузка...
+                  </div>
+                ) : (
+                  <DayPicker
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
+                    locale={ru}
+                    modifiers={{
+                      booked: (date) => hasBookingsOnDate(date),
+                      fullyBooked: (date) => isFullyBooked(date),
+                    }}
+                    modifiersClassNames={{
+                      booked: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 font-semibold",
+                      fullyBooked: "bg-red-200 dark:bg-red-800/60 text-red-800 dark:text-red-200 font-bold",
+                      selected: "!bg-primary !text-primary-foreground",
+                    }}
+                    className="rounded-md"
+                    classNames={{
+                      months: "flex flex-col",
+                      month: "space-y-2",
+                      caption: "hidden",
+                      nav: "hidden",
+                      table: "w-full border-collapse",
+                      head_row: "flex w-full",
+                      head_cell: "text-muted-foreground rounded-md w-full font-normal text-[0.8rem] flex-1 text-center",
+                      row: "flex w-full mt-1",
+                      cell: "flex-1 text-center text-sm p-0 relative",
+                      day: "h-8 w-full p-0 font-normal rounded-md hover-elevate cursor-pointer flex items-center justify-center",
+                      day_today: "bg-accent text-accent-foreground",
+                      day_outside: "text-muted-foreground opacity-50",
+                      day_disabled: "text-muted-foreground opacity-50",
+                    }}
+                  />
+                )}
+
+                {/* Legend */}
+                <div className="flex items-center justify-center gap-4 mt-3 pt-3 border-t text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-sm bg-red-100 dark:bg-red-900/40" />
+                    <span className="text-muted-foreground">Есть брони</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-sm bg-red-200 dark:bg-red-800/60" />
+                    <span className="text-muted-foreground">Полностью занят</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Selected date bookings */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {format(selectedDate, "d MMMM", { locale: ru })}
+                  {isSameDay(selectedDate, new Date()) && (
+                    <Badge variant="secondary" className="text-xs">Сегодня</Badge>
+                  )}
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => shareBookingDate(selectedDate)}
+                  data-testid="button-share-date"
+                >
+                  <Share2 className="h-4 w-4 mr-1" />
+                  Поделиться
+                </Button>
               </div>
-            ) : (
-              <>
-                {pendingSpa.length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm text-status-pending flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-status-pending animate-pulse" />
-                      Ожидают подтверждения
-                    </h3>
-                    {pendingSpa.map((booking) => (
-                      <Card key={booking.id} className="border-status-pending/30">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3 gap-2">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <Badge variant="outline">{booking.spaResource}</Badge>
-                                <StatusBadge status={booking.status} />
-                              </div>
-                              <p className="font-medium">{booking.customer.fullName}</p>
-                              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {booking.customer.phone}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-mono text-sm">
-                                {booking.startTime} - {booking.endTime}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {format(parseISO(booking.date), "d MMM", { locale: ru })}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <Badge variant="secondary" className="text-xs">
-                              {SPA_TYPE_LABELS[booking.bookingType] || booking.bookingType}
-                            </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              {booking.guestsCount} гост.
-                            </Badge>
-                          </div>
-                          {formatSpaOptions(booking.options).length > 0 && (
-                            <p className="text-sm text-muted-foreground mb-3">
-                              {formatSpaOptions(booking.options).join(" / ")}
-                            </p>
-                          )}
-                          <div className="flex items-center justify-between pt-3 border-t gap-2">
-                            <div>
-                              <p className="font-semibold">
-                                {booking.pricing.total} BYN
-                                {booking.pricing.discountPercent > 0 && (
-                                  <span className="text-xs text-status-confirmed ml-1">
-                                    (-{booking.pricing.discountPercent}%)
-                                  </span>
-                                )}
-                              </p>
-                              {booking.pricing.discountAmount > 0 && (
-                                <p className="text-xs text-muted-foreground line-through">
-                                  {booking.pricing.base} BYN
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              {isOwner && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenDiscountDialog(booking)}
-                                  data-testid={`button-discount-spa-${booking.id}`}
-                                >
-                                  <Percent className="h-4 w-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => cancelSpaMutation.mutate(booking.id)}
-                                disabled={cancelSpaMutation.isPending}
-                                data-testid={`button-cancel-spa-${booking.id}`}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => acceptSpaMutation.mutate(booking.id)}
-                                disabled={acceptSpaMutation.isPending}
-                                data-testid={`button-accept-spa-${booking.id}`}
-                              >
-                                <Check className="h-4 w-4 mr-1" />
-                                Принять
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
 
-                {todaySpa.filter(b => b.status !== "pending_call").length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm">Сегодня</h3>
-                    {todaySpa.filter(b => b.status !== "pending_call").map((booking) => (
-                      <Card key={booking.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-2 gap-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline">{booking.spaResource}</Badge>
-                              <StatusBadge status={booking.status} />
-                            </div>
-                            <span className="text-sm font-mono">
-                              {booking.startTime} - {booking.endTime}
-                            </span>
-                          </div>
-                          <p className="font-medium">{booking.customer.fullName}</p>
-                          <p className="text-sm text-muted-foreground">{booking.customer.phone}</p>
-                          {formatSpaOptions(booking.options).length > 0 && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {formatSpaOptions(booking.options).join(" / ")}
-                            </p>
-                          )}
-                          <div className="flex items-center justify-between mt-2 gap-2">
-                            <div>
-                              <span className="font-semibold">
-                                {booking.pricing.total} BYN
-                              </span>
-                              {booking.pricing.discountPercent > 0 && (
-                                <span className="text-xs text-status-confirmed ml-1">
-                                  (-{booking.pricing.discountPercent}%)
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              {isOwner && booking.status !== "completed" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenDiscountDialog(booking)}
-                                  data-testid={`button-discount-today-spa-${booking.id}`}
-                                >
-                                  <Percent className="h-4 w-4" />
-                                </Button>
-                              )}
-                              {booking.status !== "completed" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => cancelSpaMutation.mutate(booking.id)}
-                                  disabled={cancelSpaMutation.isPending}
-                                  data-testid={`button-cancel-today-spa-${booking.id}`}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {booking.status === "confirmed" && (
-                            <div className="mt-3 pt-3 border-t space-y-2">
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  onClick={() => closeSpaPaymentMutation.mutate({ 
-                                    bookingId: booking.id, 
-                                    method: "erip" 
-                                  })}
-                                  disabled={closeSpaPaymentMutation.isPending}
-                                  data-testid={`button-erip-spa-${booking.id}`}
-                                >
-                                  <CreditCard className="h-4 w-4 mr-1" />
-                                  ЕРИП
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  onClick={() => closeSpaPaymentMutation.mutate({ 
-                                    bookingId: booking.id, 
-                                    method: "cash" 
-                                  })}
-                                  disabled={closeSpaPaymentMutation.isPending}
-                                  data-testid={`button-cash-spa-${booking.id}`}
-                                >
-                                  <Banknote className="h-4 w-4 mr-1" />
-                                  Наличные
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+              {loadingDateBookings ? (
+                <BookingCardSkeleton />
+              ) : bookingsForSelectedDate.length > 0 ? (
+                bookingsForSelectedDate.map((booking) => renderSpaBookingCard(booking, false))
+              ) : (
+                <Card>
+                  <CardContent className="p-4 text-center text-sm text-muted-foreground">
+                    Нет бронирований на эту дату
+                    <div className="mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => shareBookingDate(selectedDate)}
+                      >
+                        <Share2 className="h-4 w-4 mr-1" />
+                        Отправить ссылку для брони
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
-                {upcomingSpa.filter(b => b.status !== "pending_call").length > 0 && (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-sm">Предстоящие</h3>
-                    {upcomingSpa.filter(b => b.status !== "pending_call").map((booking) => (
-                      <Card key={booking.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-2 gap-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline">{booking.spaResource}</Badge>
-                              <StatusBadge status={booking.status} />
-                            </div>
-                            <div className="text-right">
-                              <p className="font-mono text-sm">
-                                {booking.startTime} - {booking.endTime}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(parseISO(booking.date), "d MMM", { locale: ru })}
-                              </p>
-                            </div>
-                          </div>
-                          <p className="font-medium">{booking.customer.fullName}</p>
-                          <p className="text-sm text-muted-foreground">{booking.customer.phone}</p>
-                          <div className="flex items-center justify-between mt-2">
-                            <div>
-                              <span className="font-semibold">
-                                {booking.pricing.total} BYN
-                              </span>
-                              {booking.pricing.discountPercent > 0 && (
-                                <span className="text-xs text-status-confirmed ml-1">
-                                  (-{booking.pricing.discountPercent}%)
-                                </span>
-                              )}
-                            </div>
-                            {isOwner && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenDiscountDialog(booking)}
-                                data-testid={`button-discount-upcoming-spa-${booking.id}`}
-                              >
-                                <Percent className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+            {/* Pending bookings section */}
+            {pendingSpa.length > 0 && (
+              <div className="space-y-3 pt-4 border-t">
+                <h3 className="font-semibold text-sm text-status-pending flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-status-pending animate-pulse" />
+                  Ожидают подтверждения ({pendingSpa.length})
+                </h3>
+                {pendingSpa.map((booking) => renderSpaBookingCard(booking, true))}
+              </div>
+            )}
 
-                {spaBookings.length === 0 && (
-                  <Card>
-                    <CardContent className="p-6">
-                      <EmptyState
-                        icon={Droplets}
-                        title="Нет SPA бронирований"
-                        description="SPA бронирования появятся здесь"
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-              </>
+            {/* All upcoming bookings */}
+            {upcomingSpa.filter(b => b.status !== "pending_call").length > 0 && (
+              <div className="space-y-3 pt-4 border-t">
+                <h3 className="font-semibold text-sm">Все предстоящие</h3>
+                {upcomingSpa.filter(b => b.status !== "pending_call").map((booking) => renderSpaBookingCard(booking, true))}
+              </div>
+            )}
+
+            {spaBookings.length === 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <EmptyState
+                    icon={Droplets}
+                    title="Нет SPA бронирований"
+                    description="SPA бронирования появятся здесь"
+                  />
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 

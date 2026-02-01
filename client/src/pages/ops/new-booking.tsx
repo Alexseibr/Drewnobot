@@ -98,7 +98,7 @@ export default function NewBookingPage() {
 
   // Fetch calendar availability data
   const { data: calendarData, isLoading: calendarLoading } = useQuery<CalendarData>({
-    queryKey: ["/api/ops/spa-calendar", getYear(calendarMonth), getMonth(calendarMonth) + 1],
+    queryKey: [`/api/ops/spa-calendar?year=${getYear(calendarMonth)}&month=${getMonth(calendarMonth) + 1}`],
   });
 
   const getDateAvailability = (date: Date): { spa1: boolean; spa2: boolean; spa1Count: number; spa2Count: number } | undefined => {
