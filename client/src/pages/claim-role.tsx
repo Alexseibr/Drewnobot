@@ -79,22 +79,22 @@ export default function ClaimRolePage() {
       const data = await response.json();
       
       if (data.user && data.token) {
-        localStorage.setItem("drewno-auth", JSON.stringify({ 
-          user: data.user, 
-          token: data.token 
-        }));
-        
         if (data.user.role !== "GUEST") {
+          // Only save auth data for staff members
+          localStorage.setItem("drewno-auth", JSON.stringify({ 
+            user: data.user, 
+            token: data.token 
+          }));
           toast({
             title: "Успешно",
             description: `Вы авторизованы как ${getRoleName(data.user.role)}`,
           });
           setLocation("/ops");
+          window.location.reload();
         } else {
+          // Do NOT save auth or redirect for guests - they should not have staff access
           setError("Ваш номер телефона не зарегистрирован в системе персонала. Обратитесь к владельцу для получения доступа.");
         }
-        
-        window.location.reload();
       }
     } catch (error) {
       console.error("[ClaimRole] Auth error:", error);

@@ -89,11 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (!initData) {
         if (process.env.NODE_ENV === "development" || import.meta.env.DEV) {
+          // Use random ID in dev mode to prevent all users getting the same role
+          const devUserId = Math.floor(Math.random() * 1000000000);
           initData = "user=" + encodeURIComponent(JSON.stringify({
-            id: 123456789,
+            id: devUserId,
             first_name: "Тест",
             last_name: "Пользователь",
-            username: "test_user",
+            username: "test_user_" + devUserId,
           })) + "&auth_date=" + Math.floor(Date.now() / 1000) + "&hash=dev";
         } else {
           console.warn("[Auth] No Telegram initData available");
