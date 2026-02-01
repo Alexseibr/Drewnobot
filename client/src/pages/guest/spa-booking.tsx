@@ -788,6 +788,8 @@ export default function SpaBookingPage() {
               </div>
             </div>
           )}
+          
+          <div className="h-8" />
         </div>
       </PageContainer>
       <BottomNav />

@@ -158,6 +158,7 @@ export default function BathBookingPage() {
       },
       options: {
         tub: data.tub,
+        terrace: false,
         grill: data.grill,
         charcoal: data.charcoal,
       },
@@ -675,6 +676,8 @@ export default function BathBookingPage() {
                     {bookingMutation.isPending ? "Отправка..." : "Отправить заявку"}
                   </Button>
                 </div>
+                
+                <div className="h-8" />
               </>
             )}
           </form>
