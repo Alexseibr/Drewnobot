@@ -241,6 +241,37 @@ const ROLE_LABELS: Record<string, string> = {
   GUEST: "Гость",
 };
 
+async function handleSpaBookingDeepLink(
+  chatId: number, 
+  from: { id: number; first_name: string; last_name?: string; username?: string },
+  date: string | null
+) {
+  const webAppUrl = process.env.REPLIT_DEPLOYMENT_URL || process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEPLOYMENT_URL || process.env.REPLIT_DEV_DOMAIN}`
+    : "https://drewno-ops.replit.app";
+  
+  const bookingUrl = date 
+    ? `${webAppUrl}/guest/spa?date=${date}`
+    : `${webAppUrl}/guest/spa`;
+  
+  const dateText = date 
+    ? `на ${date.split('-').reverse().join('.')}`
+    : "";
+  
+  await sendMessage(
+    chatId,
+    `<b>Бронирование SPA ${dateText}</b>\n\n` +
+    `Нажмите кнопку ниже, чтобы выбрать время и забронировать:`,
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "Забронировать SPA", web_app: { url: bookingUrl } }
+        ]]
+      }
+    }
+  );
+}
+
 async function handleStart(chatId: number, from: { id: number; first_name: string; last_name?: string; username?: string }) {
   const telegramId = from.id.toString();
   const user = await storage.getUserByTelegramId(telegramId);
@@ -304,6 +335,17 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
       
       if (text === "/start") {
         await handleStart(chat.id, from);
+      } else if (text.startsWith("/start book_spa_")) {
+        // Deep link for SPA booking with date: /start book_spa_YYYY-MM-DD
+        const dateMatch = text.match(/book_spa_(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          await handleSpaBookingDeepLink(chat.id, from, dateMatch[1]);
+        } else {
+          await handleStart(chat.id, from);
+        }
+      } else if (text.startsWith("/start book_spa")) {
+        // Generic SPA booking deep link without date
+        await handleSpaBookingDeepLink(chat.id, from, null);
       } else if (text === "/menu") {
         await handleMenu(chat.id, from.id.toString());
       } else if (text === "/help") {

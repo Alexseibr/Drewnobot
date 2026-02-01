@@ -29,6 +29,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Loading } from "@/components/ui/spinner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -546,8 +547,8 @@ export default function BookingsPage() {
                 </div>
                 
                 {calendarLoading ? (
-                  <div className="py-8 text-center text-sm text-muted-foreground">
-                    Загрузка...
+                  <div className="py-8 flex justify-center">
+                    <Loading size="sm" />
                   </div>
                 ) : (
                   <DayPicker

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { ArrowLeft, UserPlus, Users, Trash2 } from "lucide-react";
+import { Loading } from "@/components/ui/spinner";
 import type { User } from "@shared/schema";
 
 export default function InstructorManagePage() {
@@ -145,7 +146,7 @@ export default function InstructorManagePage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <p className="text-muted-foreground">Загрузка...</p>
+              <Loading size="sm" />
             ) : instructors.length === 0 ? (
               <p className="text-muted-foreground">Инструкторов пока нет</p>
             ) : (

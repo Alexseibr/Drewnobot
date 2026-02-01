@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loading } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -371,8 +372,8 @@ export default function NewBookingPage() {
                                   </div>
                                 )}
                                 {calendarLoading && (
-                                  <div className="mt-2 text-sm text-muted-foreground">
-                                    Загрузка данных...
+                                  <div className="mt-2">
+                                    <Loading size="sm" />
                                   </div>
                                 )}
                               </div>
