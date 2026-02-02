@@ -268,12 +268,9 @@ export default function SpaBookingPage() {
       };
       const startParam = `share_contact_${btoa(JSON.stringify(bookingData))}`;
       
-      // Open bot with start parameter
-      if (tg?.openTelegramLink) {
-        tg.openTelegramLink(`https://t.me/Drewno_bot?start=${startParam}`);
-      } else {
-        window.open(`https://t.me/Drewno_bot?start=${startParam}`, "_blank");
-      }
+      // Open bot with start parameter - always use window.open to avoid tg:// protocol issues
+      const botUrl = `https://t.me/Drewno_bot?start=${startParam}`;
+      window.open(botUrl, "_blank");
       
       toast({
         title: "Поделитесь контактом в боте",
