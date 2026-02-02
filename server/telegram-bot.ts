@@ -141,6 +141,37 @@ async function sendMessageWithContactButton(chatId: number, text: string) {
   return result;
 }
 
+// Exported function for API to request contact from user
+export async function sendContactRequest(
+  userId: string | number, 
+  bookingData: { date: string; time: string; resource: string; service: string; duration: number; guests: number }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const chatId = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+    
+    // Store booking data for this user
+    pendingContactRequests.set(chatId.toString(), bookingData);
+    
+    console.log("[Telegram Bot] Sending contact request to user", chatId);
+    
+    const result = await sendMessageWithContactButton(
+      chatId,
+      "Для бронирования необходимо подтвердить ваш номер телефона.\n\nНажмите кнопку ниже, чтобы поделиться контактом:"
+    );
+    
+    if (result?.ok) {
+      console.log("[Telegram Bot] Contact request sent successfully to", chatId);
+      return { success: true };
+    } else {
+      console.error("[Telegram Bot] Failed to send contact request:", result);
+      return { success: false, error: "Failed to send message" };
+    }
+  } catch (error) {
+    console.error("[Telegram Bot] Error sending contact request:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
 async function answerCallbackQuery(callbackQueryId: string, text?: string) {
   return telegramApi("answerCallbackQuery", {
     callback_query_id: callbackQueryId,

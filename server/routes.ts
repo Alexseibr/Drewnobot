@@ -2161,6 +2161,31 @@ export async function registerRoutes(
     }
   });
 
+  // API endpoint for requesting contact via bot (for older WebApp versions)
+  app.post("/api/guest/request-contact", async (req, res) => {
+    try {
+      const { userId, bookingData } = req.body;
+      
+      if (!userId || !bookingData) {
+        return res.status(400).json({ error: "Missing userId or bookingData" });
+      }
+      
+      // Import bot functions
+      const { sendContactRequest } = await import("./telegram-bot");
+      
+      const result = await sendContactRequest(userId, bookingData);
+      
+      if (result.success) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ error: result.error || "Failed to send contact request" });
+      }
+    } catch (error) {
+      console.error("[API] Error requesting contact:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Rate limit map for unauthenticated bookings
   const bookingAttempts = new Map<string, { count: number; resetAt: number }>();
   const MAX_UNVERIFIED_PENDING = 3; // Max pending bookings per phone

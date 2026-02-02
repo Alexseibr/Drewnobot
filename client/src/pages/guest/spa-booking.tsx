@@ -247,7 +247,7 @@ export default function SpaBookingPage() {
     return Math.min(5, CLOSE_HOUR - startHour);
   };
 
-  const handleRequestContact = () => {
+  const handleRequestContact = async () => {
     const tg = (window as any).Telegram?.WebApp;
     
     // Check if requestContact is supported (version 6.9+)
@@ -256,8 +256,17 @@ export default function SpaBookingPage() {
     const supportsRequestContact = versionNum >= 6.9 && typeof tg?.requestContact === 'function';
     
     if (!supportsRequestContact) {
-      // For older versions, open bot to share contact via deep link
-      // The bot will send user back with phone verified
+      // For older versions, ask server to send contact request via bot
+      const userId = tg?.initDataUnsafe?.user?.id;
+      if (!userId) {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось определить пользователя Telegram",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const bookingData = {
         date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
         time: selectedTime,
@@ -266,16 +275,37 @@ export default function SpaBookingPage() {
         duration: durationHours,
         guests: guestsCount,
       };
-      const startParam = `share_contact_${btoa(JSON.stringify(bookingData))}`;
       
-      // Open bot with start parameter - always use window.open to avoid tg:// protocol issues
-      const botUrl = `https://t.me/Drewno_bot?start=${startParam}`;
-      window.open(botUrl, "_blank");
-      
-      toast({
-        title: "Поделитесь контактом в боте",
-        description: "Нажмите кнопку 'Поделиться номером' в чате с ботом",
-      });
+      try {
+        const response = await fetch("/api/guest/request-contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, bookingData }),
+        });
+        
+        if (response.ok) {
+          toast({
+            title: "Проверьте чат с ботом",
+            description: "Нажмите кнопку 'Поделиться номером' в чате @Drewno_bot",
+          });
+          // Close WebApp to show bot chat
+          if (tg?.close) {
+            tg.close();
+          }
+        } else {
+          toast({
+            title: "Ошибка",
+            description: "Не удалось отправить запрос. Попробуйте позже.",
+            variant: "destructive",
+          });
+        }
+      } catch (e) {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось отправить запрос",
+          variant: "destructive",
+        });
+      }
       return;
     }
 
