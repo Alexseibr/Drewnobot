@@ -100,6 +100,7 @@ export default function SpaBookingPage() {
     startTime: string;
     endTime: string;
     available: boolean;
+    maxDuration: number;
   }>>({
     queryKey: ["/api/guest/spa/availability", selectedDate ? format(selectedDate, "yyyy-MM-dd") : null],
     enabled: !!selectedDate,
@@ -197,6 +198,14 @@ export default function SpaBookingPage() {
 
   const getMaxDuration = (startTime: string): number => {
     if (!startTime) return 5;
+    // Get maxDuration from API if available
+    const slot = availability?.find(
+      s => s.spaResource === selectedResource && s.startTime === startTime
+    );
+    if (slot?.maxDuration) {
+      return slot.maxDuration;
+    }
+    // Fallback to closing time calculation
     const startHour = parseInt(startTime.split(":")[0]);
     return Math.min(5, CLOSE_HOUR - startHour);
   };

@@ -2093,6 +2093,7 @@ export async function registerRoutes(
         startTime: string;
         endTime: string;
         available: boolean;
+        maxDuration: number;
       }> = [];
       
       for (const spaResource of ["SPA1", "SPA2"]) {
@@ -2101,27 +2102,44 @@ export async function registerRoutes(
           !["cancelled", "expired", "completed"].includes(b.status)
         );
         
+        // Sort bookings by start time to find next booking easily
+        const sortedBookings = spaBookings.sort((a, b) => 
+          a.startTime.localeCompare(b.startTime)
+        );
+        
         for (let hour = 10; hour <= closeHour - 3; hour++) {
           const startTime = `${hour.toString().padStart(2, "0")}:00`;
-          const endTime = `${(hour + 3).toString().padStart(2, "0")}:00`;
-          const slotEnd = hour + 3;
           
-          // Check if slot conflicts with any booking (including cleanup time between bookings)
-          const isBlocked = spaBookings.some(b => {
+          // Find next booking after this slot start time
+          const nextBooking = sortedBookings.find(b => {
+            const bStart = parseInt(b.startTime.split(":")[0]);
+            return bStart > hour;
+          });
+          
+          // Find if there's a booking that overlaps with this start time
+          const overlappingBooking = sortedBookings.find(b => {
             const bStart = parseInt(b.startTime.split(":")[0]);
             const bEnd = parseInt(b.endTime.split(":")[0]);
-            
-            // Direct overlap check
-            if (hour < bEnd && slotEnd > bStart) return true;
-            
-            // Cleanup time needed between bookings (but not after closing time)
-            // If new slot ends before existing starts, need 1 hour gap
-            if (slotEnd <= bStart && slotEnd > bStart - CLEANUP_HOURS) return true;
-            // If new slot starts after existing ends, need 1 hour gap (only if existing doesn't end at closing)
-            if (hour >= bEnd && hour < bEnd + CLEANUP_HOURS && bEnd < closeHour) return true;
-            
-            return false;
+            // This start time falls within existing booking (or within cleanup period after it)
+            return hour >= bStart && hour < bEnd + CLEANUP_HOURS && bEnd < closeHour;
           });
+          
+          // Calculate max duration considering next booking and cleanup time
+          let maxDuration = closeHour - hour; // Default: until closing
+          
+          if (nextBooking) {
+            const nextStart = parseInt(nextBooking.startTime.split(":")[0]);
+            // Need 1 hour cleanup before next booking
+            maxDuration = Math.min(maxDuration, nextStart - hour - CLEANUP_HOURS);
+          }
+          
+          // Cap at 5 hours max
+          maxDuration = Math.min(5, maxDuration);
+          
+          // Slot is unavailable if overlapping with booking/cleanup or max duration < 3 hours
+          const isBlocked = overlappingBooking !== undefined || maxDuration < 3;
+          
+          const endTime = `${(hour + 3).toString().padStart(2, "0")}:00`;
           
           slots.push({
             spaResource,
@@ -2129,6 +2147,7 @@ export async function registerRoutes(
             startTime,
             endTime,
             available: !isBlocked,
+            maxDuration: isBlocked ? 0 : maxDuration,
           });
         }
       }
