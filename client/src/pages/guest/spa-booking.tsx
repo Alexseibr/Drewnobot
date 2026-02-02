@@ -523,7 +523,9 @@ export default function SpaBookingPage() {
                                 setSelectedTime(time);
                                 setStep("details");
                               }}
-                              className={cn(isDisabled && "opacity-50")}
+                              className={cn(
+                                isDisabled && "opacity-40 line-through text-muted-foreground bg-muted cursor-not-allowed"
+                              )}
                               data-testid={`button-time-${time}`}
                             >
                               {time}
