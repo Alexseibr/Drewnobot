@@ -765,15 +765,24 @@ export async function registerRoutes(
     try {
       const { bathCode, date, startTime, endTime } = req.body;
       
+      // Check for conflicts - same bath at overlapping time
       const existingBookings = await storage.getBathBookingsForDate(date);
-      const conflict = existingBookings.some(b => 
-        b.bathCode === bathCode && 
-        !["cancelled", "expired"].includes(b.status) &&
-        !(endTime <= b.startTime || startTime >= b.endTime)
-      );
+      const newStartMinutes = parseInt(startTime.split(":")[0]) * 60 + parseInt(startTime.split(":")[1] || "0");
+      const newEndMinutes = parseInt(endTime.split(":")[0]) * 60 + parseInt(endTime.split(":")[1] || "0");
+      
+      const conflict = existingBookings.some(b => {
+        if (b.bathCode !== bathCode) return false;
+        if (["cancelled", "expired", "completed"].includes(b.status)) return false;
+        
+        const bStartMinutes = parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1] || "0");
+        const bEndMinutes = parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1] || "0");
+        
+        // Check overlap: NOT (end1 <= start2 OR start1 >= end2)
+        return !(newEndMinutes <= bStartMinutes || newStartMinutes >= bEndMinutes);
+      });
       
       if (conflict) {
-        return res.status(400).json({ error: "Time slot is not available" });
+        return res.status(400).json({ error: "Это время уже занято. Выберите другое время." });
       }
       
       // Ensure required fields have defaults
@@ -2176,16 +2185,24 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Время окончания не соответствует продолжительности" });
       }
       
-      // Check for conflicts
+      // Check for conflicts - same resource at overlapping time
       const existingBookings = await storage.getSpaBookingsForDate(date);
-      const conflict = existingBookings.some(b => 
-        b.spaResource === spaResource && 
-        !["cancelled", "expired", "completed"].includes(b.status) &&
-        !(endTime <= b.startTime || startTime >= b.endTime)
-      );
+      const newStartMinutes = parseInt(startTime.split(":")[0]) * 60 + parseInt(startTime.split(":")[1] || "0");
+      const newEndMinutes = parseInt(endTime.split(":")[0]) * 60 + parseInt(endTime.split(":")[1] || "0");
+      
+      const conflict = existingBookings.some(b => {
+        if (b.spaResource !== spaResource) return false;
+        if (["cancelled", "expired", "completed"].includes(b.status)) return false;
+        
+        const bStartMinutes = parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1] || "0");
+        const bEndMinutes = parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1] || "0");
+        
+        // Check overlap: NOT (end1 <= start2 OR start1 >= end2)
+        return !(newEndMinutes <= bStartMinutes || newStartMinutes >= bEndMinutes);
+      });
       
       if (conflict) {
-        return res.status(400).json({ error: "Это время уже занято" });
+        return res.status(400).json({ error: "Это время уже занято. Выберите другое время." });
       }
       
       // Ensure phone is provided for unverified users
@@ -2245,6 +2262,26 @@ export async function registerRoutes(
       const parsed = insertSpaBookingSchema.safeParse(insertData);
       if (!parsed.success) {
         return res.status(400).json({ error: "Неверные данные бронирования" });
+      }
+      
+      // Check for conflicts - same resource at overlapping time
+      const existingBookings = await storage.getSpaBookingsForDate(date);
+      const startMinutes = parseInt(startTime.split(":")[0]) * 60 + parseInt(startTime.split(":")[1] || "0");
+      const endMinutes = parseInt(endTime.split(":")[0]) * 60 + parseInt(endTime.split(":")[1] || "0");
+      
+      const conflict = existingBookings.some(b => {
+        if (b.spaResource !== spaResource) return false;
+        if (["cancelled", "expired", "completed"].includes(b.status)) return false;
+        
+        const bStartMinutes = parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1] || "0");
+        const bEndMinutes = parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1] || "0");
+        
+        // Check overlap: NOT (end1 <= start2 OR start1 >= end2)
+        return !(endMinutes <= bStartMinutes || startMinutes >= bEndMinutes);
+      });
+      
+      if (conflict) {
+        return res.status(400).json({ error: "Это время уже занято. Выберите другое время." });
       }
       
       // Create booking with discount applied
