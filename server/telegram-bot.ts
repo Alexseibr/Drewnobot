@@ -2,6 +2,16 @@ import { storage } from "./storage";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+// Store pending contact requests with booking data
+const pendingContactRequests = new Map<string, {
+  date: string;
+  time: string;
+  resource: string;
+  service: string;
+  duration: number;
+  guests: number;
+}>();
+
 interface TelegramUpdate {
   update_id: number;
   message?: {
@@ -17,6 +27,12 @@ interface TelegramUpdate {
       type: string;
     };
     text?: string;
+    contact?: {
+      phone_number: string;
+      first_name: string;
+      last_name?: string;
+      user_id?: number;
+    };
   };
   callback_query?: {
     id: string;
@@ -93,6 +109,32 @@ async function sendMessage(chatId: number, text: string, options: object = {}) {
       console.log(`[Telegram Bot] Tracked message ${result.result.message_id} for chat ${chatId}`);
     } catch (e) {
       console.error(`[Telegram Bot] Failed to track message for chat ${chatId}:`, e);
+    }
+  }
+  
+  return result;
+}
+
+async function sendMessageWithContactButton(chatId: number, text: string) {
+  const result = await telegramApi("sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    reply_markup: {
+      keyboard: [
+        [{ text: "📱 Поделиться номером", request_contact: true }],
+        [{ text: "❌ Отмена" }]
+      ],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    },
+  });
+  
+  if (result?.ok && result.result?.message_id) {
+    try {
+      await storage.trackBotMessage(chatId.toString(), result.result.message_id, false);
+    } catch (e) {
+      console.error(`[Telegram Bot] Failed to track message:`, e);
     }
   }
   
@@ -351,6 +393,27 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
       } else if (text.startsWith("/start book_spa")) {
         // Generic SPA booking deep link without date
         await handleSpaBookingDeepLink(chat.id, from, null);
+      } else if (text.startsWith("/start share_contact_")) {
+        // Deep link for contact sharing from WebApp
+        const dataMatch = text.match(/share_contact_(.+)/);
+        if (dataMatch) {
+          try {
+            const bookingData = JSON.parse(atob(dataMatch[1]));
+            // Store booking data temporarily for this user
+            pendingContactRequests.set(from.id.toString(), bookingData);
+            
+            // Send message with contact request button
+            await sendMessageWithContactButton(
+              chat.id,
+              "Для бронирования необходимо подтвердить ваш номер телефона.\n\nНажмите кнопку ниже, чтобы поделиться контактом:"
+            );
+          } catch (e) {
+            console.error("[Telegram Bot] Failed to parse booking data:", e);
+            await handleStart(chat.id, from);
+          }
+        } else {
+          await handleStart(chat.id, from);
+        }
       } else if (text === "/menu") {
         await handleMenu(chat.id, from.id.toString());
       } else if (text === "/help") {
@@ -361,6 +424,77 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
           "/menu - Показать меню\n" +
           "/help - Показать справку\n\n" +
           "Для бронирования используйте кнопки меню."
+        );
+      } else if (text === "❌ Отмена") {
+        // User cancelled contact sharing
+        pendingContactRequests.delete(from.id.toString());
+        await sendMessage(
+          chat.id,
+          "Бронирование отменено.",
+          { reply_markup: { remove_keyboard: true } }
+        );
+        await handleStart(chat.id, from);
+      }
+    }
+    
+    // Handle contact sharing
+    if (update.message?.contact) {
+      const { chat, from, contact } = update.message;
+      const userId = from.id.toString();
+      const bookingData = pendingContactRequests.get(userId);
+      
+      if (bookingData && contact.phone_number) {
+        // Remove pending request
+        pendingContactRequests.delete(userId);
+        
+        // Format phone number
+        let phone = contact.phone_number;
+        if (!phone.startsWith("+")) {
+          phone = "+" + phone;
+        }
+        
+        // Create URL with booking data and phone
+        const webAppUrl = getWebAppUrl();
+        const params = new URLSearchParams({
+          date: bookingData.date,
+          time: bookingData.time,
+          resource: bookingData.resource,
+          service: bookingData.service,
+          duration: bookingData.duration.toString(),
+          guests: bookingData.guests.toString(),
+          phone: phone,
+          name: [contact.first_name, contact.last_name].filter(Boolean).join(" "),
+        });
+        
+        const bookingUrl = `${webAppUrl}/guest/spa-booking?${params.toString()}`;
+        
+        // Send confirmation with button to continue booking
+        await sendMessage(
+          chat.id,
+          `Номер телефона подтверждён: ${phone}\n\nНажмите кнопку ниже, чтобы продолжить бронирование:`,
+          {
+            reply_markup: {
+              remove_keyboard: true,
+            },
+          }
+        );
+        
+        await sendMessage(
+          chat.id,
+          "Продолжить бронирование:",
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "📅 Продолжить бронирование", web_app: { url: bookingUrl } }]
+              ]
+            }
+          }
+        );
+      } else {
+        await sendMessage(
+          chat.id,
+          "Не удалось получить номер телефона. Попробуйте ещё раз.",
+          { reply_markup: { remove_keyboard: true } }
         );
       }
     }

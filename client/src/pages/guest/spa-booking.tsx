@@ -94,6 +94,43 @@ export default function SpaBookingPage() {
     }
   }, [user]);
 
+  // Handle return from bot with contact data
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const phoneFromBot = params.get("phone");
+    const nameFromBot = params.get("name");
+    const dateFromBot = params.get("date");
+    const timeFromBot = params.get("time");
+    const resourceFromBot = params.get("resource");
+    const serviceFromBot = params.get("service") as BookingType | null;
+    const durationFromBot = params.get("duration");
+    const guestsFromBot = params.get("guests");
+
+    if (phoneFromBot) {
+      setPhone(phoneFromBot);
+      if (nameFromBot) setFullName(nameFromBot);
+      if (dateFromBot) setSelectedDate(new Date(dateFromBot));
+      if (timeFromBot) setSelectedTime(timeFromBot);
+      if (resourceFromBot) setSelectedResource(resourceFromBot);
+      if (serviceFromBot && ["bath_only", "terrace_only", "tub_only", "bath_with_tub"].includes(serviceFromBot)) {
+        setSelectedType(serviceFromBot);
+      }
+      if (durationFromBot) setDurationHours(parseInt(durationFromBot) || 3);
+      if (guestsFromBot) setGuestsCount(parseInt(guestsFromBot) || 2);
+      
+      // Go to confirm step since we have verified phone
+      setStep("confirm");
+      
+      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname);
+      
+      toast({
+        title: "Контакт подтверждён",
+        description: "Проверьте данные и подтвердите бронирование",
+      });
+    }
+  }, []);
+
   const { data: availability, isLoading: loadingAvailability } = useQuery<Array<{
     spaResource: string;
     date: string;
@@ -212,11 +249,35 @@ export default function SpaBookingPage() {
 
   const handleRequestContact = () => {
     const tg = (window as any).Telegram?.WebApp;
-    if (!tg?.requestContact) {
+    
+    // Check if requestContact is supported (version 6.9+)
+    const version = tg?.version || "6.0";
+    const versionNum = parseFloat(version);
+    const supportsRequestContact = versionNum >= 6.9 && typeof tg?.requestContact === 'function';
+    
+    if (!supportsRequestContact) {
+      // For older versions, open bot to share contact via deep link
+      // The bot will send user back with phone verified
+      const bookingData = {
+        date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+        time: selectedTime,
+        resource: selectedResource,
+        service: selectedType,
+        duration: durationHours,
+        guests: guestsCount,
+      };
+      const startParam = `share_contact_${btoa(JSON.stringify(bookingData))}`;
+      
+      // Open bot with start parameter
+      if (tg?.openTelegramLink) {
+        tg.openTelegramLink(`https://t.me/Drewno_bot?start=${startParam}`);
+      } else {
+        window.open(`https://t.me/Drewno_bot?start=${startParam}`, "_blank");
+      }
+      
       toast({
-        title: "Откройте в Telegram",
-        description: "Для авторизации откройте приложение через Telegram бота @Drewno_bot",
-        variant: "destructive",
+        title: "Поделитесь контактом в боте",
+        description: "Нажмите кнопку 'Поделиться номером' в чате с ботом",
       });
       return;
     }
