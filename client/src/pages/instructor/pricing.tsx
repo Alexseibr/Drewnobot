@@ -106,7 +106,7 @@ export default function InstructorPricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-64">
+    <div className="min-h-screen bg-background pb-24">
       <header className="sticky top-0 z-50 bg-background border-b p-4">
         <div className="flex items-center gap-4">
           <Link href="/instructor">
