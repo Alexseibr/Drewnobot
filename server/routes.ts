@@ -2120,8 +2120,11 @@ export async function registerRoutes(
           const overlappingBooking = sortedBookings.find(b => {
             const bStart = parseInt(b.startTime.split(":")[0]);
             const bEnd = parseInt(b.endTime.split(":")[0]);
-            // This start time falls within existing booking (or within cleanup period after it)
-            return hour >= bStart && hour < bEnd + CLEANUP_HOURS && bEnd < closeHour;
+            // This start time falls within existing booking
+            if (hour >= bStart && hour < bEnd) return true;
+            // This start time is within cleanup period after a booking (only if booking doesn't end at closing)
+            if (hour >= bEnd && hour < bEnd + CLEANUP_HOURS && bEnd < closeHour) return true;
+            return false;
           });
           
           // Calculate max duration considering next booking and cleanup time
