@@ -172,7 +172,7 @@ export default function InstructorFinancesPage() {
   const expensesByCategory = financesData?.expensesByCategory || {};
 
   return (
-    <div className="min-h-screen flex flex-col pb-56">
+    <div className="min-h-screen flex flex-col pb-64">
       <Header 
         title="Финансы" 
         showBack
