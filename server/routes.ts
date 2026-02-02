@@ -2085,6 +2085,7 @@ export async function registerRoutes(
       const settings = await storage.getSiteSettings();
       const closeHour = parseInt(settings.closeTime.split(":")[0]) || 22;
       const existingBookings = await storage.getSpaBookingsForDate(date);
+      const CLEANUP_HOURS = 1; // 1 hour for cleaning between bookings
       
       const slots: Array<{
         spaResource: string;
@@ -2104,10 +2105,17 @@ export async function registerRoutes(
           const startTime = `${hour.toString().padStart(2, "0")}:00`;
           const endTime = `${(hour + 3).toString().padStart(2, "0")}:00`;
           
+          // Check if slot conflicts with any booking (including cleanup time)
           const isBlocked = spaBookings.some(b => {
             const bStart = parseInt(b.startTime.split(":")[0]);
             const bEnd = parseInt(b.endTime.split(":")[0]);
-            return hour < bEnd && (hour + 3) > bStart;
+            const bEndWithCleanup = bEnd + CLEANUP_HOURS; // Add cleanup time after booking
+            
+            // New booking: hour to (hour + 3)
+            // Existing booking with cleanup: bStart to bEndWithCleanup
+            // Also need cleanup before: new booking must end at least 1 hour before existing booking starts
+            // Overlap if: new_start < existing_end_with_cleanup AND new_end + cleanup > existing_start
+            return hour < bEndWithCleanup && (hour + 3 + CLEANUP_HOURS) > bStart;
           });
           
           slots.push({
@@ -2185,8 +2193,9 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Время окончания не соответствует продолжительности" });
       }
       
-      // Check for conflicts - same resource at overlapping time
+      // Check for conflicts - same resource at overlapping time (with cleanup buffer)
       const existingBookings = await storage.getSpaBookingsForDate(date);
+      const CLEANUP_MINUTES = 60; // 1 hour for cleaning between bookings
       const newStartMinutes = parseInt(startTime.split(":")[0]) * 60 + parseInt(startTime.split(":")[1] || "0");
       const newEndMinutes = parseInt(endTime.split(":")[0]) * 60 + parseInt(endTime.split(":")[1] || "0");
       
@@ -2197,12 +2206,16 @@ export async function registerRoutes(
         const bStartMinutes = parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1] || "0");
         const bEndMinutes = parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1] || "0");
         
-        // Check overlap: NOT (end1 <= start2 OR start1 >= end2)
-        return !(newEndMinutes <= bStartMinutes || newStartMinutes >= bEndMinutes);
+        // With cleanup time: new booking must not overlap with existing + cleanup buffer
+        // New ends before existing starts (with cleanup before)
+        // OR new starts after existing ends (with cleanup after)
+        const noConflict = (newEndMinutes + CLEANUP_MINUTES <= bStartMinutes) || 
+                          (newStartMinutes >= bEndMinutes + CLEANUP_MINUTES);
+        return !noConflict;
       });
       
       if (conflict) {
-        return res.status(400).json({ error: "Это время уже занято. Выберите другое время." });
+        return res.status(400).json({ error: "Это время уже занято. Нужен 1 час на уборку между бронированиями." });
       }
       
       // Ensure phone is provided for unverified users
@@ -2264,8 +2277,9 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Неверные данные бронирования" });
       }
       
-      // Check for conflicts - same resource at overlapping time
+      // Check for conflicts - same resource at overlapping time (with cleanup buffer)
       const existingBookings = await storage.getSpaBookingsForDate(date);
+      const CLEANUP_MINUTES = 60; // 1 hour for cleaning between bookings
       const startMinutes = parseInt(startTime.split(":")[0]) * 60 + parseInt(startTime.split(":")[1] || "0");
       const endMinutes = parseInt(endTime.split(":")[0]) * 60 + parseInt(endTime.split(":")[1] || "0");
       
@@ -2276,12 +2290,14 @@ export async function registerRoutes(
         const bStartMinutes = parseInt(b.startTime.split(":")[0]) * 60 + parseInt(b.startTime.split(":")[1] || "0");
         const bEndMinutes = parseInt(b.endTime.split(":")[0]) * 60 + parseInt(b.endTime.split(":")[1] || "0");
         
-        // Check overlap: NOT (end1 <= start2 OR start1 >= end2)
-        return !(endMinutes <= bStartMinutes || startMinutes >= bEndMinutes);
+        // With cleanup time: new booking must not overlap with existing + cleanup buffer
+        const noConflict = (endMinutes + CLEANUP_MINUTES <= bStartMinutes) || 
+                          (startMinutes >= bEndMinutes + CLEANUP_MINUTES);
+        return !noConflict;
       });
       
       if (conflict) {
-        return res.status(400).json({ error: "Это время уже занято. Выберите другое время." });
+        return res.status(400).json({ error: "Это время уже занято. Нужен 1 час на уборку между бронированиями." });
       }
       
       // Create booking with discount applied
