@@ -1,0 +1,78 @@
+root@server-srekbm:/var/www/drewno-ops# # Перейти в папку проекта (уточните путь)
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+root@server-srekbm:/var/www/drewno-ops# # или
+root@server-srekbm:/var/www/drewno-ops# cd /home/drewno/app
+-bash: cd: /home/drewno/app: No such file or directory
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Затем подтянуть изменения
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+remote: Enumerating objects: 6, done.
+remote: Counting objects: 100% (6/6), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 4 (delta 2), reused 4 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (4/4), 2.11 KiB | 721.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   b492434..0bfc8c7  main       -> origin/main
+Updating b492434..0bfc8c7
+Fast-forward
+ ...ver-srekbm-var-www-drewno-ops-cd-var-www-drewno_1770016397999.txt | 47 ++++++++++++++++++++++++++++++++
+ 1 file changed, 47 insertions(+)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cd-var-www-drewno_1770016397999.txt
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Установить зависимости
+root@server-srekbm:/var/www/drewno-ops# npm install
+up to date, audited 500 packages in 2s
+
+68 packages are looking for funding
+  run `npm fund` for details
+
+4 vulnerabilities (1 moderate, 3 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Собрать проект
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (5) ../node_modules/wouter/esm/index.js
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3219 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-BDKCdhZ-.css            85.71 kB │ gzip:  14.03 kB
+../dist/public/assets/index-DDgdWb6f.js          1,308.70 kB │ gzip: 350.47 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 25.84s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 594ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Перезапустить
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 23   │ online    │ 0%       │ 18.5mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# psql "$DATABASE_URL" -c "SELECT id, spa_resource, date, start_time,end_time, status FROM spa_bookings WHERE date = '2026-02-02' AND status NOT IN ('cancelled');"
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "root"does not exist
+root@server-srekbm:/var/www/drewno-ops# psql "$DATABASE_URL" -c "SELECT * FROM spa_bookings LIMIT 10;"
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "root"does not exist
+root@server-srekbm:/var/www/drewno-ops#
