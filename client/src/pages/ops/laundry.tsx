@@ -277,7 +277,7 @@ export default function LaundryPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 pb-48">
+    <div className="space-y-4 p-4 pb-56">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-xl font-semibold">Прачечная</h1>
         {!isWarehouseInitialized && (
