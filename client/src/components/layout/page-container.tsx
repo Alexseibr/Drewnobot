@@ -10,7 +10,7 @@ export function PageContainer({ children, className, noPadding }: PageContainerP
   return (
     <div
       className={cn(
-        "flex-1 overflow-y-auto pb-36",
+        "flex-1 overflow-y-auto pb-40",
         !noPadding && "p-4",
         className
       )}
