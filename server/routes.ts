@@ -2077,9 +2077,9 @@ export async function registerRoutes(
     }
   });
   
-  app.get("/api/guest/spa/availability", async (req, res) => {
+  app.get("/api/guest/spa/availability/:date?", async (req, res) => {
     try {
-      const date = req.query.date as string;
+      const date = req.params.date || (req.query.date as string);
       if (!date) return res.status(400).json({ error: "Требуется дата" });
       
       const settings = await storage.getSiteSettings();
