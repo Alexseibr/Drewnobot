@@ -58,21 +58,24 @@ async function telegramApi(method: string, body: object = {}) {
 const PRODUCTION_URL = "https://d.drewno.by";
 
 function getWebAppUrl(): string {
-  // Always use production URL if set
+  // Use explicit WEBAPP_URL if set
+  if (process.env.WEBAPP_URL) {
+    return process.env.WEBAPP_URL;
+  }
+  
+  // Always use production URL in production
   if (process.env.NODE_ENV === "production") {
     return PRODUCTION_URL;
   }
   
-  // Use REPL_SLUG and REPL_OWNER for Replit deployment
-  const replSlug = process.env.REPL_SLUG;
-  const replOwner = process.env.REPL_OWNER;
-  
-  if (replSlug && replOwner) {
-    return `https://${replSlug}.${replOwner}.repl.co`;
+  // Use Replit dev domain for development
+  const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
+  if (replitDevDomain) {
+    return `https://${replitDevDomain}`;
   }
   
-  // Fallback for local development - use Replit dev URL
-  return process.env.WEBAPP_URL || `https://${process.env.REPL_ID}.id.repl.co`;
+  // Fallback to production URL
+  return PRODUCTION_URL;
 }
 
 async function sendMessage(chatId: number, text: string, options: object = {}) {
