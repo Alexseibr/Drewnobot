@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Plus, AlertTriangle, Wrench, CheckCircle, Clock, XCircle } from "lucide-react";
 import { Link } from "wouter";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -124,7 +125,7 @@ export default function IncidentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-40">
       <header className="sticky top-0 z-50 bg-background border-b p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -335,6 +336,8 @@ export default function IncidentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BottomNav />
     </div>
   );
 }
