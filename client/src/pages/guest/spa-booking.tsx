@@ -256,13 +256,14 @@ export default function SpaBookingPage() {
     const supportsRequestContact = versionNum >= 6.9 && typeof tg?.requestContact === 'function';
     
     if (!supportsRequestContact) {
-      // For older versions, ask server to send contact request via bot
+      // For older versions or non-Telegram browsers, ask server to send contact request via bot
       const userId = tg?.initDataUnsafe?.user?.id;
+      
       if (!userId) {
+        // Not in Telegram WebApp - show manual phone input hint
         toast({
-          title: "Ошибка",
-          description: "Не удалось определить пользователя Telegram",
-          variant: "destructive",
+          title: "Введите номер вручную",
+          description: "Откройте приложение через Telegram для автоматической подгрузки номера",
         });
         return;
       }
