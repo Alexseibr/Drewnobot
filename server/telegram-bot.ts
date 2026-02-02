@@ -395,23 +395,28 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
         await handleSpaBookingDeepLink(chat.id, from, null);
       } else if (text.startsWith("/start share_contact_")) {
         // Deep link for contact sharing from WebApp
+        console.log("[Telegram Bot] Received share_contact deep link from user", from.id);
         const dataMatch = text.match(/share_contact_(.+)/);
         if (dataMatch) {
           try {
             const bookingData = JSON.parse(atob(dataMatch[1]));
+            console.log("[Telegram Bot] Parsed booking data:", JSON.stringify(bookingData));
             // Store booking data temporarily for this user
             pendingContactRequests.set(from.id.toString(), bookingData);
             
             // Send message with contact request button
-            await sendMessageWithContactButton(
+            console.log("[Telegram Bot] Sending contact request button to chat", chat.id);
+            const result = await sendMessageWithContactButton(
               chat.id,
               "Для бронирования необходимо подтвердить ваш номер телефона.\n\nНажмите кнопку ниже, чтобы поделиться контактом:"
             );
+            console.log("[Telegram Bot] sendMessageWithContactButton result:", JSON.stringify(result));
           } catch (e) {
             console.error("[Telegram Bot] Failed to parse booking data:", e);
             await handleStart(chat.id, from);
           }
         } else {
+          console.log("[Telegram Bot] No match for share_contact data");
           await handleStart(chat.id, from);
         }
       } else if (text === "/menu") {
