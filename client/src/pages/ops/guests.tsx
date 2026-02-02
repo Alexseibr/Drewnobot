@@ -13,7 +13,6 @@ import {
   Search
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -333,7 +332,6 @@ export default function GuestsPage() {
         </DialogContent>
       </Dialog>
 
-      <BottomNav />
     </PageContainer>
   );
 }

@@ -22,7 +22,6 @@ import {
   BarChart3
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,7 +171,7 @@ export default function InstructorFinancesPage() {
   const expensesByCategory = financesData?.expensesByCategory || {};
 
   return (
-    <div className="min-h-screen flex flex-col pb-28">
+    <div className="min-h-screen flex flex-col ">
       <Header 
         title="Финансы" 
         showBack
@@ -570,7 +569,6 @@ export default function InstructorFinancesPage() {
         </DialogContent>
       </Dialog>
 
-      <BottomNav />
     </div>
   );
 }

@@ -17,7 +17,6 @@ import {
   UserCheck,
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -157,7 +156,6 @@ export default function OwnerStaffPage() {
             </CardContent>
           </Card>
         </PageContainer>
-        <BottomNav />
       </div>
     );
   }
@@ -592,7 +590,6 @@ export default function OwnerStaffPage() {
         </DialogContent>
       </Dialog>
 
-      <BottomNav />
     </div>
   );
 }

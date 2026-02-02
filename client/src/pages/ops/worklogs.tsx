@@ -14,7 +14,6 @@ import {
   Timer
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -445,7 +444,6 @@ export default function WorkLogsPage() {
         </div>
       </PageContainer>
       
-      <BottomNav />
     </div>
   );
 }

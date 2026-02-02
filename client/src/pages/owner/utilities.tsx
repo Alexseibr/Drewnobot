@@ -109,7 +109,7 @@ export default function UtilitiesPage() {
   const isLoading = metersLoading || readingsLoading;
 
   return (
-    <div className="min-h-screen bg-background pb-28">
+    <div className="min-h-screen bg-background ">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="flex items-center gap-4 px-4 py-3">
           <Link href="/owner/settings">

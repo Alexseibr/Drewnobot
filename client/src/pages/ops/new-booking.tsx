@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -605,7 +604,6 @@ export default function NewBookingPage() {
         </div>
       </PageContainer>
 
-      <BottomNav />
     </div>
   );
 }

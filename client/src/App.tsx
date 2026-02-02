@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
+import { AppLayout } from "@/components/layout/app-layout";
 
 import LandingPage from "@/pages/landing";
 import BathBookingPage from "@/pages/guest/bath-booking";
@@ -94,9 +95,9 @@ function App() {
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
-            <div className="min-h-screen bg-background">
+            <AppLayout>
               <Router />
-            </div>
+            </AppLayout>
             <Toaster />
           </TooltipProvider>
         </QueryClientProvider>

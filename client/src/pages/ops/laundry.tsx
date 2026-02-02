@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -277,7 +276,7 @@ export default function LaundryPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 pb-28">
+    <div className="space-y-4 p-4 ">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-xl font-semibold">Прачечная</h1>
         {!isWarehouseInitialized && (
@@ -815,7 +814,6 @@ export default function LaundryPage() {
         </DialogContent>
       </Dialog>
 
-      <BottomNav />
     </div>
   );
 }

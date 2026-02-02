@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { Header } from "@/components/layout/header";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -184,7 +183,6 @@ export default function OwnerSettingsPage() {
         </div>
       </PageContainer>
       
-      <BottomNav />
     </div>
   );
 }

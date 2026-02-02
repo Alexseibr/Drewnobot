@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { Header } from "@/components/layout/header";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -377,7 +376,6 @@ export default function OpsDashboard() {
         </Button>
       </Link>
 
-      <BottomNav />
     </div>
   );
 }

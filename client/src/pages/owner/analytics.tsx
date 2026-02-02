@@ -25,7 +25,6 @@ import {
   ChevronDown
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -968,7 +967,6 @@ export default function OwnerAnalyticsPage() {
         </div>
       </PageContainer>
 
-      <BottomNav />
     </div>
   );
 }

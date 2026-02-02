@@ -120,7 +120,7 @@ export default function TextileAuditPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 pb-28">
+    <div className="space-y-4 p-4 ">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Аудит текстиля</h1>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

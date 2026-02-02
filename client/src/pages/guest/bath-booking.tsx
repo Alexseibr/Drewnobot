@@ -9,7 +9,6 @@ import { ru } from "date-fns/locale";
 import { CalendarIcon, Clock, Bath, Flame, Package, Phone, User, Check, Loader2, Share2 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { PageContainer } from "@/components/layout/page-container";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -723,7 +722,6 @@ export default function BathBookingPage() {
           </form>
         </Form>
       </PageContainer>
-      <BottomNav />
     </div>
   );
 }

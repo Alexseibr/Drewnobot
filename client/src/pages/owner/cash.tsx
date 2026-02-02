@@ -14,7 +14,6 @@ import {
   Calendar
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -316,7 +315,6 @@ export default function OwnerCashPage() {
         </div>
       </PageContainer>
 
-      <BottomNav />
     </div>
   );
 }
