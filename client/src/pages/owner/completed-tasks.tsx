@@ -53,7 +53,7 @@ export default function CompletedTasksPage() {
   const sortedDates = Object.keys(tasksByDate).sort((a, b) => b.localeCompare(a));
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-56">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="flex items-center gap-4 px-4 py-3">
           <Link href="/owner/settings">

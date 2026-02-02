@@ -188,7 +188,7 @@ export default function ThermostatsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-56">
       <header className="sticky top-0 z-50 bg-background border-b p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">

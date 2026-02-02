@@ -221,7 +221,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-56">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="flex items-center gap-4 p-4">
           <Link href="/ops">
