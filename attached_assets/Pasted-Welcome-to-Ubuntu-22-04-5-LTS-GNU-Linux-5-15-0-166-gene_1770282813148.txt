@@ -1,0 +1,53 @@
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-166-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+Failed to automatically attach to an Ubuntu Pro subscription 11 time(s).
+The failure was due to: "Unable to determine cloud platform.".
+The next attempt is scheduled for 2026-02-06T09:35:00+03:00.
+You can try manually with `sudo pro auto-attach`.
+
+New release '24.04.3 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+Last login: Thu Feb  5 12:03:22 2026 from 176.60.50.97
+ ² в реальном времени \ Просмотр лого
+root@server-srekbm:~# pm2 logs drewno-ops \
+>  \
+\ # Последние 100 строк логов \
+[TAILING] Tailing last 15 lines for [drewno-ops]process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+0|drewno-o |
+0|drewno-o | > rest-express@1.0.0 start
+0|drewno-o | > NODE_ENV=production node dist/index.cjs
+0|drewno-o |
+
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o | Node.js v20.19.6
+0|drewno-o | node:internal/modules/cjs/loader:1210
+0|drewno-o |   throw err;
+0|drewno-o |   ^
+0|drewno-o |
+0|drewno-o | Error: Cannot find module '/var/www/drewno-ops/dist/index.cjs'
+0|drewno-o |     at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+0|drewno-o |     at Module._load (node:internal/modules/cjs/loader:1038:27)
+0|drewno-o |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+0|drewno-o |     at node:internal/main/run_main_module:28:49 {
+0|drewno-o |   code: 'MODULE_NOT_FOUND',
+0|drewno-o |   requireStack: []
+0|drewno-o | }
+0|drewno-o |
+0|drewno-o | Node.js v20.19.6
