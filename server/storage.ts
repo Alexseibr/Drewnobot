@@ -53,6 +53,11 @@ import type {
   NotificationConfig, InsertNotificationConfig,
   BotMessage, InsertBotMessage,
   CheckInActionLog, InsertCheckInActionLog,
+  CleaningWorker, InsertCleaningWorker,
+  CleaningRate, InsertCleaningRate,
+  CleaningLog, InsertCleaningLog,
+  HourlyLog, InsertHourlyLog,
+  SalaryPeriod, InsertSalaryPeriod,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -368,6 +373,36 @@ export interface IStorage {
   // Check-in action logs
   getCheckInActionLogs(bookingId: string): Promise<CheckInActionLog[]>;
   createCheckInActionLog(log: InsertCheckInActionLog): Promise<CheckInActionLog>;
+  
+  // Cleaning Workers (сотрудники уборки)
+  getCleaningWorkers(): Promise<CleaningWorker[]>;
+  getCleaningWorker(id: string): Promise<CleaningWorker | undefined>;
+  createCleaningWorker(worker: InsertCleaningWorker): Promise<CleaningWorker>;
+  updateCleaningWorker(id: string, updates: Partial<CleaningWorker>): Promise<CleaningWorker | undefined>;
+  
+  // Cleaning Rates (тарифы за уборку)
+  getCleaningRates(): Promise<CleaningRate[]>;
+  getCleaningRateForUnit(unitCode: string): Promise<CleaningRate | undefined>;
+  setCleaningRate(rate: InsertCleaningRate): Promise<CleaningRate>;
+  
+  // Cleaning Logs (журнал уборок)
+  getCleaningLogs(date?: string): Promise<CleaningLog[]>;
+  getCleaningLogsForMonth(month: string): Promise<CleaningLog[]>;
+  createCleaningLog(log: InsertCleaningLog): Promise<CleaningLog>;
+  deleteCleaningLog(id: string): Promise<boolean>;
+  
+  // Hourly Logs (почасовой учёт)
+  getHourlyLogs(date?: string): Promise<HourlyLog[]>;
+  getHourlyLogsForMonth(month: string): Promise<HourlyLog[]>;
+  createHourlyLog(log: InsertHourlyLog): Promise<HourlyLog>;
+  deleteHourlyLog(id: string): Promise<boolean>;
+  
+  // Salary Periods (закрытые периоды зарплат)
+  getSalaryPeriods(month?: string): Promise<SalaryPeriod[]>;
+  getSalaryPeriod(id: string): Promise<SalaryPeriod | undefined>;
+  createSalaryPeriod(period: InsertSalaryPeriod): Promise<SalaryPeriod>;
+  updateSalaryPeriod(id: string, updates: Partial<SalaryPeriod>): Promise<SalaryPeriod | undefined>;
+  closeSalaryMonth(month: string): Promise<SalaryPeriod[]>;
 }
 
 const PRICES: Record<string, number> = {
@@ -2263,6 +2298,225 @@ export class MemStorage implements IStorage {
     };
     this.checkInActionLogs.set(id, newLog);
     return newLog;
+  }
+
+  // ============ CLEANING WORKERS ============
+  private cleaningWorkers: Map<string, CleaningWorker> = new Map();
+  
+  async getCleaningWorkers(): Promise<CleaningWorker[]> {
+    return Array.from(this.cleaningWorkers.values()).filter(w => w.isActive);
+  }
+  
+  async getCleaningWorker(id: string): Promise<CleaningWorker | undefined> {
+    return this.cleaningWorkers.get(id);
+  }
+  
+  async createCleaningWorker(worker: InsertCleaningWorker): Promise<CleaningWorker> {
+    const id = randomUUID();
+    const newWorker: CleaningWorker = {
+      ...worker,
+      id,
+      isActive: worker.isActive ?? true,
+      createdAt: new Date().toISOString(),
+    };
+    this.cleaningWorkers.set(id, newWorker);
+    return newWorker;
+  }
+  
+  async updateCleaningWorker(id: string, updates: Partial<CleaningWorker>): Promise<CleaningWorker | undefined> {
+    const worker = this.cleaningWorkers.get(id);
+    if (!worker) return undefined;
+    const updated = { ...worker, ...updates };
+    this.cleaningWorkers.set(id, updated);
+    return updated;
+  }
+
+  // ============ CLEANING RATES ============
+  private cleaningRates: Map<string, CleaningRate> = new Map();
+  
+  async getCleaningRates(): Promise<CleaningRate[]> {
+    return Array.from(this.cleaningRates.values());
+  }
+  
+  async getCleaningRateForUnit(unitCode: string): Promise<CleaningRate | undefined> {
+    for (const rate of this.cleaningRates.values()) {
+      if (rate.unitCode === unitCode) return rate;
+    }
+    return undefined;
+  }
+  
+  async setCleaningRate(rate: InsertCleaningRate): Promise<CleaningRate> {
+    const existing = await this.getCleaningRateForUnit(rate.unitCode);
+    if (existing) {
+      const updated = { ...existing, rate: rate.rate, updatedAt: new Date().toISOString() };
+      this.cleaningRates.set(existing.id, updated);
+      return updated;
+    }
+    const id = randomUUID();
+    const newRate: CleaningRate = {
+      ...rate,
+      id,
+      updatedAt: new Date().toISOString(),
+    };
+    this.cleaningRates.set(id, newRate);
+    return newRate;
+  }
+
+  // ============ CLEANING LOGS ============
+  private cleaningLogs: Map<string, CleaningLog> = new Map();
+  
+  async getCleaningLogs(date?: string): Promise<CleaningLog[]> {
+    const logs = Array.from(this.cleaningLogs.values());
+    if (date) return logs.filter(l => l.date === date);
+    return logs;
+  }
+  
+  async getCleaningLogsForMonth(month: string): Promise<CleaningLog[]> {
+    return Array.from(this.cleaningLogs.values()).filter(l => l.date.startsWith(month));
+  }
+  
+  async createCleaningLog(log: InsertCleaningLog): Promise<CleaningLog> {
+    const id = randomUUID();
+    const newLog: CleaningLog = {
+      ...log,
+      id,
+      createdAt: new Date().toISOString(),
+    };
+    this.cleaningLogs.set(id, newLog);
+    return newLog;
+  }
+  
+  async deleteCleaningLog(id: string): Promise<boolean> {
+    return this.cleaningLogs.delete(id);
+  }
+
+  // ============ HOURLY LOGS ============
+  private hourlyLogs: Map<string, HourlyLog> = new Map();
+  
+  async getHourlyLogs(date?: string): Promise<HourlyLog[]> {
+    const logs = Array.from(this.hourlyLogs.values());
+    if (date) return logs.filter(l => l.date === date);
+    return logs;
+  }
+  
+  async getHourlyLogsForMonth(month: string): Promise<HourlyLog[]> {
+    return Array.from(this.hourlyLogs.values()).filter(l => l.date.startsWith(month));
+  }
+  
+  async createHourlyLog(log: InsertHourlyLog): Promise<HourlyLog> {
+    const id = randomUUID();
+    // Calculate duration and total
+    const [startH, startM] = log.startTime.split(":").map(Number);
+    const [endH, endM] = log.endTime.split(":").map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const durationMinutes = endMinutes >= startMinutes ? endMinutes - startMinutes : (24 * 60 - startMinutes) + endMinutes;
+    const totalAmount = (durationMinutes / 60) * log.hourlyRate;
+    
+    const newLog: HourlyLog = {
+      ...log,
+      id,
+      durationMinutes,
+      totalAmount: Math.round(totalAmount * 100) / 100,
+      createdAt: new Date().toISOString(),
+    };
+    this.hourlyLogs.set(id, newLog);
+    return newLog;
+  }
+  
+  async deleteHourlyLog(id: string): Promise<boolean> {
+    return this.hourlyLogs.delete(id);
+  }
+
+  // ============ SALARY PERIODS ============
+  private salaryPeriods: Map<string, SalaryPeriod> = new Map();
+  
+  async getSalaryPeriods(month?: string): Promise<SalaryPeriod[]> {
+    const periods = Array.from(this.salaryPeriods.values());
+    if (month) return periods.filter(p => p.month === month);
+    return periods;
+  }
+  
+  async getSalaryPeriod(id: string): Promise<SalaryPeriod | undefined> {
+    return this.salaryPeriods.get(id);
+  }
+  
+  async createSalaryPeriod(period: InsertSalaryPeriod): Promise<SalaryPeriod> {
+    const id = randomUUID();
+    const newPeriod: SalaryPeriod = { ...period, id };
+    this.salaryPeriods.set(id, newPeriod);
+    return newPeriod;
+  }
+  
+  async updateSalaryPeriod(id: string, updates: Partial<SalaryPeriod>): Promise<SalaryPeriod | undefined> {
+    const period = this.salaryPeriods.get(id);
+    if (!period) return undefined;
+    const updated = { ...period, ...updates };
+    this.salaryPeriods.set(id, updated);
+    return updated;
+  }
+  
+  async closeSalaryMonth(month: string): Promise<SalaryPeriod[]> {
+    // Get all cleaning and hourly logs for the month
+    const cleaningLogs = await this.getCleaningLogsForMonth(month);
+    const hourlyLogs = await this.getHourlyLogsForMonth(month);
+    
+    // Group by worker
+    const workerStats = new Map<string, {
+      workerName: string;
+      cleaningCount: number;
+      cleaningTotal: number;
+      hourlyMinutes: number;
+      hourlyTotal: number;
+    }>();
+    
+    for (const log of cleaningLogs) {
+      const stats = workerStats.get(log.workerId) || {
+        workerName: log.workerName,
+        cleaningCount: 0,
+        cleaningTotal: 0,
+        hourlyMinutes: 0,
+        hourlyTotal: 0,
+      };
+      stats.cleaningCount++;
+      stats.cleaningTotal += log.rate;
+      workerStats.set(log.workerId, stats);
+    }
+    
+    for (const log of hourlyLogs) {
+      const stats = workerStats.get(log.workerId) || {
+        workerName: log.workerName,
+        cleaningCount: 0,
+        cleaningTotal: 0,
+        hourlyMinutes: 0,
+        hourlyTotal: 0,
+      };
+      stats.hourlyMinutes += log.durationMinutes;
+      stats.hourlyTotal += log.totalAmount;
+      workerStats.set(log.workerId, stats);
+    }
+    
+    // Create salary periods for each worker
+    const periods: SalaryPeriod[] = [];
+    const closedAt = new Date().toISOString();
+    
+    for (const [workerId, stats] of workerStats.entries()) {
+      const period = await this.createSalaryPeriod({
+        month,
+        workerId,
+        workerName: stats.workerName,
+        cleaningCount: stats.cleaningCount,
+        cleaningTotal: stats.cleaningTotal,
+        hourlyMinutes: stats.hourlyMinutes,
+        hourlyTotal: stats.hourlyTotal,
+        totalAmount: stats.cleaningTotal + stats.hourlyTotal,
+        isPaid: false,
+        closedAt,
+      });
+      periods.push(period);
+    }
+    
+    return periods;
   }
 }
 

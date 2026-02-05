@@ -3997,6 +3997,308 @@ export async function registerRoutes(
     }
   });
 
+  // ============ CLEANING WORKERS (сотрудники уборки) ============
+  
+  // Get all cleaning workers (with auto-initialization)
+  app.get("/api/admin/cleaning-workers", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      let workers = await storage.getCleaningWorkers();
+      
+      // Auto-initialize default workers if none exist
+      if (workers.length === 0) {
+        const defaultWorkers = ["Валентина", "Людмила", "Александра"];
+        for (const name of defaultWorkers) {
+          await storage.createCleaningWorker({ name, hourlyRate: 10, isActive: true });
+        }
+        workers = await storage.getCleaningWorkers();
+        
+        // Also initialize default cleaning rates
+        const defaultRates = [
+          { unitCode: "D1", rate: 50 },
+          { unitCode: "D2", rate: 50 },
+          { unitCode: "D3", rate: 50 },
+          { unitCode: "D4", rate: 50 },
+          { unitCode: "SPA1", rate: 40 },
+          { unitCode: "SPA2", rate: 40 },
+        ];
+        for (const r of defaultRates) {
+          await storage.setCleaningRate(r);
+        }
+      }
+      
+      res.json(workers);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка загрузки сотрудников" });
+    }
+  });
+
+  // Create cleaning worker (Owner/SuperAdmin only)
+  app.post("/api/admin/cleaning-workers", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { name, hourlyRate } = req.body;
+      if (!name) return res.status(400).json({ error: "Имя обязательно" });
+      const worker = await storage.createCleaningWorker({ name, hourlyRate, isActive: true });
+      res.json(worker);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка создания сотрудника" });
+    }
+  });
+
+  // Update cleaning worker (Owner/SuperAdmin only)
+  app.patch("/api/admin/cleaning-workers/:id", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const worker = await storage.updateCleaningWorker(id, req.body);
+      if (!worker) return res.status(404).json({ error: "Сотрудник не найден" });
+      res.json(worker);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка обновления сотрудника" });
+    }
+  });
+
+  // ============ CLEANING RATES (тарифы за уборку) ============
+  
+  // Get all rates
+  app.get("/api/admin/cleaning-rates", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const rates = await storage.getCleaningRates();
+      res.json(rates);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка загрузки тарифов" });
+    }
+  });
+
+  // Set rate (Owner/SuperAdmin only)
+  app.post("/api/admin/cleaning-rates", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { unitCode, rate } = req.body;
+      if (!unitCode || rate === undefined) return res.status(400).json({ error: "Код юнита и тариф обязательны" });
+      const saved = await storage.setCleaningRate({ unitCode, rate });
+      res.json(saved);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка сохранения тарифа" });
+    }
+  });
+
+  // ============ CLEANING LOGS (журнал уборок) ============
+  
+  // Get cleaning logs for today (Admin) or all (Owner)
+  app.get("/api/admin/cleaning-logs", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const date = req.query.date as string | undefined;
+      
+      // Admin can only see today's logs
+      if (user.role === "ADMIN") {
+        const today = new Date().toISOString().slice(0, 10);
+        const logs = await storage.getCleaningLogs(today);
+        return res.json(logs);
+      }
+      
+      // Owner can see any date or all
+      const logs = await storage.getCleaningLogs(date);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка загрузки уборок" });
+    }
+  });
+
+  // Get cleaning logs for month (Owner only)
+  app.get("/api/owner/cleaning-logs/:month", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { month } = req.params;
+      const logs = await storage.getCleaningLogsForMonth(month);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка загрузки уборок" });
+    }
+  });
+
+  // Create cleaning log
+  app.post("/api/admin/cleaning-logs", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { date, unitCode, workerId, workerName, rate } = req.body;
+      
+      // Admin can only create for today
+      if (user.role === "ADMIN") {
+        const today = new Date().toISOString().slice(0, 10);
+        if (date !== today) {
+          return res.status(403).json({ error: "Можно вносить только за сегодня" });
+        }
+      }
+      
+      if (!date || !unitCode || !workerId || !workerName || rate === undefined) {
+        return res.status(400).json({ error: "Все поля обязательны" });
+      }
+      
+      const log = await storage.createCleaningLog({
+        date,
+        unitCode,
+        workerId,
+        workerName,
+        rate,
+        createdBy: user.id,
+      });
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка создания записи" });
+    }
+  });
+
+  // Delete cleaning log (Owner only, or Admin for today)
+  app.delete("/api/admin/cleaning-logs/:id", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      await storage.deleteCleaningLog(req.params.id);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка удаления" });
+    }
+  });
+
+  // ============ HOURLY LOGS (почасовой учёт) ============
+  
+  // Get hourly logs
+  app.get("/api/admin/hourly-logs", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const date = req.query.date as string | undefined;
+      
+      // Admin can only see today's logs
+      if (user.role === "ADMIN") {
+        const today = new Date().toISOString().slice(0, 10);
+        const logs = await storage.getHourlyLogs(today);
+        return res.json(logs);
+      }
+      
+      const logs = await storage.getHourlyLogs(date);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка загрузки логов" });
+    }
+  });
+
+  // Get hourly logs for month
+  app.get("/api/owner/hourly-logs/:month", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { month } = req.params;
+      const logs = await storage.getHourlyLogsForMonth(month);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка загрузки логов" });
+    }
+  });
+
+  // Create hourly log
+  app.post("/api/admin/hourly-logs", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { date, workerId, workerName, workType, startTime, endTime, hourlyRate } = req.body;
+      
+      // Admin can only create for today
+      if (user.role === "ADMIN") {
+        const today = new Date().toISOString().slice(0, 10);
+        if (date !== today) {
+          return res.status(403).json({ error: "Можно вносить только за сегодня" });
+        }
+      }
+      
+      if (!date || !workerId || !workerName || !workType || !startTime || !endTime || hourlyRate === undefined) {
+        return res.status(400).json({ error: "Все поля обязательны" });
+      }
+      
+      const log = await storage.createHourlyLog({
+        date,
+        workerId,
+        workerName,
+        workType,
+        startTime,
+        endTime,
+        hourlyRate,
+        createdBy: user.id,
+      });
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка создания записи" });
+    }
+  });
+
+  // Delete hourly log
+  app.delete("/api/admin/hourly-logs/:id", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      await storage.deleteHourlyLog(req.params.id);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка удаления" });
+    }
+  });
+
+  // ============ SALARY PERIODS (зарплаты) ============
+  
+  // Get salary periods (Owner only)
+  app.get("/api/owner/salary-periods", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const month = req.query.month as string | undefined;
+      const periods = await storage.getSalaryPeriods(month);
+      res.json(periods);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка загрузки зарплат" });
+    }
+  });
+
+  // Close salary month (Owner only)
+  app.post("/api/owner/salary-periods/close", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { month } = req.body;
+      if (!month) return res.status(400).json({ error: "Месяц обязателен (YYYY-MM)" });
+      
+      // Check if already closed
+      const existing = await storage.getSalaryPeriods(month);
+      if (existing.length > 0) {
+        return res.status(400).json({ error: "Месяц уже закрыт" });
+      }
+      
+      const periods = await storage.closeSalaryMonth(month);
+      res.json(periods);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка закрытия месяца" });
+    }
+  });
+
+  // Mark salary as paid
+  app.post("/api/owner/salary-periods/:id/pay", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { id } = req.params;
+      
+      const period = await storage.updateSalaryPeriod(id, {
+        isPaid: true,
+        paidAt: new Date().toISOString(),
+        paidBy: user.id,
+      });
+      
+      if (!period) return res.status(404).json({ error: "Период не найден" });
+      res.json(period);
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка обновления" });
+    }
+  });
+
+  // Get salary summary for display (Admin sees last closed month only)
+  app.get("/api/admin/salary-summary", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      // Get previous month
+      const now = new Date();
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const month = prevMonth.toISOString().slice(0, 7);
+      
+      const periods = await storage.getSalaryPeriods(month);
+      res.json({ month, periods });
+    } catch (error) {
+      res.status(500).json({ error: "Ошибка загрузки" });
+    }
+  });
+
   // ============ TELEGRAM BOT WEBHOOK ============
   app.post("/api/telegram/webhook", async (req, res) => {
     try {

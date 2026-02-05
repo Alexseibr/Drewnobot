@@ -117,6 +117,16 @@ Five user roles with hierarchical permissions:
   - Cadence options: daily, weekly, monthly, once, custom
   - Initialize with default notifications for new installations
   - API: `/api/admin/notifications` (GET, POST, PATCH, DELETE, toggle, initialize)
+- **Staff Salary System** - Comprehensive salary tracking for cleaning staff
+  - **Cleaning Workers**: Валентина, Людмила, Александра (auto-initialized)
+  - **Cleaning Logs** (`/ops/staff`): Daily log of cleanings by unit (D1-D4, SPA1-SPA2) with per-unit rates
+  - **Hourly Logs** (`/ops/staff`): Track bath/tub heating time with precise minute calculation
+  - **Salary Periods** (`/owner/salaries`): Monthly closure aggregates cleaning and hourly totals per worker
+  - **Staff Settings** (`/owner/staff-settings`): Manage workers (add/edit/deactivate) and cleaning rates per unit
+  - Role-based access: Admin can only add/view today's data, Owner has full historical access
+  - Duration calculation: Handles overnight shifts (e.g., 23:00 - 02:00)
+  - Default rates: D1-D4 = 50 BYN, SPA1-SPA2 = 40 BYN, Hourly = 10 BYN/hour
+  - API: `/api/admin/cleaning-workers`, `/api/admin/cleaning-logs`, `/api/admin/hourly-logs`, `/api/owner/salary-periods`, `/api/admin/cleaning-rates`
   
 ### Project Structure
 ```

@@ -9,7 +9,9 @@ import {
   Thermometer,
   Zap,
   CheckCircle2,
-  ChevronRight
+  ChevronRight,
+  Banknote,
+  Settings
 } from "lucide-react";
 import { Link } from "wouter";
 import { Header } from "@/components/layout/header";
@@ -134,6 +136,32 @@ export default function OwnerSettingsPage() {
                     <div>
                       <span className="font-medium">Выполненные задачи</span>
                       <p className="text-xs text-muted-foreground">История работы персонала</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </Link>
+              
+              <Link href="/owner/salaries">
+                <div className="flex items-center justify-between p-3 -mx-3 rounded-md hover-elevate cursor-pointer mt-2 border" data-testid="link-salaries">
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-5 w-5 text-emerald-500" />
+                    <div>
+                      <span className="font-medium">Зарплаты</span>
+                      <p className="text-xs text-muted-foreground">Начисления и выплаты</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </Link>
+              
+              <Link href="/owner/staff-settings">
+                <div className="flex items-center justify-between p-3 -mx-3 rounded-md hover-elevate cursor-pointer mt-2 border" data-testid="link-staff-settings">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <span className="font-medium">Настройки персонала</span>
+                      <p className="text-xs text-muted-foreground">Сотрудники и тарифы</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />

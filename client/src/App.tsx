@@ -21,6 +21,7 @@ import LaundryPage from "@/pages/ops/laundry";
 import GuestsPage from "@/pages/ops/guests";
 import SuppliesPage from "@/pages/ops/supplies";
 import IncidentsPage from "@/pages/ops/incidents";
+import OpsStaffPage from "@/pages/ops/staff";
 import InstructorSchedulePage from "@/pages/instructor/schedule";
 import InstructorManagePage from "@/pages/instructor/manage";
 import InstructorFinancesPage from "@/pages/instructor/finances";
@@ -37,6 +38,8 @@ import ThermostatsPage from "@/pages/owner/thermostats";
 import UtilitiesPage from "@/pages/owner/utilities";
 import CompletedTasksPage from "@/pages/owner/completed-tasks";
 import NotificationsPage from "@/pages/owner/notifications";
+import StaffSettingsPage from "@/pages/owner/staff-settings";
+import SalariesPage from "@/pages/owner/salaries";
 import StaffManagementPage from "@/pages/admin/staff";
 import ClaimRolePage from "@/pages/claim-role";
 import NotFound from "@/pages/not-found";
@@ -60,6 +63,7 @@ function Router() {
       <Route path="/ops/guests" component={GuestsPage} />
       <Route path="/ops/supplies" component={SuppliesPage} />
       <Route path="/ops/incidents" component={IncidentsPage} />
+      <Route path="/ops/staff" component={OpsStaffPage} />
       
       <Route path="/instructor" component={InstructorSchedulePage} />
       <Route path="/instructor/sessions" component={InstructorSchedulePage} />
@@ -79,6 +83,8 @@ function Router() {
       <Route path="/owner/utilities" component={UtilitiesPage} />
       <Route path="/owner/completed-tasks" component={CompletedTasksPage} />
       <Route path="/owner/notifications" component={NotificationsPage} />
+      <Route path="/owner/staff-settings" component={StaffSettingsPage} />
+      <Route path="/owner/salaries" component={SalariesPage} />
       
       <Route path="/admin/staff" component={StaffManagementPage} />
       

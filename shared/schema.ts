@@ -1907,3 +1907,145 @@ export const checkInActionLogSchema = z.object({
 export type CheckInActionLog = z.infer<typeof checkInActionLogSchema>;
 export const insertCheckInActionLogSchema = checkInActionLogSchema.omit({ id: true, actionAt: true });
 export type InsertCheckInActionLog = z.infer<typeof insertCheckInActionLogSchema>;
+
+// ============ CLEANING WORKERS (сотрудники уборки) ============
+export const cleaningWorkerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  isActive: z.boolean().default(true),
+  hourlyRate: z.number().optional(), // ставка за час (для топки)
+  createdAt: z.string(),
+});
+export type CleaningWorker = z.infer<typeof cleaningWorkerSchema>;
+export const insertCleaningWorkerSchema = cleaningWorkerSchema.omit({ id: true, createdAt: true });
+export type InsertCleaningWorker = z.infer<typeof insertCleaningWorkerSchema>;
+
+export const cleaningWorkersTable = pgTable("cleaning_workers", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  hourlyRate: real("hourly_rate"),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ CLEANING RATES (тарифы за уборку) ============
+// Тарифы за уборку домиков/бань
+export const CleaningUnit = z.enum(["D1", "D2", "D3", "D4", "SPA1", "SPA2"]);
+export type CleaningUnit = z.infer<typeof CleaningUnit>;
+
+export const cleaningRateSchema = z.object({
+  id: z.string(),
+  unitCode: CleaningUnit,
+  rate: z.number(), // ставка за уборку
+  updatedAt: z.string(),
+});
+export type CleaningRate = z.infer<typeof cleaningRateSchema>;
+export const insertCleaningRateSchema = cleaningRateSchema.omit({ id: true, updatedAt: true });
+export type InsertCleaningRate = z.infer<typeof insertCleaningRateSchema>;
+
+export const cleaningRatesTable = pgTable("cleaning_rates", {
+  id: text("id").primaryKey(),
+  unitCode: text("unit_code").notNull(),
+  rate: real("rate").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// ============ CLEANING LOGS (журнал уборок) ============
+// Какой сотрудник убирал какой домик/баню в какой день
+export const cleaningLogSchema = z.object({
+  id: z.string(),
+  date: z.string(), // YYYY-MM-DD
+  unitCode: CleaningUnit,
+  workerId: z.string(),
+  workerName: z.string(), // денормализация для удобства
+  rate: z.number(), // ставка на момент записи
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type CleaningLog = z.infer<typeof cleaningLogSchema>;
+export const insertCleaningLogSchema = cleaningLogSchema.omit({ id: true, createdAt: true });
+export type InsertCleaningLog = z.infer<typeof insertCleaningLogSchema>;
+
+export const cleaningLogsTable = pgTable("cleaning_logs", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  unitCode: text("unit_code").notNull(),
+  workerId: text("worker_id").notNull(),
+  workerName: text("worker_name").notNull(),
+  rate: real("rate").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ HOURLY LOGS (почасовой учёт - топка бани/купели) ============
+export const HourlyWorkType = z.enum(["bath_heating", "tub_heating", "other"]);
+export type HourlyWorkType = z.infer<typeof HourlyWorkType>;
+
+export const hourlyLogSchema = z.object({
+  id: z.string(),
+  date: z.string(), // YYYY-MM-DD
+  workerId: z.string(),
+  workerName: z.string(),
+  workType: HourlyWorkType,
+  startTime: z.string(), // HH:MM
+  endTime: z.string(), // HH:MM
+  durationMinutes: z.number(),
+  hourlyRate: z.number(),
+  totalAmount: z.number(), // = durationMinutes / 60 * hourlyRate
+  createdBy: z.string(),
+  createdAt: z.string(),
+});
+export type HourlyLog = z.infer<typeof hourlyLogSchema>;
+export const insertHourlyLogSchema = hourlyLogSchema.omit({ id: true, createdAt: true, durationMinutes: true, totalAmount: true });
+export type InsertHourlyLog = z.infer<typeof insertHourlyLogSchema>;
+
+export const hourlyLogsTable = pgTable("hourly_logs", {
+  id: text("id").primaryKey(),
+  date: text("date").notNull(),
+  workerId: text("worker_id").notNull(),
+  workerName: text("worker_name").notNull(),
+  workType: text("work_type").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  durationMinutes: integer("duration_minutes").notNull(),
+  hourlyRate: real("hourly_rate").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// ============ SALARY PERIODS (закрытые периоды зарплат) ============
+export const salaryPeriodSchema = z.object({
+  id: z.string(),
+  month: z.string(), // YYYY-MM
+  workerId: z.string(),
+  workerName: z.string(),
+  cleaningCount: z.number(), // кол-во уборок
+  cleaningTotal: z.number(), // сумма за уборки
+  hourlyMinutes: z.number(), // минуты почасовой работы
+  hourlyTotal: z.number(), // сумма за почасовую
+  totalAmount: z.number(), // общая сумма
+  isPaid: z.boolean().default(false),
+  paidAt: z.string().optional(),
+  paidBy: z.string().optional(),
+  closedAt: z.string(), // когда закрыт период
+});
+export type SalaryPeriod = z.infer<typeof salaryPeriodSchema>;
+export const insertSalaryPeriodSchema = salaryPeriodSchema.omit({ id: true });
+export type InsertSalaryPeriod = z.infer<typeof insertSalaryPeriodSchema>;
+
+export const salaryPeriodsTable = pgTable("salary_periods", {
+  id: text("id").primaryKey(),
+  month: text("month").notNull(),
+  workerId: text("worker_id").notNull(),
+  workerName: text("worker_name").notNull(),
+  cleaningCount: integer("cleaning_count").notNull(),
+  cleaningTotal: real("cleaning_total").notNull(),
+  hourlyMinutes: integer("hourly_minutes").notNull(),
+  hourlyTotal: real("hourly_total").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  isPaid: boolean("is_paid").notNull().default(false),
+  paidAt: text("paid_at"),
+  paidBy: text("paid_by"),
+  closedAt: text("closed_at").notNull(),
+});

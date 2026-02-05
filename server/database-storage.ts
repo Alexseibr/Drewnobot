@@ -55,6 +55,11 @@ import type {
   ElectricityReading, InsertElectricityReading,
   NotificationConfig, InsertNotificationConfig,
   CheckInActionLog, InsertCheckInActionLog,
+  CleaningWorker, InsertCleaningWorker,
+  CleaningRate, InsertCleaningRate,
+  CleaningLog, InsertCleaningLog,
+  HourlyLog, InsertHourlyLog,
+  SalaryPeriod, InsertSalaryPeriod,
 } from "@shared/schema";
 import {
   usersTable, unitsTable, cleaningTariffsTable, servicePricesTable,
@@ -68,6 +73,7 @@ import {
   suppliesTable, supplyTransactionsTable, incidentsTable, staffShiftsTable, unitInfoTable,
   thermostatHousesTable, thermostatDailyPlansTable, thermostatActionLogsTable,
   notificationConfigsTable, botMessagesTable, checkInActionLogsTable,
+  cleaningWorkersTable, cleaningRatesTable, cleaningLogsTable, hourlyLogsTable, salaryPeriodsTable,
   BotMessage,
 } from "@shared/schema";
 
@@ -3828,5 +3834,389 @@ export class DatabaseStorage implements IStorage {
       ...log,
       actionAt: now,
     };
+  }
+
+  // ============ CLEANING WORKERS ============
+  async getCleaningWorkers(): Promise<CleaningWorker[]> {
+    const rows = await db.select().from(cleaningWorkersTable)
+      .where(eq(cleaningWorkersTable.isActive, true))
+      .orderBy(asc(cleaningWorkersTable.name));
+    return rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      isActive: r.isActive,
+      hourlyRate: r.hourlyRate || undefined,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  async getCleaningWorker(id: string): Promise<CleaningWorker | undefined> {
+    const rows = await db.select().from(cleaningWorkersTable).where(eq(cleaningWorkersTable.id, id));
+    if (rows.length === 0) return undefined;
+    const r = rows[0];
+    return {
+      id: r.id,
+      name: r.name,
+      isActive: r.isActive,
+      hourlyRate: r.hourlyRate || undefined,
+      createdAt: r.createdAt,
+    };
+  }
+
+  async createCleaningWorker(worker: InsertCleaningWorker): Promise<CleaningWorker> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await db.insert(cleaningWorkersTable).values({
+      id,
+      name: worker.name,
+      isActive: worker.isActive ?? true,
+      hourlyRate: worker.hourlyRate || null,
+      createdAt: now,
+    });
+    return {
+      id,
+      name: worker.name,
+      isActive: worker.isActive ?? true,
+      hourlyRate: worker.hourlyRate,
+      createdAt: now,
+    };
+  }
+
+  async updateCleaningWorker(id: string, updates: Partial<CleaningWorker>): Promise<CleaningWorker | undefined> {
+    const existing = await this.getCleaningWorker(id);
+    if (!existing) return undefined;
+    await db.update(cleaningWorkersTable).set({
+      name: updates.name ?? existing.name,
+      isActive: updates.isActive ?? existing.isActive,
+      hourlyRate: updates.hourlyRate ?? existing.hourlyRate ?? null,
+    }).where(eq(cleaningWorkersTable.id, id));
+    return { ...existing, ...updates };
+  }
+
+  // ============ CLEANING RATES ============
+  async getCleaningRates(): Promise<CleaningRate[]> {
+    const rows = await db.select().from(cleaningRatesTable);
+    return rows.map(r => ({
+      id: r.id,
+      unitCode: r.unitCode as CleaningRate["unitCode"],
+      rate: r.rate,
+      updatedAt: r.updatedAt,
+    }));
+  }
+
+  async getCleaningRateForUnit(unitCode: string): Promise<CleaningRate | undefined> {
+    const rows = await db.select().from(cleaningRatesTable).where(eq(cleaningRatesTable.unitCode, unitCode));
+    if (rows.length === 0) return undefined;
+    const r = rows[0];
+    return {
+      id: r.id,
+      unitCode: r.unitCode as CleaningRate["unitCode"],
+      rate: r.rate,
+      updatedAt: r.updatedAt,
+    };
+  }
+
+  async setCleaningRate(rate: InsertCleaningRate): Promise<CleaningRate> {
+    const now = new Date().toISOString();
+    const existing = await this.getCleaningRateForUnit(rate.unitCode);
+    if (existing) {
+      await db.update(cleaningRatesTable).set({
+        rate: rate.rate,
+        updatedAt: now,
+      }).where(eq(cleaningRatesTable.id, existing.id));
+      return { ...existing, rate: rate.rate, updatedAt: now };
+    }
+    const id = randomUUID();
+    await db.insert(cleaningRatesTable).values({
+      id,
+      unitCode: rate.unitCode,
+      rate: rate.rate,
+      updatedAt: now,
+    });
+    return {
+      id,
+      unitCode: rate.unitCode,
+      rate: rate.rate,
+      updatedAt: now,
+    };
+  }
+
+  // ============ CLEANING LOGS ============
+  async getCleaningLogs(date?: string): Promise<CleaningLog[]> {
+    let query = db.select().from(cleaningLogsTable);
+    if (date) {
+      query = query.where(eq(cleaningLogsTable.date, date)) as typeof query;
+    }
+    const rows = await query.orderBy(desc(cleaningLogsTable.date));
+    return rows.map(r => ({
+      id: r.id,
+      date: r.date,
+      unitCode: r.unitCode as CleaningLog["unitCode"],
+      workerId: r.workerId,
+      workerName: r.workerName,
+      rate: r.rate,
+      createdBy: r.createdBy,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  async getCleaningLogsForMonth(month: string): Promise<CleaningLog[]> {
+    const rows = await db.select().from(cleaningLogsTable)
+      .where(sql`${cleaningLogsTable.date} LIKE ${month + '%'}`)
+      .orderBy(desc(cleaningLogsTable.date));
+    return rows.map(r => ({
+      id: r.id,
+      date: r.date,
+      unitCode: r.unitCode as CleaningLog["unitCode"],
+      workerId: r.workerId,
+      workerName: r.workerName,
+      rate: r.rate,
+      createdBy: r.createdBy,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  async createCleaningLog(log: InsertCleaningLog): Promise<CleaningLog> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    await db.insert(cleaningLogsTable).values({
+      id,
+      date: log.date,
+      unitCode: log.unitCode,
+      workerId: log.workerId,
+      workerName: log.workerName,
+      rate: log.rate,
+      createdBy: log.createdBy,
+      createdAt: now,
+    });
+    return {
+      id,
+      ...log,
+      createdAt: now,
+    };
+  }
+
+  async deleteCleaningLog(id: string): Promise<boolean> {
+    const result = await db.delete(cleaningLogsTable).where(eq(cleaningLogsTable.id, id));
+    return true;
+  }
+
+  // ============ HOURLY LOGS ============
+  async getHourlyLogs(date?: string): Promise<HourlyLog[]> {
+    let query = db.select().from(hourlyLogsTable);
+    if (date) {
+      query = query.where(eq(hourlyLogsTable.date, date)) as typeof query;
+    }
+    const rows = await query.orderBy(desc(hourlyLogsTable.date));
+    return rows.map(r => ({
+      id: r.id,
+      date: r.date,
+      workerId: r.workerId,
+      workerName: r.workerName,
+      workType: r.workType as HourlyLog["workType"],
+      startTime: r.startTime,
+      endTime: r.endTime,
+      durationMinutes: r.durationMinutes,
+      hourlyRate: r.hourlyRate,
+      totalAmount: r.totalAmount,
+      createdBy: r.createdBy,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  async getHourlyLogsForMonth(month: string): Promise<HourlyLog[]> {
+    const rows = await db.select().from(hourlyLogsTable)
+      .where(sql`${hourlyLogsTable.date} LIKE ${month + '%'}`)
+      .orderBy(desc(hourlyLogsTable.date));
+    return rows.map(r => ({
+      id: r.id,
+      date: r.date,
+      workerId: r.workerId,
+      workerName: r.workerName,
+      workType: r.workType as HourlyLog["workType"],
+      startTime: r.startTime,
+      endTime: r.endTime,
+      durationMinutes: r.durationMinutes,
+      hourlyRate: r.hourlyRate,
+      totalAmount: r.totalAmount,
+      createdBy: r.createdBy,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  async createHourlyLog(log: InsertHourlyLog): Promise<HourlyLog> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    
+    // Calculate duration
+    const [startH, startM] = log.startTime.split(":").map(Number);
+    const [endH, endM] = log.endTime.split(":").map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const durationMinutes = endMinutes >= startMinutes ? endMinutes - startMinutes : (24 * 60 - startMinutes) + endMinutes;
+    const totalAmount = Math.round((durationMinutes / 60) * log.hourlyRate * 100) / 100;
+
+    await db.insert(hourlyLogsTable).values({
+      id,
+      date: log.date,
+      workerId: log.workerId,
+      workerName: log.workerName,
+      workType: log.workType,
+      startTime: log.startTime,
+      endTime: log.endTime,
+      durationMinutes,
+      hourlyRate: log.hourlyRate,
+      totalAmount,
+      createdBy: log.createdBy,
+      createdAt: now,
+    });
+    return {
+      id,
+      ...log,
+      durationMinutes,
+      totalAmount,
+      createdAt: now,
+    };
+  }
+
+  async deleteHourlyLog(id: string): Promise<boolean> {
+    await db.delete(hourlyLogsTable).where(eq(hourlyLogsTable.id, id));
+    return true;
+  }
+
+  // ============ SALARY PERIODS ============
+  async getSalaryPeriods(month?: string): Promise<SalaryPeriod[]> {
+    let query = db.select().from(salaryPeriodsTable);
+    if (month) {
+      query = query.where(eq(salaryPeriodsTable.month, month)) as typeof query;
+    }
+    const rows = await query.orderBy(desc(salaryPeriodsTable.month));
+    return rows.map(r => ({
+      id: r.id,
+      month: r.month,
+      workerId: r.workerId,
+      workerName: r.workerName,
+      cleaningCount: r.cleaningCount,
+      cleaningTotal: r.cleaningTotal,
+      hourlyMinutes: r.hourlyMinutes,
+      hourlyTotal: r.hourlyTotal,
+      totalAmount: r.totalAmount,
+      isPaid: r.isPaid,
+      paidAt: r.paidAt || undefined,
+      paidBy: r.paidBy || undefined,
+      closedAt: r.closedAt,
+    }));
+  }
+
+  async getSalaryPeriod(id: string): Promise<SalaryPeriod | undefined> {
+    const rows = await db.select().from(salaryPeriodsTable).where(eq(salaryPeriodsTable.id, id));
+    if (rows.length === 0) return undefined;
+    const r = rows[0];
+    return {
+      id: r.id,
+      month: r.month,
+      workerId: r.workerId,
+      workerName: r.workerName,
+      cleaningCount: r.cleaningCount,
+      cleaningTotal: r.cleaningTotal,
+      hourlyMinutes: r.hourlyMinutes,
+      hourlyTotal: r.hourlyTotal,
+      totalAmount: r.totalAmount,
+      isPaid: r.isPaid,
+      paidAt: r.paidAt || undefined,
+      paidBy: r.paidBy || undefined,
+      closedAt: r.closedAt,
+    };
+  }
+
+  async createSalaryPeriod(period: InsertSalaryPeriod): Promise<SalaryPeriod> {
+    const id = randomUUID();
+    await db.insert(salaryPeriodsTable).values({
+      id,
+      month: period.month,
+      workerId: period.workerId,
+      workerName: period.workerName,
+      cleaningCount: period.cleaningCount,
+      cleaningTotal: period.cleaningTotal,
+      hourlyMinutes: period.hourlyMinutes,
+      hourlyTotal: period.hourlyTotal,
+      totalAmount: period.totalAmount,
+      isPaid: period.isPaid ?? false,
+      paidAt: period.paidAt || null,
+      paidBy: period.paidBy || null,
+      closedAt: period.closedAt,
+    });
+    return { id, ...period };
+  }
+
+  async updateSalaryPeriod(id: string, updates: Partial<SalaryPeriod>): Promise<SalaryPeriod | undefined> {
+    const existing = await this.getSalaryPeriod(id);
+    if (!existing) return undefined;
+    await db.update(salaryPeriodsTable).set({
+      isPaid: updates.isPaid ?? existing.isPaid,
+      paidAt: updates.paidAt ?? existing.paidAt ?? null,
+      paidBy: updates.paidBy ?? existing.paidBy ?? null,
+    }).where(eq(salaryPeriodsTable.id, id));
+    return { ...existing, ...updates };
+  }
+
+  async closeSalaryMonth(month: string): Promise<SalaryPeriod[]> {
+    const cleaningLogs = await this.getCleaningLogsForMonth(month);
+    const hourlyLogs = await this.getHourlyLogsForMonth(month);
+    
+    const workerStats = new Map<string, {
+      workerName: string;
+      cleaningCount: number;
+      cleaningTotal: number;
+      hourlyMinutes: number;
+      hourlyTotal: number;
+    }>();
+    
+    for (const log of cleaningLogs) {
+      const stats = workerStats.get(log.workerId) || {
+        workerName: log.workerName,
+        cleaningCount: 0,
+        cleaningTotal: 0,
+        hourlyMinutes: 0,
+        hourlyTotal: 0,
+      };
+      stats.cleaningCount++;
+      stats.cleaningTotal += log.rate;
+      workerStats.set(log.workerId, stats);
+    }
+    
+    for (const log of hourlyLogs) {
+      const stats = workerStats.get(log.workerId) || {
+        workerName: log.workerName,
+        cleaningCount: 0,
+        cleaningTotal: 0,
+        hourlyMinutes: 0,
+        hourlyTotal: 0,
+      };
+      stats.hourlyMinutes += log.durationMinutes;
+      stats.hourlyTotal += log.totalAmount;
+      workerStats.set(log.workerId, stats);
+    }
+    
+    const periods: SalaryPeriod[] = [];
+    const closedAt = new Date().toISOString();
+    
+    for (const [workerId, stats] of workerStats.entries()) {
+      const period = await this.createSalaryPeriod({
+        month,
+        workerId,
+        workerName: stats.workerName,
+        cleaningCount: stats.cleaningCount,
+        cleaningTotal: stats.cleaningTotal,
+        hourlyMinutes: stats.hourlyMinutes,
+        hourlyTotal: stats.hourlyTotal,
+        totalAmount: stats.cleaningTotal + stats.hourlyTotal,
+        isPaid: false,
+        closedAt,
+      });
+      periods.push(period);
+    }
+    
+    return periods;
   }
 }
