@@ -1,0 +1,76 @@
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-166-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+Failed to automatically attach to an Ubuntu Pro subscription 1 time(s).
+The failure was due to: "Unable to determine cloud platform.".
+The next attempt is scheduled for 2026-02-05T14:07:00+03:00.
+You can try manually with `sudo pro auto-attach`.
+
+New release '24.04.3 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+Last login: Thu Feb  5 13:50:08 2026 from 46.53.131.212
+root@server-srekbm:~# # Перейти в папку проекта (уточните путь)
+root@server-srekbm:~# cd /var/www/drewno-ops
+root@server-srekbm:/var/www/drewno-ops# # или
+root@server-srekbm:/var/www/drewno-ops# cd /home/drewno/app
+-bash: cd: /home/drewno/app: No such file or directory
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Затем подтянуть изменения
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Установить зависимости
+root@server-srekbm:/var/www/drewno-ops# npm install
+
+up to date, audited 500 packages in 3s
+
+68 packages are looking for funding
+  run `npm fund` for details
+
+4 vulnerabilities (1 moderate, 3 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Собрать проект
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectlytransformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-C2H21Ask.css            85.86 kB │ gzip:  14.07 kB
+../dist/public/assets/index-BiS7Kf-t.js          1,333.95 kB │ gzip: 355.08 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 20.70s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 831ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Перезапустить
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+[PM2] Spawning PM2 daemon with pm2_home=/root/.pm2
+[PM2] PM2 Successfully daemonized
+Use --update-env to update environment variables
+[PM2][ERROR] Process or Namespace drewno-ops not found
+root@server-srekbm:/var/www/drewno-ops#
