@@ -1,0 +1,133 @@
+root@server-srekbm:/var/www/drewno-ops# # Перейти в папку проекта (уточните путь)
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+root@server-srekbm:/var/www/drewno-ops# # или
+root@server-srekbm:/var/www/drewno-ops# cd /home/drewno/app
+-bash: cd: /home/drewno/app: No such file or directory
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Затем подтянуть изменения
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+remote: Enumerating objects: 46, done.
+remote: Counting objects: 100% (46/46), done.
+remote: Compressing objects: 100% (9/9), done.
+remote: Total 44 (delta 35), reused 44 (delta 35), pack-reused 0 (from 0)
+Unpacking objects: 100% (44/44), 372.91 KiB | 2.14 MiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   bef5558..c526d36  main       -> origin/main
+Updating bef5558..c526d36
+Fast-forward
+ attached_assets/IMG_7826_1770283087156.png                                 | Bin 0 -> 393957 bytes
+ ...lcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1770282813148.txt |  53 +++
+ ...lcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1770288866624.txt |  76 +++++
+ ...lcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1770288921220.txt | 159 +++++++++
+ ...lcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1770288989463.txt | 275 +++++++++++++++
+ ...no-app-bash-cd-home-drewno-app-No-such-file-or-direct_1770281992814.txt | 111 ++++++
+ ...no-app-bash-cd-home-drewno-app-No-such-file-or-direct_1770282038950.txt | 111 ++++++
+ ...no-app-bash-cd-home-drewno-app-No-such-file-or-direct_1770282102891.txt | 111 ++++++
+ ...d-for-user-user-C-root-server-srekbm-var-www-drewno-o_1770289036076.txt |  61 ++++ ...d-for-user-user-C-root-server-srekbm-var-www-drewno-o_1770289063687.txt | 145 ++++++++
+ ...d-for-user-user-C-root-server-srekbm-var-www-drewno-o_1770289109613.txt | 530 +++++++++++++++++++++++++++++
+ ...d-for-user-user-C-root-server-srekbm-var-www-drewno-o_1770289151955.txt | 622 ++++++++++++++++++++++++++++++++++
+ ...ot-server-srekbm-var-www-drewno-ops-cat-var-www-drewn_1770289343575.txt |  90 +++++
+ 13 files changed, 2344 insertions(+)
+ create mode 100644 attached_assets/IMG_7826_1770283087156.png
+ create mode 100644 attached_assets/Pasted-Welcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1770282813148.txt
+ create mode 100644 attached_assets/Pasted-Welcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1770288866624.txt
+ create mode 100644 attached_assets/Pasted-Welcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1770288921220.txt
+ create mode 100644 attached_assets/Pasted-Welcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1770288989463.txt
+ create mode 100644 attached_assets/Pasted-ewno-app-bash-cd-home-drewno-app-No-such-file-or-direct_1770281992814.txt
+ create mode 100644 attached_assets/Pasted-ewno-app-bash-cd-home-drewno-app-No-such-file-or-direct_1770282038950.txt
+ create mode 100644 attached_assets/Pasted-ewno-app-bash-cd-home-drewno-app-No-such-file-or-direct_1770282102891.txt
+ create mode 100644 attached_assets/Pasted-led-for-user-user-C-root-server-srekbm-var-www-drewno-o_1770289036076.txt
+ create mode 100644 attached_assets/Pasted-led-for-user-user-C-root-server-srekbm-var-www-drewno-o_1770289063687.txt
+ create mode 100644 attached_assets/Pasted-led-for-user-user-C-root-server-srekbm-var-www-drewno-o_1770289109613.txt
+ create mode 100644 attached_assets/Pasted-led-for-user-user-C-root-server-srekbm-var-www-drewno-o_1770289151955.txt
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-cat-var-www-drewn_1770289343575.txt
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Установить зависимости
+root@server-srekbm:/var/www/drewno-ops# npm install
+
+up to date, audited 500 packages in 2s
+
+68 packages are looking for funding
+  run `npm fund` for details
+
+4 vulnerabilities (1 moderate, 3 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Собрать проект
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (4) src/App.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectlytransformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-C2H21Ask.css            85.86 kB │ gzip:  14.07 kB
+../dist/public/assets/index-BiS7Kf-t.js          1,333.95 kB │ gzip: 355.08 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 19.68s
+building server...
+
+  dist/index.cjs  1.3mb ⚠️
+
+⚡ Done in 475ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Перезапустить
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 1    │ online    │ 0%       │ 22.3mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# sudo -u postgres psql -d drewno -c "SELECT * FROM cleaning_workers;"ERROR:  relation "cleaning_workers" does not exist
+LINE 1: SELECT * FROM cleaning_workers;
+                      ^
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops && npm run db:push
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/var/www/drewno-ops/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+error: password authentication failed for user "drewno"
+    at /var/www/drewno-ops/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Object.query (/var/www/drewno-ops/node_modules/drizzle-kit/bin.cjs:80622:26)
+    at async fromDatabase2 (/var/www/drewno-ops/node_modules/drizzle-kit/bin.cjs:19276:25) {
+  length: 102,
+  severity: 'FATAL',
+  code: '28P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'auth.c',
+  line: '343',
+  routine: 'auth_failed'
+}
+root@server-srekbm:/var/www/drewno-ops#
