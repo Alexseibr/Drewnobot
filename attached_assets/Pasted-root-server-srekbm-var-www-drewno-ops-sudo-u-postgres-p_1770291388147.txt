@@ -1,0 +1,115 @@
+root@server-srekbm:/var/www/drewno-ops# sudo -u postgres psql -d drewno << 'EOF'
+> GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO drewno;
+> GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO drewno;
+> GRANT USAGE ON SCHEMA public TO drewno;
+> ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO drewno;
+> ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO drewno;
+> SELECT 'Permissions granted!' as status;
+> EOF
+GRANT
+GRANT
+GRANT
+ALTER DEFAULT PRIVILEGES
+ALTER DEFAULT PRIVILEGES
+        status
+----------------------
+ Permissions granted!
+(1 row)
+
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# pm2 delete drewno-ops && pm2 start /var/www/drewno-ops/ecosystem.config.cjs && pm2 save && sleep 3 && pm2 logs drewno-ops --lines 20
+[PM2] Applying action deleteProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2][WARN] Applications drewno-ops not running, starting...
+[PM2] App [drewno-ops] launched (1 instances)
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 0    │ online    │ 0%       │ 18.5mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+[TAILING] Tailing last 20 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 20 lines:
+0|drewno-o |     at async /var/www/drewno-ops/dist/index.cjs:216:114003 {
+0|drewno-o |   length: 102,
+0|drewno-o |   severity: 'FATAL',
+0|drewno-o |   code: '28P01',
+0|drewno-o |   detail: undefined,
+0|drewno-o |   hint: undefined,
+0|drewno-o |   position: undefined,
+0|drewno-o |   internalPosition: undefined,
+0|drewno-o |   internalQuery: undefined,
+0|drewno-o |   where: undefined,
+0|drewno-o |   schema: undefined,
+0|drewno-o |   table: undefined,
+0|drewno-o |   column: undefined,
+0|drewno-o |   dataType: undefined,
+0|drewno-o |   constraint: undefined,
+0|drewno-o |   file: 'auth.c',
+0|drewno-o |   line: '343',
+0|drewno-o |   routine: 'auth_failed'
+0|drewno-o | }
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 20 lines:
+0|drewno-o | 2:35:48 PM [scheduler] Scheduler initialized:
+0|drewno-o | 2:35:48 PM [scheduler]   - Daily tasks: 06:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]   - Weekly tasks: 06:00 Monday
+0|drewno-o | 2:35:48 PM [scheduler]   - Monthly tasks: 06:00 1st of month
+0|drewno-o | 2:35:48 PM [scheduler]   - Weather check: 18:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 2:35:48 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]   - Notifications:
+0|drewno-o | 2:35:48 PM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]   - Thermostat:
+0|drewno-o | 2:35:48 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 2:35:48 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 2:35:48 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 2:35:48 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+^C
+root@server-srekbm:/var/www/drewno-ops# ^C
+root@server-srekbm:/var/www/drewno-ops# # Проверьте прямое подключение к БД
+psql "postgresql://drewno:39903990aSs%24@localhost:5432/drewno" -c "SELECT COUNT(*) FROM cleaning_workers;"
+
+# Проверьте новые логи
+pm2 logs drewno-ops --lines 10
+ count
+-------
+     0
+(1 row)
+
+[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o |   schema: undefined,
+0|drewno-o |   table: undefined,
+0|drewno-o |   column: undefined,
+0|drewno-o |   dataType: undefined,
+0|drewno-o |   constraint: undefined,
+0|drewno-o |   file: 'auth.c',
+0|drewno-o |   line: '343',
+0|drewno-o |   routine: 'auth_failed'
+0|drewno-o | }
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | 2:35:48 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]   - Thermostat:
+0|drewno-o | 2:35:48 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 2:35:48 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 2:35:48 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 2:35:48 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 2:35:48 PM [scheduler] [ThermostatScheduler] Houses initialized
