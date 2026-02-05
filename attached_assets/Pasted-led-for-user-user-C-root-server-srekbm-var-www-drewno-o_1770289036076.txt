@@ -1,0 +1,61 @@
+led for user "user"
+
+^C
+root@server-srekbm:/var/www/drewno-ops# # Сначала остановите
+pm2 delete drewno-ops
+
+# Создайте конфиг PM2
+cat > /var/www/drewno-ops/ecosystem.config.js << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'drewno-ops',
+    script: 'npm',
+    args: 'start',
+    cwd: '/var/www/drewno-ops',
+    env: {
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgresql://drewno:ВАШ_ПАРОЛЬ@localhost:5432/drewno',
+      SESSION_SECRET: 'ваш_секрет_сессии',
+      TELEGRAM_BOT_TOKEN: 'ваш_токен_бота'
+    }
+  }]
+};
+EOF
+
+# Отредактируйте файл с правильными значениями
+nano /var/www/drewno-ops/ecosystem.config.js
+
+# Запустите через конфиг
+pm2 start /var/www/drewno-ops/ecosystem.config.js
+pm2 save
+[PM2] Applying action deleteProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+[PM2][ERROR] File /var/www/drewno-ops/ecosystem.config.js malformated
+ReferenceError: module is not defined in ES module scope
+This file is being treated as an ES module because it has a '.js' file extension and '/var/www/drewno-ops/package.json' contains "type": "module". To treat it as a CommonJS script, rename it to use the '.cjs' file extension.
+    at file:///var/www/drewno-ops/ecosystem.config.js:1:1
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:437:37)
+    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:389:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1363:24)
+    at Module._compile (node:internal/modules/cjs/loader:1503:5)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+[PM2] Saving current process list...
+[PM2][WARN] PM2 is not managing any process, skipping save...
+[PM2][WARN] To force saving use: pm2 save --force
+root@server-srekbm:/var/www/drewno-ops# cat /var/www/drewno-ops/.env
+# или
+echo $DATABASE_URL
+DATABASE_URL=postgresql://drewno:39903990aSs\$@localhost:5432/drewno
+TELEGRAM_BOT_TOKEN=7409502547:AAEIpGl2VdyNmC92q7NLrMDhSqMZiQqNCPA
+TRAVELLINE_CLIENT_ID=api_connection_591d3_f8821b2920
+TRAVELLINE_CLIENT_SECRET=poRxwSFItcKBYd56bc8cZ6SsxTNX8fg3
+TRAVELLINE_PROPERTY_ID=39140
+postgresql://user:password@localhost:5432/drewno
+root@server-srekbm:/var/www/drewno-ops#
