@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Plus, Trash2, Clock, Home, Droplets, Users } from "lucide-react";
+import { Plus, Clock, Home } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,12 +32,16 @@ const WORK_TYPES = [
 
 export default function StaffPage() {
   const { toast } = useToast();
-  const today = format(new Date(), "yyyy-MM-dd");
-  const todayDisplay = format(new Date(), "d MMMM yyyy", { locale: ru });
+  const now = new Date();
+  const today = format(now, "yyyy-MM-dd");
+  const yesterday = format(subDays(now, 1), "yyyy-MM-dd");
+  const todayDisplay = format(now, "d MMMM", { locale: ru });
+  const yesterdayDisplay = format(subDays(now, 1), "d MMMM", { locale: ru });
 
   const [isCleaningDialogOpen, setIsCleaningDialogOpen] = useState(false);
   const [isHourlyDialogOpen, setIsHourlyDialogOpen] = useState(false);
 
+  const [selectedDate, setSelectedDate] = useState<string>(today);
   const [selectedWorker, setSelectedWorker] = useState<string>("");
   const [selectedUnit, setSelectedUnit] = useState<string>("");
   const [selectedWorkType, setSelectedWorkType] = useState<string>("bath_heating");
@@ -76,7 +80,7 @@ export default function StaffPage() {
       if (!worker) throw new Error("Выберите сотрудника");
       
       return apiRequest("POST", "/api/admin/cleaning-logs", {
-        date: today,
+        date: selectedDate,
         unitCode: selectedUnit,
         workerId: selectedWorker,
         workerName: worker.name,
@@ -88,6 +92,7 @@ export default function StaffPage() {
       setIsCleaningDialogOpen(false);
       setSelectedWorker("");
       setSelectedUnit("");
+      setSelectedDate(today);
       toast({ title: "Уборка добавлена" });
     },
     onError: (error: any) => {
@@ -101,7 +106,7 @@ export default function StaffPage() {
       if (!worker) throw new Error("Выберите сотрудника");
       
       return apiRequest("POST", "/api/admin/hourly-logs", {
-        date: today,
+        date: selectedDate,
         workerId: selectedWorker,
         workerName: worker.name,
         workType: selectedWorkType,
@@ -116,6 +121,7 @@ export default function StaffPage() {
       setSelectedWorker("");
       setStartTime("14:00");
       setEndTime("17:00");
+      setSelectedDate(today);
       toast({ title: "Часы добавлены" });
     },
     onError: (error: any) => {
@@ -123,35 +129,47 @@ export default function StaffPage() {
     },
   });
 
-  const deleteCleaningMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/cleaning-logs/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cleaning-logs"] });
-      toast({ title: "Удалено" });
-    },
-  });
-
-  const deleteHourlyMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/hourly-logs/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/hourly-logs"] });
-      toast({ title: "Удалено" });
-    },
-  });
+  const todayCleaningLogs = cleaningLogs.filter(l => l.date === today);
+  const yesterdayCleaningLogs = cleaningLogs.filter(l => l.date === yesterday);
+  const todayHourlyLogs = hourlyLogs.filter(l => l.date === today);
+  const yesterdayHourlyLogs = hourlyLogs.filter(l => l.date === yesterday);
 
   const totalCleaningAmount = cleaningLogs.reduce((sum, log) => sum + log.rate, 0);
   const totalHourlyAmount = hourlyLogs.reduce((sum, log) => sum + log.totalAmount, 0);
   const totalHourlyMinutes = hourlyLogs.reduce((sum, log) => sum + log.durationMinutes, 0);
+
+  const renderCleaningLog = (log: CleaningLog) => (
+    <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+      <div>
+        <div className="font-medium">{log.workerName}</div>
+        <div className="text-sm text-muted-foreground">
+          {CLEANING_UNITS.find(u => u.code === log.unitCode)?.label || log.unitCode}
+        </div>
+      </div>
+      <span className="font-medium">{log.rate} BYN</span>
+    </div>
+  );
+
+  const renderHourlyLog = (log: HourlyLog) => (
+    <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+      <div>
+        <div className="font-medium">{log.workerName}</div>
+        <div className="text-sm text-muted-foreground">
+          {WORK_TYPES.find(t => t.code === log.workType)?.label || log.workType}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {log.startTime} - {log.endTime} ({Math.floor(log.durationMinutes / 60)}ч {log.durationMinutes % 60}м)
+        </div>
+      </div>
+      <span className="font-medium">{log.totalAmount.toFixed(2)} BYN</span>
+    </div>
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header title="Сотрудники" showBack />
 
       <main className="flex-1 p-4 space-y-4">
-        <div className="text-center text-muted-foreground text-sm">
-          {todayDisplay}
-        </div>
-
         <Tabs defaultValue="cleaning" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="cleaning" data-testid="tab-cleaning">
@@ -166,8 +184,8 @@ export default function StaffPage() {
 
           <TabsContent value="cleaning" className="space-y-4 mt-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base">Уборки сегодня</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                <CardTitle className="text-base">Журнал уборок</CardTitle>
                 <Dialog open={isCleaningDialogOpen} onOpenChange={setIsCleaningDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" data-testid="button-add-cleaning">
@@ -180,6 +198,18 @@ export default function StaffPage() {
                       <DialogTitle>Добавить уборку</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label>Дата</Label>
+                        <Select value={selectedDate} onValueChange={setSelectedDate}>
+                          <SelectTrigger data-testid="select-date-cleaning">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={today}>Сегодня ({todayDisplay})</SelectItem>
+                            <SelectItem value={yesterday}>Вчера ({yesterdayDisplay})</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-2">
                         <Label>Сотрудник</Label>
                         <Select value={selectedWorker} onValueChange={setSelectedWorker}>
@@ -220,36 +250,24 @@ export default function StaffPage() {
                   </DialogContent>
                 </Dialog>
               </CardHeader>
-              <CardContent>
-                {cleaningLogs.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">Нет записей</p>
-                ) : (
+              <CardContent className="space-y-4">
+                {todayCleaningLogs.length > 0 && (
                   <div className="space-y-2">
-                    {cleaningLogs.map(log => (
-                      <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div>
-                          <div className="font-medium">{log.workerName}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {CLEANING_UNITS.find(u => u.code === log.unitCode)?.label || log.unitCode}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{log.rate} BYN</span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => deleteCleaningMutation.mutate(log.id)}
-                            data-testid={`button-delete-cleaning-${log.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                    <div className="text-sm font-medium text-muted-foreground">Сегодня ({todayDisplay})</div>
+                    {todayCleaningLogs.map(renderCleaningLog)}
                   </div>
                 )}
+                {yesterdayCleaningLogs.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">Вчера ({yesterdayDisplay})</div>
+                    {yesterdayCleaningLogs.map(renderCleaningLog)}
+                  </div>
+                )}
+                {cleaningLogs.length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">Нет записей</p>
+                )}
                 {cleaningLogs.length > 0 && (
-                  <div className="mt-4 pt-4 border-t flex justify-between text-sm font-medium">
+                  <div className="pt-4 border-t flex justify-between text-sm font-medium">
                     <span>Итого:</span>
                     <span>{totalCleaningAmount} BYN</span>
                   </div>
@@ -260,7 +278,7 @@ export default function StaffPage() {
 
           <TabsContent value="hourly" className="space-y-4 mt-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
                 <CardTitle className="text-base">Почасовая работа</CardTitle>
                 <Dialog open={isHourlyDialogOpen} onOpenChange={setIsHourlyDialogOpen}>
                   <DialogTrigger asChild>
@@ -274,6 +292,18 @@ export default function StaffPage() {
                       <DialogTitle>Добавить часы</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label>Дата</Label>
+                        <Select value={selectedDate} onValueChange={setSelectedDate}>
+                          <SelectTrigger data-testid="select-date-hourly">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={today}>Сегодня ({todayDisplay})</SelectItem>
+                            <SelectItem value={yesterday}>Вчера ({yesterdayDisplay})</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-2">
                         <Label>Сотрудник</Label>
                         <Select value={selectedWorker} onValueChange={setSelectedWorker}>
@@ -332,39 +362,24 @@ export default function StaffPage() {
                   </DialogContent>
                 </Dialog>
               </CardHeader>
-              <CardContent>
-                {hourlyLogs.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">Нет записей</p>
-                ) : (
+              <CardContent className="space-y-4">
+                {todayHourlyLogs.length > 0 && (
                   <div className="space-y-2">
-                    {hourlyLogs.map(log => (
-                      <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div>
-                          <div className="font-medium">{log.workerName}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {WORK_TYPES.find(t => t.code === log.workType)?.label || log.workType}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {log.startTime} - {log.endTime} ({Math.floor(log.durationMinutes / 60)}ч {log.durationMinutes % 60}м)
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{log.totalAmount.toFixed(2)} BYN</span>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => deleteHourlyMutation.mutate(log.id)}
-                            data-testid={`button-delete-hourly-${log.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                    <div className="text-sm font-medium text-muted-foreground">Сегодня ({todayDisplay})</div>
+                    {todayHourlyLogs.map(renderHourlyLog)}
                   </div>
                 )}
+                {yesterdayHourlyLogs.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">Вчера ({yesterdayDisplay})</div>
+                    {yesterdayHourlyLogs.map(renderHourlyLog)}
+                  </div>
+                )}
+                {hourlyLogs.length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">Нет записей</p>
+                )}
                 {hourlyLogs.length > 0 && (
-                  <div className="mt-4 pt-4 border-t space-y-1">
+                  <div className="pt-4 border-t space-y-1">
                     <div className="flex justify-between text-sm">
                       <span>Всего часов:</span>
                       <span>{Math.floor(totalHourlyMinutes / 60)}ч {totalHourlyMinutes % 60}м</span>
