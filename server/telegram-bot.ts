@@ -30,8 +30,11 @@ async function getEwelinkClient() {
       password,
     });
     
-    // Skip user.get() test if it's missing in some versions
-    console.log("[eWeLink] Client initialized");
+    // Explicitly call login to get the token
+    console.log("[eWeLink] Attempting explicit login...");
+    await ewelinkClient.login();
+    
+    console.log("[eWeLink] Client initialized and logged in");
     return ewelinkClient;
   } catch (error) {
     console.error("[eWeLink] Login failed:", error);
