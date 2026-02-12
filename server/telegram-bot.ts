@@ -27,6 +27,7 @@ async function loginDirect() {
     // This is the official App ID for the Android/iOS app which has broad access
     const appid = "4s1pGLh9sW7Lp8su"; 
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
+    const API_URL_LOGIN = "https://eu-apia.coolkit.cc/v2/user/login";
 
     const timestamp = Math.floor(Date.now() / 1000);
     const nonce = Math.random().toString(36).substring(2, 10); // Exactly 8 chars
@@ -41,7 +42,7 @@ async function loginDirect() {
       .update(data)
       .digest("base64");
 
-    const response = await axios.post(`${API_URL}/user/login`, data, {
+    const response = await axios.post(API_URL_LOGIN, data, {
       headers: {
         "Content-Type": "application/json",
         "X-CK-Appid": appid,
