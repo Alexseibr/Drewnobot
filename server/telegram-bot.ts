@@ -39,7 +39,7 @@ async function loginDirect() {
     const sign = crypto
       .createHmac("sha256", appsecret)
       .update(data)
-      .digest("base64");
+      .digest("hex");
 
     const response = await axios.post(API_URL_LOGIN, data, {
       headers: {
@@ -95,7 +95,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     const sign = crypto
       .createHmac("sha256", appsecret)
       .update(data)
-      .digest("base64");
+      .digest("hex");
 
     const response = await axios.post(`${API_URL}/device/thing/status`, data, {
       headers: {
