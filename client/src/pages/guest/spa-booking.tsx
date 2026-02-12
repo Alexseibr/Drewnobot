@@ -71,7 +71,7 @@ const ADDITIONAL_SERVICES = {
 
 export default function SpaBookingPage() {
   const [, setLocation] = useLocation();
-  const [step, setStep] = useState<Step>("calendar");
+  const [step, setStep] = useState<Step>("service");
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -348,11 +348,11 @@ export default function SpaBookingPage() {
   };
 
   const stepTitles: Record<Step, string> = {
+    service: "Что бронируем?",
     calendar: "Выберите дату",
-    service: "Выберите услугу",
     time: "Выберите время",
-    details: "Детали бронирования",
-    confirm: "Подтверждение",
+    details: "Ваши данные",
+    confirm: "Проверка",
     success: "Готово",
   };
 
@@ -413,20 +413,54 @@ export default function SpaBookingPage() {
       <PageContainer>
         <div className="space-y-6">
           <div className="flex items-center justify-center gap-1">
-            {["calendar", "service", "time", "details", "confirm"].map((s, i) => (
+            {["service", "calendar", "time", "details", "confirm"].map((s, i) => (
               <div 
                 key={s} 
                 className={cn(
                   "h-1.5 rounded-full transition-all",
                   s === step ? "w-8 bg-primary" : "w-4 bg-muted",
-                  ["calendar", "service", "time", "details", "confirm"].indexOf(step) > i && "bg-primary/50"
+                  ["service", "calendar", "time", "details", "confirm"].indexOf(step) > i && "bg-primary/50"
                 )} 
               />
             ))}
           </div>
 
+          {step === "service" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {BOOKING_TYPES.map(({ value, label, description, icon: Icon }) => (
+                  <Card
+                    key={value}
+                    className={cn(
+                      "cursor-pointer transition-all hover-elevate",
+                      selectedType === value && "ring-2 ring-primary"
+                    )}
+                    onClick={() => {
+                      setSelectedType(value);
+                      setStep("calendar");
+                    }}
+                    data-testid={`card-type-${value}`}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <Icon className={cn(
+                        "h-8 w-8 mx-auto mb-2",
+                        selectedType === value ? "text-primary" : "text-muted-foreground"
+                      )} />
+                      <p className="font-medium text-sm">{label}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{description}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {step === "calendar" && (
             <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Flame className="h-4 w-4" />
+                <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+              </div>
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -444,7 +478,7 @@ export default function SpaBookingPage() {
                     onSelect={(date) => {
                       setSelectedDate(date);
                       if (date) {
-                        setStep("service");
+                        setStep("time");
                       }
                     }}
                     disabled={(date) => {
@@ -491,45 +525,9 @@ export default function SpaBookingPage() {
                   />
                 </CardContent>
               </Card>
-            </div>
-          )}
-
-          {step === "service" && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CalendarIcon className="h-4 w-4" />
-                <span>{selectedDate && format(selectedDate, "d MMMM yyyy", { locale: ru })}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {BOOKING_TYPES.map(({ value, label, description, icon: Icon }) => (
-                  <Card
-                    key={value}
-                    className={cn(
-                      "cursor-pointer transition-all hover-elevate",
-                      selectedType === value && "ring-2 ring-primary"
-                    )}
-                    onClick={() => {
-                      setSelectedType(value);
-                      setStep("time");
-                    }}
-                    data-testid={`card-type-${value}`}
-                  >
-                    <CardContent className="p-4 text-center">
-                      <Icon className={cn(
-                        "h-8 w-8 mx-auto mb-2",
-                        selectedType === value ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <p className="font-medium text-sm">{label}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{description}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <Button variant="ghost" className="w-full" onClick={() => setStep("calendar")}>
+              <Button variant="ghost" className="w-full" onClick={() => setStep("service")}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Назад к календарю
+                Назад к выбору услуги
               </Button>
             </div>
           )}
@@ -627,7 +625,7 @@ export default function SpaBookingPage() {
                 </Card>
               )}
 
-              <Button variant="ghost" className="w-full" onClick={() => setStep("service")}>
+              <Button variant="ghost" className="w-full" onClick={() => setStep("calendar")}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Назад
               </Button>
