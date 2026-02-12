@@ -1,0 +1,90 @@
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 4.21 KiB | 861.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   3a9fbf7..ea1be7a  main       -> origin/main
+Updating 3a9fbf7..ea1be7a
+Fast-forward
+ ...rewno-ops-git-pull-origin-m_1770890417888.txt | 187 +++++++++++++++++++
+ server/telegram-bot.ts                           |  31 ++-
+ 2 files changed, 200 insertions(+), 18 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-git-pull-origin-m_1770890417888.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 21.45s
+building server...
+
+  dist/index.cjs  1.4mb ⚠️
+
+⚡ Done in 746ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 29   │ online    │ 0%       │ 24.2mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o | [eWeLink] Login failed: TypeError: Ln.login is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215419)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:216165)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | [eWeLink] Login failed: TypeError: Ln.login is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215419)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:216165)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | [eWeLink] Login failed: TypeError: Ln.login is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215419)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:216165)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 1:01:49 PM [scheduler]   - Scheduled task notifications: everyminute
+0|drewno-o | 1:01:49 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 1:01:49 PM [scheduler]   - Notifications:
+0|drewno-o | 1:01:49 PM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 1:01:49 PM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 1:01:49 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 1:01:49 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:01:49 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:01:49 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:01:49 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:01:49 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:01:49 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 1:01:49 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 1:01:49 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 1:01:49 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | 1:01:57 PM [express] GET /api/guest/spa/calendar-availability 200 in 110ms :: [{"date":"2026-02-12","hasBookings":false,"fullyBooked":false},{"date":"2026-02-13","hasBookings":true,"fullyBooked":false},{"date":"2026-02-14","hasBookings":false,"fullyBooked":false},{"date":"2026-02-15","hasBookings":false,"fullyBooked":false},{"date":"2026-02-16","hasBookings":true,"fullyBooked":false},{"date":"2026-02-17","hasBookings":false,"fullyBooked":false},{"date":"2026-02-18","hasBookings":false,"fullyBooked":false},{"date":"2026-02-19","hasBookings":false,"fullyBooked":false},{"date":"2026-02-20","hasBookings":false,"fullyBooked":false},{"date":"2026-02-21","hasBookings":false,"fullyBooked":false},{"date":"2026-02-22","hasBookings":false,"fullyBooked":false},{"date":"2026-02-23","hasBookings":false,"fullyBooked":false},{"date":"2026-02-24","hasBookings":false,"fullyBooked":false},{"date":"2026-02-25","hasBookings":false,"fullyBooked":false},{"date":"2026-02-26","hasBookings":false,"fullyBooked":false},{"date":"2026-02-27","hasBookings":false,"fullyBooked":false},{"date":"2026-02-28","hasBookings":true,"fullyBooked":false},{"date":"2026-03-01","hasBookings":false,"fullyBooked":false},{"date":"2026-03-02","hasBookings":false,"fullyBooked":false},{"date":"2026-03-03","hasBookings":false,"fullyBooked":false},{"date":"2026-03-04","hasBookings":false,"fullyBooked":false},{"date":"2026-03-05","hasBookings":false,"fullyBooked":false},{"date":"2026-03-06","hasBookings":false,"fullyBooked":false},{"date":"2026-03-07","hasBookings":false,"fullyBooked":false},{"date":"2026-03-08","hasBookings":false,"fullyBooked":false},{"date":"2026-03-09","hasBookings":false,"fullyBooked":false},{"date":"2026-03-10","hasBookings":false,"fullyBooked":false},{"date":"2026-03-11","hasBookings":false,"fullyBooked":false},{"date":"2026-03-12","hasBookings":false,"fullyBooked":false},{"date":"2026-03-13","hasBookings":false,"fullyBooked":false},{"date":"2026-03-14","hasBookings":false,"fullyBooked":false},{"date":"2026-03-15","hasBookings":false,"fullyBooked":false},{"date":"2026-03-16","hasBookings":false,"fullyBooked":false},{"date":"2026-03-17","hasBookings":false,"fullyBooked":false},{"date":"2026-03-18","hasBookings":false,"fullyBooked":false},{"date":"2026-03-19","hasBookings":false,"fullyBooked":false},{"date":"2026-03-20","hasBookings":false,"fullyBooked":false},{"date":"2026-03-21","hasBookings":false,"fullyBooked":false},{"date":"2026-03-22","hasBookings":false,"fullyBooked":false},{"date":"2026-03-23","hasBookings":false,"fullyBooked":false},{"date":"2026-03-24","hasBookings":false,"fullyBooked":false},{"date":"2026-03-25","hasBookings":false,"fullyBooked":false},{"date":"2026-03-26","hasBookings":false,"fullyBooked":false},{"date":"2026-03-27","hasBookings":false,"fullyBooked":false},{"date":"2026-03-28","hasBookings":false,"fullyBooked":false},{"date":"2026-03-29","hasBookings":false,"fullyBooked":false},{"date":"2026-03-30","hasBookings":false,"fullyBooked":false},{"date":"2026-03-31","hasBookings":false,"fullyBooked":false},{"date":"2026-04-01","hasBookings":false,"fullyBooked":false},{"date":"2026-04-02","hasBookings":false,"fullyBooked":false},{"date":"2026-04-03","hasBookings":false,"fullyBooked":false},{"date":"2026-04-04","hasBookings":false,"fullyBooked":false},{"date":"2026-04-05","hasBookings":false,"fullyBooked":false},{"date":"2026-04-06","hasBookings":false,"fullyBooked":false},{"date":"2026-04-07","hasBookings":false,"fullyBooked":false},{"date":"2026-04-08","hasBookings":false,"fullyBooked":false},{"date":"2026-04-09","hasBookings":false,"fullyBooked":false},{"date":"2026-04-10","hasBookings":false,"fullyBooked":false},{"date":"2026-04-11","hasBookings":false,"fullyBooked":false},{"date":"2026-04-12","hasBookings":false,"fullyBooked":false}]
+0|drewno-ops  | [eWeLink] Device ID length: 10
+0|drewno-ops  | [eWeLink] Device ID prefix: 100
+0|drewno-ops  | [eWeLink] Client initialized
+0|drewno-ops  | [eWeLink] Sending switch ON command...
+0|drewno-ops  | [eWeLink] Response from API: {"status":200,"responseTime":124,"error":400,"msg":"\"authorization\" with value \"Bearer\" fails to matchthe required pattern: /^Bearer\\s[0-9a-f]+$/","data":{}}
+0|drewno-ops  | [eWeLink] Gate open command sent successfully
+0|drewno-ops  | 1:02:01 PM [express] POST /api/admin/gate/open 200 in 153ms:: {"message":"Ворота открыты"}
