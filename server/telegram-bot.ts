@@ -60,6 +60,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     console.log("[eWeLink] Sending switch ON command...");
     // Some multi-channel devices or specific gate controllers use 'switches' array or 'toggle'
     // Let's try sending everything: 'switch', 'switches', and 'toggle'
+    // Testing outlet 1 (second channel) as well, as sometimes gates are not on outlet 0
     await client.device.setThingStatus({
       type: 1, // device
       id: deviceId.trim(),
@@ -71,7 +72,8 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
           { switch: "on", outlet: 2 },
           { switch: "on", outlet: 3 }
         ],
-        toggle: 1
+        toggle: 1,
+        trig: 1
       }
     });
     
