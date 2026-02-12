@@ -2553,6 +2553,21 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Open gate manually
+  app.post("/api/admin/gate/open", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { openGate } = await import("./telegram-bot");
+      const result = await openGate();
+      if (result.success) {
+        res.json({ message: "Ворота открыты" });
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось открыть ворота" });
+    }
+  });
+
   // Owner: Apply discount to SPA booking
   app.post("/api/owner/spa-bookings/:id/discount", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {

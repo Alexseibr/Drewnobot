@@ -12,7 +12,8 @@ import {
   Users,
   ArrowRight,
   Plus,
-  Timer
+  Timer,
+  Unlock
 } from "lucide-react";
 import { Link } from "wouter";
 import { Header } from "@/components/layout/header";
@@ -58,6 +59,23 @@ export default function OpsDashboard() {
 
   const { data: cashData } = useQuery<CashData>({
     queryKey: ["/api/cash/shift/current"],
+  });
+
+  const openGateMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/gate/open");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Ворота открываются" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Ошибка", 
+        description: error.message || "Не удалось открыть ворота",
+        variant: "destructive" 
+      });
+    },
   });
 
   const completeTaskMutation = useMutation({
@@ -166,6 +184,25 @@ export default function OpsDashboard() {
               </Card>
             </div>
           )}
+
+          <Card className="hover-elevate cursor-pointer border-primary/20 bg-primary/5" onClick={() => {
+            if (window.confirm("Вы уверены, что хотите открыть ворота?")) {
+              openGateMutation.mutate();
+            }
+          }}>
+            <CardContent className="p-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-primary/10 p-2">
+                  <Unlock className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">Открыть ворота</p>
+                  <p className="text-sm text-muted-foreground">Ручное управление</p>
+                </div>
+              </div>
+              {openGateMutation.isPending && <Clock className="h-5 w-5 animate-spin text-primary" />}
+            </CardContent>
+          </Card>
 
           <Link href="/ops/worklogs">
             <Card className="hover-elevate cursor-pointer">

@@ -320,6 +320,12 @@ function getStaffKeyboard(role: string) {
   if (role === "ADMIN" || role === "OWNER" || role === "SUPER_ADMIN") {
     keyboard.push([
       {
+        text: "🔓 Открыть ворота",
+        callback_data: "admin_open_gate"
+      }
+    ]);
+    keyboard.push([
+      {
         text: "Панель управления",
         web_app: { url: `${webAppUrl}/ops` }
       }
@@ -606,10 +612,42 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
         await handleGateOpenCallback(data, from, message.chat.id);
       }
       
+      // Handle Admin Manual Gate Open
+      if (data === "admin_open_gate") {
+        await handleAdminGateOpenCallback(from, message.chat.id);
+      }
+      
       await answerCallbackQuery(update.callback_query.id);
     }
   } catch (error) {
     console.error("[Telegram Bot] Error handling update:", error);
+  }
+}
+
+// Handle Admin Manual Gate Open
+async function handleAdminGateOpenCallback(
+  from: { id: number; first_name: string },
+  chatId: number
+) {
+  const telegramId = from.id.toString();
+  try {
+    const user = await storage.getUserByTelegramId(telegramId);
+    if (!user || !user.isActive || !["ADMIN", "OWNER", "SUPER_ADMIN"].includes(user.role)) {
+      await sendMessage(chatId, "У вас нет прав для этого действия.");
+      return;
+    }
+
+    await sendMessage(chatId, "Открываю ворота по команде администратора...");
+    const result = await openGate();
+    
+    if (result.success) {
+      await sendMessage(chatId, "✅ Ворота открыты.");
+      await notifyAdmins(`Администратор ${user.name || from.first_name} открыл ворота вручную через бота.`);
+    } else {
+      await sendMessage(chatId, `❌ Ошибка: ${result.error}`);
+    }
+  } catch (error) {
+    console.error("[Telegram Bot] Admin gate callback error:", error);
   }
 }
 
