@@ -56,7 +56,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     const client = await getEwelinkClient();
     if (!client) return { success: false, error: "Failed to connect to eWeLink" };
     
-    // Let's try sending "on", wait 3s, and send "off" to simulate a longer button press.
+    // Gate scenario is configured to auto-off, so we only need to send the "on" command.
     console.log("[eWeLink] Sending switch ON command...");
     await client.device.setThingStatus({
       type: 1, // device
@@ -64,17 +64,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
       params: { switch: "on" }
     });
     
-    // Increased delay to 3 seconds for physical relay to register and trigger the gate controller
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    console.log("[eWeLink] Sending switch OFF command...");
-    await client.device.setThingStatus({
-      type: 1, // device
-      id: deviceId.trim(),
-      params: { switch: "off" }
-    });
-    
-    console.log("[eWeLink] Gate pulse sequence completed successfully");
+    console.log("[eWeLink] Gate open command sent successfully");
     return { success: true };
   } catch (error) {
     console.error("[eWeLink] Failed to open gate:", error);
