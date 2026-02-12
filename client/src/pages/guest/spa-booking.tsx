@@ -21,8 +21,8 @@ import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";
 
-type BookingType = "bath_only" | "terrace_only" | "tub_only" | "bath_with_tub";
-type Step = "calendar" | "service" | "time" | "details" | "confirm" | "success";
+type BookingType = "bath_only" | "tub_only" | "terrace_only";
+type Step = "service" | "complex" | "addons" | "calendar" | "time" | "details" | "confirm" | "success";
 
 const CLOSE_HOUR = 22;
 const MIN_HOURS_ADVANCE_SPA = 3;
@@ -42,16 +42,20 @@ const BOOKING_TYPES: { value: BookingType; label: string; description: string; i
   { value: "bath_only", label: "Баня", description: "3 часа, до 6 гостей", icon: Flame },
   { value: "tub_only", label: "Купель", description: "3 часа, 4-6 гостей", icon: Droplets },
   { value: "terrace_only", label: "Терраса", description: "3 часа, до 12 гостей", icon: Sun },
-  { value: "bath_with_tub", label: "Баня + Купель", description: "3 часа, 6-10 гостей", icon: Flame },
 ];
 
-const getMaxGuests = (bookingType: BookingType, spaResource: string): number => {
+const getMaxGuests = (bookingType: BookingType, spaResource: string, withAddon: boolean): number => {
   const isComplex1 = spaResource === "SPA1";
+  if (bookingType === "terrace_only") return 12;
+  
+  if (withAddon) {
+    // This is essentially bath_with_tub
+    return isComplex1 ? 10 : 6;
+  }
+
   switch (bookingType) {
     case "bath_only": return 6;
-    case "terrace_only": return 12;
     case "tub_only": return isComplex1 ? 6 : 4;
-    case "bath_with_tub": return isComplex1 ? 10 : 6;
     default: return 6;
   }
 };
@@ -60,9 +64,10 @@ const PRICES: Record<BookingType, { base: number; guestThreshold?: number; highe
   bath_only: { base: 150 },
   terrace_only: { base: 90 },
   tub_only: { base: 150, guestThreshold: 4, higherPrice: 180 },
-  bath_with_tub: { base: 300, guestThreshold: 9, higherPrice: 330 },
 };
 
+const ADDON_BATH_PRICE = 150;
+const ADDON_TUB_PRICE = 150;
 const EXTRA_HOUR_PRICE = 30;
 const ADDITIONAL_SERVICES = {
   grill: { name: "Аренда мангала", price: 15 },
@@ -78,6 +83,7 @@ export default function SpaBookingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedType, setSelectedType] = useState<BookingType>("bath_only");
   const [selectedResource, setSelectedResource] = useState<string>("");
+  const [withServiceAddon, setWithServiceAddon] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [durationHours, setDurationHours] = useState(3);
   const [guestsCount, setGuestsCount] = useState(2);
@@ -112,9 +118,10 @@ export default function SpaBookingPage() {
       if (dateFromBot) setSelectedDate(new Date(dateFromBot));
       if (timeFromBot) setSelectedTime(timeFromBot);
       if (resourceFromBot) setSelectedResource(resourceFromBot);
-      if (serviceFromBot && ["bath_only", "terrace_only", "tub_only", "bath_with_tub"].includes(serviceFromBot)) {
+      if (serviceFromBot && ["bath_only", "terrace_only", "tub_only"].includes(serviceFromBot)) {
         setSelectedType(serviceFromBot);
       }
+      if (params.get("withAddon")) setWithServiceAddon(params.get("withAddon") === "true");
       if (durationFromBot) setDurationHours(parseInt(durationFromBot) || 3);
       if (guestsFromBot) setGuestsCount(parseInt(guestsFromBot) || 2);
       
@@ -175,7 +182,7 @@ export default function SpaBookingPage() {
         headers,
         body: JSON.stringify({
           spaResource: selectedResource,
-          bookingType: selectedType,
+          bookingType: withServiceAddon ? "bath_with_tub" : selectedType,
           date: format(selectedDate, "yyyy-MM-dd"),
           startTime: selectedTime,
           endTime,
@@ -215,9 +222,21 @@ export default function SpaBookingPage() {
   const calculatePrice = () => {
     const priceConfig = PRICES[selectedType];
     let basePrice = priceConfig.base;
-    if (priceConfig.guestThreshold && guestsCount > priceConfig.guestThreshold) {
+
+    // Handle cross-sell addon price
+    if (withServiceAddon) {
+      if (selectedType === "bath_only") basePrice += ADDON_TUB_PRICE;
+      if (selectedType === "tub_only") basePrice += ADDON_BATH_PRICE;
+    }
+
+    // Special case for combined booking price threshold
+    if (withServiceAddon) {
+      if (guestsCount > 9) basePrice = 330;
+      else basePrice = 300;
+    } else if (priceConfig.guestThreshold && guestsCount > priceConfig.guestThreshold) {
       basePrice = priceConfig.higherPrice || priceConfig.base;
     }
+
     const extraHours = Math.max(0, durationHours - 3);
     const extraHoursPrice = extraHours * EXTRA_HOUR_PRICE;
     let servicesPrice = 0;
@@ -349,6 +368,8 @@ export default function SpaBookingPage() {
 
   const stepTitles: Record<Step, string> = {
     service: "Что бронируем?",
+    complex: "Выберите комплекс",
+    addons: "Дополнительно",
     calendar: "Выберите дату",
     time: "Выберите время",
     details: "Ваши данные",
@@ -375,7 +396,10 @@ export default function SpaBookingPage() {
               <CardContent className="p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Услуга</span>
-                  <span className="font-medium">{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                  <span className="font-medium">
+                    {BOOKING_TYPES.find(t => t.value === selectedType)?.label}
+                    {withServiceAddon && (selectedType === "bath_only" ? " + Купель" : " + Баня")}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Дата</span>
