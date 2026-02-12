@@ -2515,6 +2515,44 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Update SPA booking
+  app.patch("/api/admin/spa-bookings/:id", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const { startTime, endTime, guestsCount, totalAmount, options, bookingType, spaResource } = req.body;
+      const existing = await storage.getSpaBooking(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Бронирование не найдено" });
+
+      const updates: any = {};
+      if (startTime) updates.startTime = startTime;
+      if (endTime) updates.endTime = endTime;
+      if (guestsCount !== undefined) updates.guestsCount = guestsCount;
+      if (bookingType) updates.bookingType = bookingType;
+      if (spaResource) updates.spaResource = spaResource;
+      if (options) updates.options = { ...existing.options, ...options };
+      
+      if (totalAmount !== undefined) {
+        updates.pricing = {
+          ...existing.pricing,
+          total: totalAmount,
+          base: totalAmount, // Simplify for manual override
+          discountAmount: 0,
+          discountPercent: 0
+        };
+      }
+
+      const updated = await storage.updateSpaBooking(req.params.id, updates);
+      
+      // Notify guest about changes
+      import("./telegram-bot").then(({ notifySpaBookingUpdated }) => {
+        notifySpaBookingUpdated(updated!.id).catch(console.error);
+      });
+
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Не удалось обновить бронирование" });
+    }
+  });
+
   // Owner: Apply discount to SPA booking
   app.post("/api/owner/spa-bookings/:id/discount", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {

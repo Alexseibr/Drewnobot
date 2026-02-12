@@ -1,3 +1,5 @@
+import { format, parseISO } from "date-fns";
+import { ru } from "date-fns/locale";
 import { storage } from "./storage";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -1667,6 +1669,43 @@ async function notifyAdminAboutSpaTemperature(bookingId: string, temperature: nu
     }
   } catch (error) {
     console.error("[Telegram Bot] Failed to notify admin about temperature:", error);
+  }
+}
+
+// Notify guest about booking updates
+export async function notifySpaBookingUpdated(bookingId: string): Promise<void> {
+  try {
+    const booking = await storage.getSpaBooking(bookingId);
+    if (!booking || !booking.customer?.telegramId) return;
+
+    const bookingTypeLabels: Record<string, string> = {
+      bath_only: "Баня",
+      tub_only: "Купель",
+      bath_with_tub: "Баня + Купель",
+      terrace_only: "Терраса",
+    };
+
+    const serviceType = bookingTypeLabels[booking.bookingType] || "СПА";
+    const formattedDate = format(parseISO(booking.date), "d MMMM yyyy", { locale: ru });
+
+    let message = `<b>Обновление бронирования</b>\n\n`;
+    message += `Администратор внёс изменения в ваше бронирование:\n\n`;
+    message += `Услуга: <b>${serviceType}</b>\n`;
+    message += `Дата: <b>${formattedDate}</b>\n`;
+    message += `Время: <b>${booking.startTime} - ${booking.endTime}</b>\n`;
+    message += `Гости: <b>${booking.guestsCount} чел.</b>\n`;
+    message += `Итого к оплате: <b>${booking.pricing.total} BYN</b>\n`;
+    
+    if (booking.pricing.discountPercent > 0) {
+      message += `Скидка: <b>${booking.pricing.discountPercent}%</b>\n`;
+    }
+
+    message += `\nЖдём вас! Если возникли вопросы, напишите администратору.`;
+
+    await sendMessage(parseInt(booking.customer.telegramId, 10), message);
+    console.log(`[Telegram Bot] Sent SPA update notification to guest ${booking.customer.telegramId}`);
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send SPA update notification:", error);
   }
 }
 

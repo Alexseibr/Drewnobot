@@ -346,6 +346,46 @@ export default function BookingsPage() {
     bath_with_tub: "СПА + Купель",
   };
 
+  const [editSpaDialogOpen, setEditSpaDialogOpen] = useState(false);
+  const [selectedBookingForEdit, setSelectedBookingForEdit] = useState<SpaBooking | null>(null);
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editGuestsCount, setEditGuestsCount] = useState("");
+  const [editTotalAmount, setEditTotalAmount] = useState("");
+
+  const updateSpaMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PATCH", `/api/admin/spa-bookings/${selectedBookingForEdit?.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      invalidateSpaQueries();
+      setEditSpaDialogOpen(false);
+      toast({ title: "Бронирование обновлено" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка обновления", variant: "destructive" });
+    },
+  });
+
+  const handleOpenEditDialog = (booking: SpaBooking) => {
+    setSelectedBookingForEdit(booking);
+    setEditStartTime(booking.startTime);
+    setEditEndTime(booking.endTime);
+    setEditGuestsCount(String(booking.guestsCount));
+    setEditTotalAmount(String(booking.pricing.total));
+    setEditSpaDialogOpen(true);
+  };
+
+  const handleUpdateBooking = () => {
+    updateSpaMutation.mutate({
+      startTime: editStartTime,
+      endTime: editEndTime,
+      guestsCount: parseInt(editGuestsCount),
+      totalAmount: parseInt(editTotalAmount),
+    });
+  };
+
   const renderSpaBookingCard = (booking: SpaBooking, showDate: boolean = false) => (
     <Card key={booking.id} className={booking.status === "pending_call" ? "border-status-pending/30" : ""}>
       <CardContent className="p-4">
@@ -402,6 +442,14 @@ export default function BookingsPage() {
               data-testid={`button-share-spa-${booking.id}`}
             >
               <Share2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleOpenEditDialog(booking)}
+              data-testid={`button-edit-spa-${booking.id}`}
+            >
+              <RefreshCw className="h-4 w-4" />
             </Button>
             {isOwner && booking.status !== "completed" && (
               <Button
@@ -756,6 +804,42 @@ export default function BookingsPage() {
           </TabsContent>
         </Tabs>
       </PageContainer>
+
+      {/* Edit Booking Dialog */}
+      <Dialog open={editSpaDialogOpen} onOpenChange={setEditSpaDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Редактировать бронирование</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Начало</Label>
+                <Input value={editStartTime} onChange={(e) => setEditStartTime(e.target.value)} placeholder="14:00" />
+              </div>
+              <div className="space-y-2">
+                <Label>Конец</Label>
+                <Input value={editEndTime} onChange={(e) => setEditEndTime(e.target.value)} placeholder="17:00" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Гости</Label>
+              <Input type="number" value={editGuestsCount} onChange={(e) => setEditGuestsCount(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Итоговая сумма (BYN)</Label>
+              <Input type="number" value={editTotalAmount} onChange={(e) => setEditTotalAmount(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSpaDialogOpen(false)}>Отмена</Button>
+            <Button onClick={handleUpdateBooking} disabled={updateSpaMutation.isPending}>
+              {updateSpaMutation.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={discountDialogOpen} onOpenChange={setDiscountDialogOpen}>
         <DialogContent>
