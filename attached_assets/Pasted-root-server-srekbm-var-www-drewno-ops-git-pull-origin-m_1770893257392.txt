@@ -1,0 +1,395 @@
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 3.54 KiB | 517.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   08d6bdf..79da22d  main       -> origin/main
+Updating 08d6bdf..79da22d
+Fast-forward
+ ...rewno-ops-git-pull-origin-m_1770892120070.txt | 81 ++++++++++++++++++++
+ server/telegram-bot.ts                           |  6 +-
+ 2 files changed, 85 insertions(+), 2 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-git-pull-origin-m_1770892120070.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 23.07s
+building server...
+
+  dist/index.cjs  1.5mb ⚠️
+
+⚡ Done in 833ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 39   │ online    │ 0%       │ 18.5mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 10[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o | [eWeLink] API returned error: 406 Authentication failed
+0|drewno-o | [eWeLink] API returned error: 406 Authentication failed
+0|drewno-o | [eWeLink] getCredentials failed, trying login...
+0|drewno-o | [eWeLink] Connection failed: TypeError: n.login is not a function
+0|drewno-o |     at sG (/var/www/drewno-ops/dist/index.cjs:70:215457)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o |     at async jy (/var/www/drewno-ops/dist/index.cjs:70:216008)
+0|drewno-o |     at async /var/www/drewno-ops/dist/index.cjs:247:56583
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | 1:30:08 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 1:30:08 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:30:08 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:30:08 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:30:08 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:30:08 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:30:08 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 1:30:08 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 1:30:08 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 1:30:08 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | [eWeLink] Attempting direct HTTP login...
+0|drewno-ops  | [eWeLink] Direct login response: {"error":400,"msg":"invalid appid","data":{}}
+0|drewno-ops  | 1:30:16 PM [express] POST /api/admin/gate/open 500 in 131ms:: {"error":"Authentication failed"}
+0|drewno-ops  | [eWeLink] Attempting direct HTTP login...
+0|drewno-ops  | [eWeLink] Direct login response: {"error":400,"msg":"invalid appid","data":{}}
+0|drewno-ops  | 1:30:18 PM [express] POST /api/admin/gate/open 500 in 42ms :: {"error":"Authentication failed"}
+^C
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 2.80 KiB | 477.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   79da22d..9013e30  main       -> origin/main
+Updating 79da22d..9013e30
+Fast-forward
+ ...rewno-ops-git-pull-origin-m_1770892222796.txt | 78 ++++++++++++++++++++
+ server/telegram-bot.ts                           |  5 +-
+ 2 files changed, 81 insertions(+), 2 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-git-pull-origin-m_1770892222796.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (5) ../node_modules/wouter/esm/index.js
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 23.49s
+building server...
+
+  dist/index.cjs  1.5mb ⚠️
+
+⚡ Done in 1097ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 40   │ online    │ 0%       │ 16.5mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 10[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o | [eWeLink] getCredentials failed, trying login...
+0|drewno-o | [eWeLink] Connection failed: TypeError: n.login is not a function
+0|drewno-o |     at sG (/var/www/drewno-ops/dist/index.cjs:70:215457)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o |     at async jy (/var/www/drewno-ops/dist/index.cjs:70:216008)
+0|drewno-o |     at async /var/www/drewno-ops/dist/index.cjs:247:56583
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | 1:32:24 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 1:32:24 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:32:24 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:32:24 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:32:24 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:32:24 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:32:24 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 1:32:24 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 1:32:24 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 1:32:24 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | [eWeLink] Attempting direct HTTP login...
+0|drewno-ops  | [eWeLink] Direct login response: {"error":400,"msg":"invalid appid","data":{}}
+0|drewno-ops  | 1:33:04 PM [express] POST /api/admin/gate/open 500 in 252ms:: {"error":"Authentication failed"}
+^C
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 3.09 KiB | 351.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   9013e30..0d74760  main       -> origin/main
+Updating 9013e30..0d74760
+Fast-forward
+ ...rewno-ops-git-pull-origin-m_1770892389076.txt | 153 +++++++++++++++++++
+ server/telegram-bot.ts                           |   6 +-
+ 2 files changed, 156 insertions(+), 3 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-git-pull-origin-m_1770892389076.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 22.91s
+building server...
+
+  dist/index.cjs  1.5mb ⚠️
+
+⚡ Done in 936ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 41   │ online    │ 0%       │ 18.4mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 10[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o | [eWeLink] getCredentials failed, trying login...
+0|drewno-o | [eWeLink] Connection failed: TypeError: n.login is not a function
+0|drewno-o |     at sG (/var/www/drewno-ops/dist/index.cjs:70:215457)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o |     at async jy (/var/www/drewno-ops/dist/index.cjs:70:216008)
+0|drewno-o |     at async /var/www/drewno-ops/dist/index.cjs:247:56583
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | 1:34:58 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 1:34:58 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:34:58 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:34:58 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:34:58 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:34:58 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:34:58 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 1:34:58 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 1:34:58 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 1:34:58 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-ops  | 1:35:09 PM [express] GET /api/ops/today 200 in 53ms :: {"tasks":[{"id":"3dcd44c9-e712-4e3f-bede-740c461b3360","date":"2026-02-12","type":"other","title":"Подготовка дров","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.088Z"},{"id":"af570403-ff4a-4d12-9cef-95e15c93fefd","date":"2026-02-12","type":"trash_prep","title":"Вынос мусора","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.098Z"},{"id":"add0247c-a1b7-4fdc-a66e-184f1aee4389","date":"2026-02-12","type":"other","title":"Утренний обход территории","checklist":["Проверка входа","Осмотр парковки","Проверка освещения"],"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.041Z"}],"cottageBookings":[],"bathBookings":[],"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"stats":{"checkInsToday":0,"checkOutsToday":0,"bathsToday":0,"openTasks":0,"cashBalance":16683}}
+0|drewno-ops  | 1:35:09 PM [express] GET /api/auth/me 200 in 7ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-ops  | 1:35:09 PM [express] GET /api/cash/shift/current 200 in 12ms :: {"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"transactions":[],"balance":0}
+0|drewno-ops  | [eWeLink] Attempting direct HTTP login...
+0|drewno-ops  | [eWeLink] Direct login response: {"error":400,"msg":"invalid appid","data":{}}
+0|drewno-ops  | 1:35:11 PM [express] POST /api/admin/gate/open 500 in 128ms:: {"error":"Authentication failed"}
+^C
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 3.97 KiB | 677.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   0d74760..4aa1229  main       -> origin/main
+Updating 0d74760..4aa1229
+Fast-forward
+ ...rewno-ops-git-pull-origin-m_1770892514702.txt | 233 +++++++++++++++++++
+ server/telegram-bot.ts                           |   3 +-
+ 2 files changed, 235 insertions(+), 1 deletion(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-git-pull-origin-m_1770892514702.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (5) ../node_modules/wouter/esm/index.js
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 21.70s
+building server...
+
+  dist/index.cjs  1.5mb ⚠️
+
+⚡ Done in 1795ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 42   │ online    │ 0%       │ 24.1mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 10[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o | [eWeLink] getCredentials failed, trying login...
+0|drewno-o | [eWeLink] Connection failed: TypeError: n.login is not a function
+0|drewno-o |     at sG (/var/www/drewno-ops/dist/index.cjs:70:215457)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o |     at async jy (/var/www/drewno-ops/dist/index.cjs:70:216008)
+0|drewno-o |     at async /var/www/drewno-ops/dist/index.cjs:247:56583
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | 1:36:39 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:36:39 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:36:39 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:36:39 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:36:39 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:36:39 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 1:36:39 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 1:36:39 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 1:36:39 PM [scheduler] [ThermostatScheduler] Houses initialized
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+
+0|drewno-ops  | 1:44:44 PM [express] GET /api/ops/today 200 in 57ms :: {"tasks":[{"id":"3dcd44c9-e712-4e3f-bede-740c461b3360","date":"2026-02-12","type":"other","title":"Подготовка дров","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.088Z"},{"id":"af570403-ff4a-4d12-9cef-95e15c93fefd","date":"2026-02-12","type":"trash_prep","title":"Вынос мусора","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.098Z"},{"id":"add0247c-a1b7-4fdc-a66e-184f1aee4389","date":"2026-02-12","type":"other","title":"Утренний обход территории","checklist":["Проверка входа","Осмотр парковки","Проверка освещения"],"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.041Z"}],"cottageBookings":[],"bathBookings":[],"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"stats":{"checkInsToday":0,"checkOutsToday":0,"bathsToday":0,"openTasks":0,"cashBalance":16683}}
+0|drewno-ops  | 1:44:45 PM [express] GET /api/cash/shift/current 200 in 7ms:: {"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"transactions":[],"balance":0}
+0|drewno-ops  | 1:44:45 PM [express] GET /api/auth/me 200 in 6ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-ops  | [eWeLink] Attempting direct HTTP login...
+0|drewno-ops  | [eWeLink] Direct login response: {"error":400,"msg":"invalid appid","data":{}}
+0|drewno-ops  | 1:44:46 PM [express] POST /api/admin/gate/open 500 in 174ms:: {"error":"Authentication failed"}
+0|drewno-ops  | [eWeLink] Attempting direct HTTP login...
+0|drewno-ops  | [eWeLink] Direct login response: {"error":400,"msg":"invalid appid","data":{}}
+0|drewno-ops  | 1:44:51 PM [express] POST /api/admin/gate/open 500 in 113ms:: {"error":"Authentication failed"}
+0|drewno-ops  | [Telegram Bot] Checking for SPA access instructions to send...
+^C
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 4.40 KiB | 450.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   4aa1229..a669c87  main       -> origin/main
+Updating 4aa1229..a669c87
+Fast-forward
+ ...rewno-ops-git-pull-origin-m_1770893094822.txt | 315 +++++++++++++++++++
+ server/telegram-bot.ts                           |  12 +-
+ 2 files changed, 323 insertions(+), 4 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-git-pull-origin-m_1770893094822.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 23.52s
+building server...
+
+  dist/index.cjs  1.5mb ⚠️
+
+⚡ Done in 1020ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 43   │ online    │ 0%       │ 18.4mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops --lines 10[TAILING] Tailing last 10 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 10 lines:
+0|drewno-o | [eWeLink] getCredentials failed, trying login...
+0|drewno-o | [eWeLink] Connection failed: TypeError: n.login is not a function
+0|drewno-o |     at sG (/var/www/drewno-ops/dist/index.cjs:70:215457)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o |     at async jy (/var/www/drewno-ops/dist/index.cjs:70:216008)
+0|drewno-o |     at async /var/www/drewno-ops/dist/index.cjs:247:56583
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 10 lines:
+0|drewno-o | 1:47:04 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 1:47:04 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:47:04 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:47:04 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:47:04 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:47:04 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:47:04 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 1:47:04 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 1:47:04 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 1:47:04 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | 1:47:28 PM [express] GET /api/ops/today 200 in 64ms :: {"tasks":[{"id":"3dcd44c9-e712-4e3f-bede-740c461b3360","date":"2026-02-12","type":"other","title":"Подготовка дров","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.088Z"},{"id":"af570403-ff4a-4d12-9cef-95e15c93fefd","date":"2026-02-12","type":"trash_prep","title":"Вынос мусора","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.098Z"},{"id":"add0247c-a1b7-4fdc-a66e-184f1aee4389","date":"2026-02-12","type":"other","title":"Утренний обход территории","checklist":["Проверка входа","Осмотр парковки","Проверка освещения"],"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.041Z"}],"cottageBookings":[],"bathBookings":[],"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"stats":{"checkInsToday":0,"checkOutsToday":0,"bathsToday":0,"openTasks":0,"cashBalance":16683}}
+0|drewno-ops  | 1:47:28 PM [express] GET /api/cash/shift/current 200 in 20ms :: {"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"transactions":[],"balance":0}
+0|drewno-ops  | 1:47:28 PM [express] GET /api/auth/me 200 in 21ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-ops  | [eWeLink] Attempting direct HTTP login...
+0|drewno-ops  | [eWeLink] Direct login response: {"error":400,"msg":"invalid appid","data":{}}
+0|drewno-ops  | 1:47:30 PM [express] POST /api/admin/gate/open 500 in 148ms:: {"error":"Authentication failed"}

@@ -37,10 +37,6 @@ async function loginDirect() {
       countryCode: "+375",
     });
 
-    // SIGNATURE CALCULATION:
-    // Some implementations use the appsecret directly as HMAC key
-    // while others use it as a hex-encoded or raw buffer.
-    // Based on eWeLink v2 spec, it's often HMAC-SHA256(data, appsecret)
     const sign = crypto
       .createHmac("sha256", appsecret)
       .update(data)
