@@ -2,7 +2,7 @@ import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 import { storage } from "./storage";
 
-import EWeLink from "ewelink-api-next";
+import * as EWeLink from "ewelink-api-next";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -22,7 +22,15 @@ async function getEwelinkClient() {
   
   try {
     // Correct way to initialize ewelink-api-next for WebAPI
-    ewelinkClient = new EWeLink.WebAPI({
+    // Using default export if available, or the module itself
+    const WebAPI = (EWeLink as any).default?.WebAPI || (EWeLink as any).WebAPI;
+    
+    if (!WebAPI) {
+      console.error("[eWeLink] WebAPI not found in module");
+      return null;
+    }
+
+    ewelinkClient = new WebAPI({
       region,
       email,
       password,
