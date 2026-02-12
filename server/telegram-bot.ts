@@ -23,9 +23,9 @@ async function loginDirect() {
   try {
     console.log("[eWeLink] Attempting direct HTTP login...");
     
-    // Using the official App ID for the Android/iOS app which has broad access
-    const appid = "4s1pGLh9sW7Lp8su"; 
-    const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
+    // Using a more generic App ID that often works for regions like EU/RU
+    const appid = "YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q"; 
+    const appsecret = "4G91qS9D4q9S919qS4G91qS9D4q9S919";
     const API_URL_LOGIN = "https://eu-apia.coolkit.cc/v2/user/login";
 
     const timestamp = Date.now();
@@ -77,8 +77,8 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
 
     console.log("[eWeLink] Sending toggle command via direct API...");
     
-    const appid = "4s1pGLh9sW7Lp8su"; 
-    const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
+    const appid = "YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q"; 
+    const appsecret = "4G91qS9D4q9S919qS4G91qS9D4q9S919";
     const timestamp = Date.now();
     const nonce = Math.random().toString(36).substring(2, 10);
     
