@@ -4141,20 +4141,6 @@ export async function registerRoutes(
       const user = (req as any).user;
       const date = req.query.date as string | undefined;
       
-      // Admin can see today and yesterday's logs
-      if (user.role === "ADMIN") {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const todayStr = today.toISOString().slice(0, 10);
-        const yesterdayStr = yesterday.toISOString().slice(0, 10);
-        
-        const todayLogs = await storage.getCleaningLogs(todayStr);
-        const yesterdayLogs = await storage.getCleaningLogs(yesterdayStr);
-        return res.json([...todayLogs, ...yesterdayLogs]);
-      }
-      
-      // Owner can see any date or all
       const logs = await storage.getCleaningLogs(date);
       res.json(logs);
     } catch (error) {
@@ -4179,19 +4165,6 @@ export async function registerRoutes(
       const user = (req as any).user;
       const { date, unitCode, workerId, workerName, rate } = req.body;
       
-      // Admin can only create for today or yesterday
-      if (user.role === "ADMIN") {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const todayStr = today.toISOString().slice(0, 10);
-        const yesterdayStr = yesterday.toISOString().slice(0, 10);
-        
-        if (date !== todayStr && date !== yesterdayStr) {
-          return res.status(403).json({ error: "Можно вносить только за сегодня или вчера" });
-        }
-      }
-      
       if (!date || !unitCode || !workerId || !workerName || rate === undefined) {
         return res.status(400).json({ error: "Все поля обязательны" });
       }
@@ -4210,8 +4183,8 @@ export async function registerRoutes(
     }
   });
 
-  // Delete cleaning log (Owner/Super Admin only - records are immutable for admins)
-  app.delete("/api/admin/cleaning-logs/:id", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+  // Delete cleaning log
+  app.delete("/api/admin/cleaning-logs/:id", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       await storage.deleteCleaningLog(req.params.id);
       res.json({ ok: true });
@@ -4227,19 +4200,6 @@ export async function registerRoutes(
     try {
       const user = (req as any).user;
       const date = req.query.date as string | undefined;
-      
-      // Admin can see today and yesterday's logs
-      if (user.role === "ADMIN") {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const todayStr = today.toISOString().slice(0, 10);
-        const yesterdayStr = yesterday.toISOString().slice(0, 10);
-        
-        const todayLogs = await storage.getHourlyLogs(todayStr);
-        const yesterdayLogs = await storage.getHourlyLogs(yesterdayStr);
-        return res.json([...todayLogs, ...yesterdayLogs]);
-      }
       
       const logs = await storage.getHourlyLogs(date);
       res.json(logs);
@@ -4265,19 +4225,6 @@ export async function registerRoutes(
       const user = (req as any).user;
       const { date, workerId, workerName, workType, startTime, endTime, hourlyRate } = req.body;
       
-      // Admin can only create for today or yesterday
-      if (user.role === "ADMIN") {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const todayStr = today.toISOString().slice(0, 10);
-        const yesterdayStr = yesterday.toISOString().slice(0, 10);
-        
-        if (date !== todayStr && date !== yesterdayStr) {
-          return res.status(403).json({ error: "Можно вносить только за сегодня или вчера" });
-        }
-      }
-      
       if (!date || !workerId || !workerName || !workType || !startTime || !endTime || hourlyRate === undefined) {
         return res.status(400).json({ error: "Все поля обязательны" });
       }
@@ -4298,8 +4245,8 @@ export async function registerRoutes(
     }
   });
 
-  // Delete hourly log (Owner/Super Admin only - records are immutable for admins)
-  app.delete("/api/admin/hourly-logs/:id", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+  // Delete hourly log
+  app.delete("/api/admin/hourly-logs/:id", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {
       await storage.deleteHourlyLog(req.params.id);
       res.json({ ok: true });

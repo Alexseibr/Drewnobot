@@ -140,20 +140,61 @@ export default function StaffPage() {
   const totalHourlyAmount = hourlyLogs.reduce((sum, log) => sum + log.totalAmount, 0);
   const totalHourlyMinutes = hourlyLogs.reduce((sum, log) => sum + log.durationMinutes, 0);
 
+  const deleteCleaningMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/cleaning-logs/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cleaning-logs"] });
+      toast({ title: "Запись удалена" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Ошибка удаления", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteHourlyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/hourly-logs/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/hourly-logs"] });
+      toast({ title: "Запись удалена" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Ошибка удаления", description: error.message, variant: "destructive" });
+    },
+  });
+
   const renderCleaningLog = (log: CleaningLog) => (
-    <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+    <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg group">
       <div>
         <div className="font-medium">{log.workerName}</div>
         <div className="text-sm text-muted-foreground">
           {CLEANING_UNITS.find(u => u.code === log.unitCode)?.label || log.unitCode}
         </div>
       </div>
-      <span className="font-medium">{log.rate} BYN</span>
+      <div className="flex items-center gap-3">
+        <span className="font-medium">{log.rate} BYN</span>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => {
+            if (confirm("Удалить эту запись?")) {
+              deleteCleaningMutation.mutate(log.id);
+            }
+          }}
+          disabled={deleteCleaningMutation.isPending}
+        >
+          <Plus className="h-4 w-4 rotate-45" />
+        </Button>
+      </div>
     </div>
   );
 
   const renderHourlyLog = (log: HourlyLog) => (
-    <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+    <div key={log.id} className="flex items-center justify-between p-3 bg-muted rounded-lg group">
       <div>
         <div className="font-medium">{log.workerName}</div>
         <div className="text-sm text-muted-foreground">
@@ -163,7 +204,22 @@ export default function StaffPage() {
           {log.startTime} - {log.endTime} ({Math.floor(log.durationMinutes / 60)}ч {log.durationMinutes % 60}м)
         </div>
       </div>
-      <span className="font-medium">{log.totalAmount.toFixed(2)} BYN</span>
+      <div className="flex items-center gap-3">
+        <span className="font-medium">{log.totalAmount.toFixed(2)} BYN</span>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => {
+            if (confirm("Удалить эту запись?")) {
+              deleteHourlyMutation.mutate(log.id);
+            }
+          }}
+          disabled={deleteHourlyMutation.isPending}
+        >
+          <Plus className="h-4 w-4 rotate-45" />
+        </Button>
+      </div>
     </div>
   );
 
