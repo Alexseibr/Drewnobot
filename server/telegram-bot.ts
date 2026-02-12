@@ -21,12 +21,21 @@ async function getEwelinkClient() {
   }
   
   try {
-    // Standard initialization for commonjs environments
-    const ewelink = (EWeLink as any).default || EWeLink;
+    // Robust detection of the WebAPI constructor for ewelink-api-next
+    const WebAPI = (EWeLink as any).WebAPI || (EWeLink as any).default?.WebAPI || (EWeLink as any).default || EWeLink;
     
-    ewelinkClient = new ewelink(email, password, region);
+    if (typeof WebAPI !== 'function') {
+      console.error("[eWeLink] WebAPI constructor not found", { type: typeof WebAPI });
+      return null;
+    }
+
+    ewelinkClient = new WebAPI({
+      region,
+      email,
+      password,
+    });
     
-    console.log("[eWeLink] Client initialized with credentials");
+    console.log("[eWeLink] Client initialized");
     return ewelinkClient;
   } catch (error) {
     console.error("[eWeLink] Login failed:", error);
@@ -51,7 +60,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     const client = await getEwelinkClient();
     if (!client) return { success: false, error: "Failed to connect to eWeLink" };
     
-    // Simplified command based on ewelink-api-next documentation for switch devices
+    // Final attempt using standard switch toggle format for ewelink-api-next
     console.log("[eWeLink] Sending switch ON command...");
     const response = await client.device.setThingStatus({
       type: 1, // device
@@ -63,12 +72,13 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     
     console.log("[eWeLink] Response from API:", JSON.stringify(response));
     
+    // Check for common error patterns
     if (response?.error === 0 || response?.status === 200 || !response?.error) {
       console.log("[eWeLink] Gate open command sent successfully");
       return { success: true };
     } else {
-      console.error("[eWeLink] API returned error:", response?.error);
-      return { success: false, error: `API Error: ${response?.error}` };
+      console.error("[eWeLink] API returned error:", response?.error, response?.msg);
+      return { success: false, error: `API Error: ${response?.error} - ${response?.msg}` };
     }
   } catch (error) {
     console.error("[eWeLink] Failed to open gate:", error);

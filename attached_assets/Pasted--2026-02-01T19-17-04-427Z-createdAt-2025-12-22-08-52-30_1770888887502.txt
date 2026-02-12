@@ -1,0 +1,98 @@
+"2026-02-01T19:17:04.427Z","createdAt":"2025-12-22 08:52:30.650697+03"}]^C
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 3.63 KiB | 620.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   069109c..aaf7e94  main       -> origin/main
+Updating 069109c..aaf7e94
+Fast-forward
+ ...w-drewno-ops-git-pull-origi_1770888704519.txt | 95 ++++++++++++++++++++
+ server/telegram-bot.ts                           | 25 ++----
+ 2 files changed, 100 insertions(+), 20 deletions(-)
+ create mode 100644 attached_assets/Pasted--C-root-server-srekbm-var-www-drewno-ops-git-pull-origi_1770888704519.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 24.08s
+building server...
+
+  dist/index.cjs  1.4mb ⚠️
+
+⚡ Done in 888ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 20   │ online    │ 0%       │ 18.5mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o | [eWeLink] Login failed: TypeError: Li.login is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215327)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:215858)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | [eWeLink] Login failed: TypeError: Li.login is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215327)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:215858)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | [eWeLink] Login failed: TypeError: Li.login is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215325)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:215876)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 12:34:10 PM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 12:34:10 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 12:34:10 PM [scheduler]   - Notifications:
+0|drewno-o | 12:34:10 PM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 12:34:10 PM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 12:34:10 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 12:34:10 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 12:34:10 PM [scheduler]   - Thermostat:
+0|drewno-o | 12:34:10 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 12:34:10 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 12:34:10 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 12:34:10 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 12:34:10 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 12:34:10 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 12:34:10 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | 12:34:24 PM [express] GET /api/admin/bookings/upcoming 200 in 34ms :: {"cottageBookings":[],"bathBookings":[]}
+0|drewno-ops  | 12:34:25 PM [express] GET /api/admin/spa-bookings/upcoming 200 in 5ms :: [{"id":"c989c19e-3bae-4315-b924-ded67fd482ee","spaResource":"SPA2","bookingType":"bath_with_tub","date":"2026-02-13","startTime":"17:00","endTime":"20:00","durationHours":3,"guestsCount":2,"customer":{"phone":"375298971111","fullName":"А.А","telegramId":"374243315"},"comment":"Для коли от Вадима ","options":{"tub":"large","grill":false,"terrace":false,"charcoal":false},"pricing":{"base":251,"total":251,"discountAmount":0,"discountPercent":0},"payments":{"cashPaid":0,"eripPaid":0},"status":"awaiting_prepayment","createdAt":"2026-02-10T10:31:12.191Z"},{"id":"2966dde9-ad5a-497b-a216-de82ef6ffc03","spaResource":"SPA1","bookingType":"bath_with_tub","date":"2026-02-16","startTime":"11:00","endTime":"14:00","durationHours":3,"guestsCount":4,"customer":{"phone":"375295244361","fullName":"R…Z","telegramId":"1459606456"},"options":{"tub":"large","grill":false,"terrace":false,"charcoal":false},"pricing":{"base":330,"total":330,"discountAmount":0,"discountPercent":0},"payments":{"cashPaid":0,"eripPaid":0},"status":"awaiting_prepayment","createdAt":"2026-02-12T06:58:30.033Z"},{"id":"8ee2dd9d-398c-44f7-84a7-234d94fc3845","spaResource":"SPA1","bookingType":"tub_only","date":"2026-02-16","startTime":"18:00","endTime":"22:00","durationHours":4,"guestsCount":4,"customer":{"phone":"375295244361","fullName":"R…Z","telegramId":"1459606456"},"options":{"tub":"small","grill":false,"terrace":false,"charcoal":false},"pricing":{"base":150,"total":150,"discountAmount":0,"discountPercent":0},"payments":{"cashPaid":0,"eripPaid":0},"status":"cancelled","createdAt":"2026-02-12T06:53:38.684Z"},{"id":"68b2f9f1-d8b8-46e9-add7-1cb7e646b97b","spaResource":"SPA1","bookingType":"tub_only","date":"2026-02-28","startTime":"16:00","endTime":"19:00","durationHours":3,"guestsCount":2,"customer":{"phone":"375336172984","fullName":"Валентина","telegramId":"7511011608"},"comment":"Для себя","options":{"tub":"small","grill":false,"terrace":false,"charcoal":false},"pricing":{"base":150,"total":150,"discountAmount":0,"discountPercent":0},"payments":{"cashPaid":0,"eripPaid":0},"status":"awaiting_prepayment","createdAt":"2026-02-10T08:23:19.676Z"}]
+0|drewno-ops  | 12:34:25 PM [express] GET /api/ops/spa-calendar 200 in 8ms :: {"year":2026,"month":2,"dates":{"2026-02-16":{"spa1":true,"spa2":false,"spa1Count":1,"spa2Count":0},"2026-02-13":{"spa1":false,"spa2":true,"spa1Count":0,"spa2Count":1},"2026-02-28":{"spa1":true,"spa2":false,"spa1Count":1,"spa2Count":0},"2026-02-02":{"spa1":true,"spa2":false,"spa1Count":1,"spa2Count":0}}}
+0|drewno-ops  | 12:34:25 PM [express] GET /api/ops/spa-bookings/by-date 200in 7ms :: []
+0|drewno-ops  | 12:34:39 PM [express] GET /api/ops/today 200 in 74ms :: {"tasks":[{"id":"3dcd44c9-e712-4e3f-bede-740c461b3360","date":"2026-02-12","type":"other","title":"Подготовка дров","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.088Z"},{"id":"af570403-ff4a-4d12-9cef-95e15c93fefd","date":"2026-02-12","type":"trash_prep","title":"Вынос мусора","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.098Z"},{"id":"add0247c-a1b7-4fdc-a66e-184f1aee4389","date":"2026-02-12","type":"other","title":"Утреннийобход территории","checklist":["Проверка входа","Осмотр парковки","Проверкаосвещения"],"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.041Z"}],"cottageBookings":[],"bathBookings":[],"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"stats":{"checkInsToday":0,"checkOutsToday":0,"bathsToday":0,"openTasks":0,"cashBalance":16683}}
+0|drewno-ops  | 12:34:39 PM [express] GET /api/auth/me 200 in 6ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-ops  | 12:34:39 PM [express] GET /api/cash/shift/current 200 in 14ms :: {"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"transactions":[],"balance":0}
+0|drewno-ops  | [eWeLink] Device ID length: 10
+0|drewno-ops  | [eWeLink] Device ID prefix: 100
+0|drewno-ops  | [eWeLink] Login failed: TypeError: n is not a constructor
+0|drewno-ops  |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215200)
+0|drewno-ops  |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:215739)
+0|drewno-ops  |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-ops  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-ops  | 12:34:42 PM [express] POST /api/admin/gate/open 500 in 10ms:: {"error":"Failed to connect to eWeLink"}
