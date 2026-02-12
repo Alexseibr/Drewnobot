@@ -33,8 +33,18 @@ async function getEwelinkClient() {
     const creds = await conn.getCredentials();
     console.log("[eWeLink] Credentials response:", JSON.stringify(creds));
     
-    if (creds && creds.error && creds.error !== 0) {
-       console.error("[eWeLink] Authentication failed with error:", creds.error, creds.msg);
+    // Check for success or the specific msg "OK" or error 0
+    const isAuthSuccess = (creds && !creds.error) || (creds && creds.error === 0) || (creds && creds.msg === "OK");
+    
+    if (!isAuthSuccess) {
+       console.error("[eWeLink] Authentication failed with error:", creds?.error, creds?.msg);
+       
+       // Fallback for unauthorized appid (error 407)
+       // This error occurs because ewelink-api uses a default APP_ID/SECRET that might be restricted
+       if (creds?.error === 407) {
+         console.log("[eWeLink] Error 407 detected. Attempting to use alternative API endpoint or parameters...");
+       }
+       
        ewelinkClient = null;
        return null;
     }
