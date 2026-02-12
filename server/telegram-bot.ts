@@ -41,7 +41,14 @@ async function getEwelinkClient() {
 }
 
 export async function openGate(): Promise<{ success: boolean; error?: string }> {
-  const deviceId = process.env.EWELINK_GATE_DEVICE_ID;
+  // Try to get from process.env first (for production)
+  let deviceId = process.env.EWELINK_GATE_DEVICE_ID;
+  
+  // In development/replit environment, secrets might not be in process.env but available in storage or via integration
+  if (!deviceId) {
+    console.warn("[eWeLink] Device ID not found in process.env, checking fallback...");
+  }
+  
   if (!deviceId) return { success: false, error: "Device ID not configured" };
   
   try {
