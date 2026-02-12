@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import * as dotenv from "dotenv";
+import dotenv from "dotenv";
 import path from "path";
 
 // Load environment variables from .env file
