@@ -1628,10 +1628,11 @@ export async function sendSpaAccessInstructions(): Promise<void> {
         message += `Начало: <b>${booking.startTime}</b>\n\n`;
         message += `<b>Как попасть:</b>\n`;
         message += `Код на воротах: <code>4444#</code>\n\n`;
+        message += `<b>Местоположение:</b>\n`;
+        message += `<a href="https://yandex.by/maps/-/CHAbU-Yk">Яндекс Карты (Открыть)</a>\n\n`;
         message += `<b>Контакты администратора:</b>\n`;
         message += `Телефон: +375 29 123-45-67\n`;
         message += `Telegram: @village_drewno_admin\n\n`;
-        message += `Если мангал - мы принесём его за 30 минут до начала.\n`;
         message += `Приятного отдыха!`;
         
         await sendMessage(parseInt(telegramId, 10), message);
@@ -1672,6 +1673,35 @@ async function notifyAdminAboutSpaTemperature(bookingId: string, temperature: nu
   }
 }
 
+// Notify admins about new SPA booking (only if it's confirmed or pending)
+export async function notifySpaBookingCreated(bookingId: string): Promise<void> {
+  try {
+    const booking = await storage.getSpaBooking(bookingId);
+    if (!booking) return;
+
+    const typeLabels: Record<string, string> = {
+      bath_only: "Баня",
+      tub_only: "Купель",
+      bath_with_tub: "Баня + Купель",
+      terrace_only: "Терраса",
+    };
+    const type = typeLabels[booking.bookingType] || "СПА";
+    
+    await notifyAdmins(
+      `<b>Новое бронирование SPA</b>\n\n` +
+      `Услуга: <b>${type}</b>\n` +
+      `Ресурс: ${booking.spaResource}\n` +
+      `Дата: ${booking.date}\n` +
+      `Время: ${booking.startTime} - ${booking.endTime}\n` +
+      `Гость: ${booking.customer.fullName}\n` +
+      `Телефон: ${booking.customer.phone}`,
+      { deepLink: `/ops/bookings` }
+    );
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to notify admins about new SPA booking:", error);
+  }
+}
+
 // Notify guest about booking updates
 export async function notifySpaBookingUpdated(bookingId: string): Promise<void> {
   try {
@@ -1706,6 +1736,87 @@ export async function notifySpaBookingUpdated(bookingId: string): Promise<void> 
     console.log(`[Telegram Bot] Sent SPA update notification to guest ${booking.customer.telegramId}`);
   } catch (error) {
     console.error("[Telegram Bot] Failed to send SPA update notification:", error);
+  }
+}
+
+// Morning reminder to guests
+export async function sendSpaMorningReminders(): Promise<void> {
+  console.log("[Telegram Bot] Sending morning reminders to guests...");
+  try {
+    const now = new Date();
+    const today = now.toLocaleString("sv-SE", { timeZone: "Europe/Minsk" }).split(" ")[0];
+    const bookings = await storage.getSpaBookingsForDate(today);
+    const active = bookings.filter(b => b.status !== "cancelled" && b.status !== "expired" && b.customer?.telegramId);
+
+    const bookingTypeLabels: Record<string, string> = {
+      bath_only: "Баня",
+      tub_only: "Купель",
+      bath_with_tub: "Баня + Купель",
+      terrace_only: "Терраса",
+    };
+
+    for (const booking of active) {
+      const serviceType = bookingTypeLabels[booking.bookingType] || "СПА";
+      let message = `<b>Доброе утро! Напоминаем о вашем бронировании сегодня</b>\n\n`;
+      message += `Услуга: <b>${serviceType}</b>\n`;
+      message += `Время: <b>${booking.startTime} - ${booking.endTime}</b>\n`;
+      message += `Гости: <b>${booking.guestsCount} чел.</b>\n\n`;
+      message += `Ждём вас!`;
+
+      await sendMessage(parseInt(booking.customer.telegramId!, 10), message);
+    }
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send guest morning reminders:", error);
+  }
+}
+
+// Evening summary for admins for tomorrow
+export async function sendAdminSpaScheduleSummary(forTomorrow: boolean = true): Promise<void> {
+  try {
+    const targetDate = new Date();
+    if (forTomorrow) targetDate.setDate(targetDate.getDate() + 1);
+    const dateStr = targetDate.toLocaleString("sv-SE", { timeZone: "Europe/Minsk" }).split(" ")[0];
+    
+    const bookings = await storage.getSpaBookingsForDate(dateStr);
+    const active = bookings.filter(b => b.status !== "cancelled" && b.status !== "expired");
+    
+    // Check if there are any bath/tub bookings specifically
+    const bathBookings = active.filter(b => 
+      b.bookingType === "bath_only" || 
+      b.bookingType === "tub_only" || 
+      b.bookingType === "bath_with_tub"
+    );
+
+    if (bathBookings.length === 0) return;
+
+    const title = forTomorrow ? "<b>Бани и купели на завтра:</b>" : "<b>Бани и купели на сегодня:</b>";
+    let message = `${title}\n\n`;
+
+    const bookingTypeLabels: Record<string, string> = {
+      bath_only: "Баня",
+      tub_only: "Купель",
+      bath_with_tub: "Баня + Купель",
+      terrace_only: "Терраса",
+    };
+
+    bathBookings.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    for (const b of bathBookings) {
+      const type = bookingTypeLabels[b.bookingType] || "СПА";
+      message += `• ${b.startTime}-${b.endTime} | ${b.spaResource} | <b>${type}</b> | ${b.guestsCount} чел.\n`;
+    }
+
+    const admins = await storage.getStaffUsers();
+    const activeAdmins = admins.filter(a => 
+      (a.role === "ADMIN" || a.role === "OWNER" || a.role === "SUPER_ADMIN") && 
+      a.isActive && a.telegramId
+    );
+
+    for (const admin of activeAdmins) {
+      await sendMessage(parseInt(admin.telegramId!, 10), message);
+    }
+  } catch (error) {
+    console.error("[Telegram Bot] Failed to send admin schedule summary:", error);
   }
 }
 
