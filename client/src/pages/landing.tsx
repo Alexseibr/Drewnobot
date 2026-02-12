@@ -105,145 +105,142 @@ export default function LandingPage() {
           </div>
 
           {isStaff && (
-            <div className="pt-8 border-t space-y-4">
-              <h2 className="text-lg font-semibold">Панель управления</h2>
+            <div className="pt-8 border-t space-y-6">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-xl font-bold tracking-tight">Панель управления</h2>
+                <Badge variant="outline" className="font-mono text-[10px] uppercase opacity-50">Staff Only</Badge>
+              </div>
               
-              {hasRole("ADMIN", "OWNER", "SUPER_ADMIN") && (
-                <Card 
-                  className="hover-elevate cursor-pointer"
-                  onClick={() => setLocation("/ops")}
-                  data-testid="card-ops"
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-full bg-primary/10 p-3">
-                        <Briefcase className="h-6 w-6 text-primary" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 1. Операционная панель (для всех кроме инструкторов) */}
+                {hasRole("ADMIN", "OWNER", "SUPER_ADMIN") && (
+                  <Card 
+                    className="hover-elevate cursor-pointer border border-primary/5 bg-card/50 backdrop-blur-sm"
+                    onClick={() => setLocation("/ops")}
+                    data-testid="card-ops"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-primary/10 p-2.5">
+                          <Briefcase className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-sm">Операции</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            Брони, касса и задачи
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">Операционная панель</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Управление бронями, кассой и задачами
-                        </p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                )}
 
-              {hasRole("INSTRUCTOR") && (
-                <Card 
-                  className="hover-elevate cursor-pointer"
-                  onClick={() => setLocation("/instructor")}
-                  data-testid="card-instructor"
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-full bg-status-confirmed/10 p-3">
-                        <Bike className="h-6 w-6 text-status-confirmed" />
+                {/* 2. Квадроциклы (только для инструкторов) */}
+                {hasRole("INSTRUCTOR") && (
+                  <Card 
+                    className="hover-elevate cursor-pointer border border-status-confirmed/5 bg-card/50 backdrop-blur-sm"
+                    onClick={() => setLocation("/instructor")}
+                    data-testid="card-instructor"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-status-confirmed/10 p-2.5">
+                          <Bike className="h-5 w-5 text-status-confirmed" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-sm">Инструктор</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            Сеансы и расписание
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">Расписание инструктора</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Управление сеансами квадроциклов
-                        </p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                )}
 
-              {hasRole("OWNER", "SUPER_ADMIN") && (
-                <Card 
-                  className="hover-elevate cursor-pointer"
-                  onClick={() => setLocation("/owner/analytics")}
-                  data-testid="card-analytics"
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-full bg-status-awaiting/10 p-3">
-                        <BarChart3 className="h-6 w-6 text-status-awaiting" />
+                {/* 3. Аналитика (Владелец и Выше) */}
+                {hasRole("OWNER", "SUPER_ADMIN") && (
+                  <Card 
+                    className="hover-elevate cursor-pointer border border-status-awaiting/5 bg-card/50 backdrop-blur-sm"
+                    onClick={() => setLocation("/owner/analytics")}
+                    data-testid="card-analytics"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-status-awaiting/10 p-2.5">
+                          <BarChart3 className="h-5 w-5 text-status-awaiting" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-sm">Аналитика</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            Доходы и статистика
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">Аналитика</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Статистика и отчёты
-                        </p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                )}
 
+                {/* 4. Настройки персонала (Владелец и Выше) */}
+                {hasRole("OWNER", "SUPER_ADMIN") && (
+                  <Card 
+                    className="hover-elevate cursor-pointer border border-status-confirmed/5 bg-card/50 backdrop-blur-sm"
+                    onClick={() => setLocation("/owner/staff-settings")}
+                    data-testid="card-staff-settings"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-status-confirmed/10 p-2.5">
+                          <UserCog className="h-5 w-5 text-status-confirmed" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-sm">Персонал</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            Уборщики и ставки
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Секция системных настроек для Супер-Админа */}
               {isSuperAdmin && (
-                <Card 
-                  className="hover-elevate cursor-pointer"
-                  onClick={() => setLocation("/admin/staff")}
-                  data-testid="card-staff-management"
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-full bg-destructive/10 p-3">
-                        <Shield className="h-6 w-6 text-destructive" />
+                <div className="space-y-3 pt-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Система</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Button 
+                      variant="outline" 
+                      className="justify-start h-auto py-3 px-4 bg-destructive/5 border-destructive/10 hover:bg-destructive/10 hover:border-destructive/20 text-destructive"
+                      onClick={() => setLocation("/admin/staff")}
+                      data-testid="button-staff-management"
+                    >
+                      <Shield className="h-4 w-4 mr-3" />
+                      <div className="text-left">
+                        <div className="text-sm font-bold">Доступы</div>
+                        <div className="text-[10px] opacity-70">Роли сотрудников</div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">Управление сотрудниками</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Назначение ролей и прав доступа
-                        </p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+                    </Button>
 
-              {hasRole("OWNER", "SUPER_ADMIN") && (
-                <Card 
-                  className="hover-elevate cursor-pointer"
-                  onClick={() => setLocation("/owner/staff-settings")}
-                  data-testid="card-staff-settings"
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-full bg-status-confirmed/10 p-3">
-                        <UserCog className="h-6 w-6 text-status-confirmed" />
+                    <Button 
+                      variant="outline" 
+                      className="justify-start h-auto py-3 px-4 bg-primary/5 border-primary/10 hover:bg-primary/10 hover:border-primary/20 text-primary"
+                      onClick={() => setLocation("/owner/notifications")}
+                      data-testid="button-notifications"
+                    >
+                      <Bell className="h-4 w-4 mr-3" />
+                      <div className="text-left">
+                        <div className="text-sm font-bold">Уведомления</div>
+                        <div className="text-[10px] opacity-70">Cron и расписание</div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">Настройки персонала</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Управление уборщиками и ставками
-                        </p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {isSuperAdmin && (
-                <Card 
-                  className="hover-elevate cursor-pointer"
-                  onClick={() => setLocation("/owner/notifications")}
-                  data-testid="card-notifications"
-                >
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-full bg-primary/10 p-3">
-                        <Bell className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">Управление уведомлениями</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Настройка расписания и типов уведомлений
-                        </p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           )}
