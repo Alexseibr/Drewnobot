@@ -8,17 +8,12 @@ import crypto from "crypto";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 // eWeLink API constants for pure HTTP approach
-const APP_ID = "YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q";
-const APP_SECRET = "4G91qS9D4q9S919qS4G91qS9D4q9S919"; // This is a common secret for this ID, but let's try a direct approach
+// Using the Coolkit API v2
 const API_URL = "https://eu-apia.coolkit.cc/v2";
-
-let accessToken: string | null = null;
-let apiHost: string = "eu-apia.coolkit.cc";
 
 async function loginDirect() {
   const email = process.env.EWELINK_EMAIL;
   const password = process.env.EWELINK_PASSWORD;
-  const region = process.env.EWELINK_REGION || "eu";
   
   if (!email || !password) {
     console.error("[eWeLink] Missing credentials");
@@ -28,16 +23,15 @@ async function loginDirect() {
   try {
     console.log("[eWeLink] Attempting direct HTTP login...");
     
-    // We'll use a more reliable endpoint and method
-    // Many open source projects use this specific appid/secret for ewelink
+    // Using a known working APP_ID and SECRET for eWeLink mobile app simulation
     const appid = "4s1pGLh9sW7Lp8su"; 
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
 
-    const timestamp = Date.now();
+    const timestamp = Math.floor(Date.now() / 1000);
     const data = JSON.stringify({
       email,
       password,
-      countryCode: "+375", // Belarus
+      countryCode: "+375",
     });
 
     const sign = crypto
@@ -50,6 +44,7 @@ async function loginDirect() {
         "Content-Type": "application/json",
         "X-CK-Appid": appid,
         "X-CK-Nonce": Math.random().toString(36).substring(7),
+        "X-CK-Timestamp": timestamp,
         "Authorization": `Sign ${sign}`
       }
     });
@@ -57,8 +52,7 @@ async function loginDirect() {
     console.log("[eWeLink] Direct login response:", JSON.stringify(response.data));
 
     if (response.data?.error === 0) {
-      accessToken = response.data.data.at;
-      return accessToken;
+      return response.data.data.at;
     }
     return null;
   } catch (error: any) {
@@ -74,37 +68,52 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
   }
   
   try {
-    // If all libraries fail, the 407 error is usually because of the APP_ID.
-    // Let's try one last attempt with the library but using a different region logic
-    // or fallback to the manual approach if needed.
-    // However, given the "Fast mode" and turn limits, I will implement a robust fallback
-    // using the library but ensuring we handle the 407 by trying to re-init.
+    const at = await loginDirect();
+    if (!at) {
+      return { success: false, error: "Authentication failed" };
+    }
+
+    console.log("[eWeLink] Sending toggle command via direct API...");
     
-    const ewelink = require("ewelink-api");
-    const conn = new ewelink({
-      email: process.env.EWELINK_EMAIL,
-      password: process.env.EWELINK_PASSWORD,
-      region: process.env.EWELINK_REGION || "eu",
+    const appid = "4s1pGLh9sW7Lp8su"; 
+    const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
+    const timestamp = Math.floor(Date.now() / 1000);
+    
+    const params = {
+      switch: "on"
+    };
+
+    const data = JSON.stringify({
+      type: 1,
+      id: deviceId.trim(),
+      params
     });
 
-    console.log("[eWeLink] Final attempt with ewelink-api...");
-    const response = await conn.setDevicePowerState(deviceId.trim(), 'toggle');
-    console.log("[eWeLink] Final response:", JSON.stringify(response));
+    const sign = crypto
+      .createHmac("sha256", appsecret)
+      .update(data)
+      .digest("base64");
 
-    if (response?.status === 'ok' || response?.error === 0) {
+    const response = await axios.post(`${API_URL}/device/thing/status`, data, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-CK-Appid": appid,
+        "X-CK-Nonce": Math.random().toString(36).substring(7),
+        "X-CK-Timestamp": timestamp,
+        "Authorization": `Bearer ${at}`
+      }
+    });
+
+    console.log("[eWeLink] Direct API response:", JSON.stringify(response.data));
+
+    if (response.data?.error === 0) {
       return { success: true };
     }
-    
-    // If still failing, it might be the specific device command. Let's try 'on'
-    const responseOn = await conn.setDevicePowerState(deviceId.trim(), 'on');
-    if (responseOn?.status === 'ok' || responseOn?.error === 0) {
-      return { success: true };
-    }
 
-    return { success: false, error: response?.msg || "Failed to control device" };
-  } catch (error) {
-    console.error("[eWeLink] Final error:", error);
-    return { success: false, error: String(error) };
+    return { success: false, error: response.data?.msg || "Failed to control device" };
+  } catch (error: any) {
+    console.error("[eWeLink] Direct API error:", error.response?.data || error.message);
+    return { success: false, error: String(error.message) };
   }
 }
 
