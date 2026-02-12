@@ -58,10 +58,15 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     
     // Gate scenario is configured to auto-off, so we only need to send the "on" command.
     console.log("[eWeLink] Sending switch ON command...");
+    // Some multi-channel devices or specific gate controllers use 'switches' array or 'toggle'
+    // Let's try sending both 'switch' and 'switches' for broader compatibility
     await client.device.setThingStatus({
       type: 1, // device
       id: deviceId.trim(),
-      params: { switch: "on" }
+      params: { 
+        switch: "on",
+        switches: [{ switch: "on", outlet: 0 }] 
+      }
     });
     
     console.log("[eWeLink] Gate open command sent successfully");
