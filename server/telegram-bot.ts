@@ -58,7 +58,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     
     // Final attempt with Pulse mode parameters often used by eWeLink for gate controllers
     console.log("[eWeLink] Sending switch ON command...");
-    await client.device.setThingStatus({
+    const response = await client.device.setThingStatus({
       type: 1, // device
       id: deviceId.trim(),
       params: { 
@@ -72,8 +72,15 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
       }
     });
     
-    console.log("[eWeLink] Gate open command sent successfully");
-    return { success: true };
+    console.log("[eWeLink] Response from API:", JSON.stringify(response));
+    
+    if (response?.error === 0 || response?.status === 200 || !response?.error) {
+      console.log("[eWeLink] Gate open command sent successfully");
+      return { success: true };
+    } else {
+      console.error("[eWeLink] API returned error:", response?.error);
+      return { success: false, error: `API Error: ${response?.error}` };
+    }
   } catch (error) {
     console.error("[eWeLink] Failed to open gate:", error);
     return { success: false, error: String(error) };
