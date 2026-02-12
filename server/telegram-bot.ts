@@ -28,6 +28,7 @@ async function loginDirect() {
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
 
     const timestamp = Math.floor(Date.now() / 1000);
+    const nonce = Math.random().toString(36).substring(2, 10); // Exactly 8 chars
     const data = JSON.stringify({
       email,
       password,
@@ -43,7 +44,7 @@ async function loginDirect() {
       headers: {
         "Content-Type": "application/json",
         "X-CK-Appid": appid,
-        "X-CK-Nonce": Math.random().toString(36).substring(7),
+        "X-CK-Nonce": nonce,
         "X-CK-Timestamp": timestamp,
         "Authorization": `Sign ${sign}`
       }
@@ -78,6 +79,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     const appid = "4s1pGLh9sW7Lp8su"; 
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
     const timestamp = Math.floor(Date.now() / 1000);
+    const nonce = Math.random().toString(36).substring(2, 10); // Exactly 8 chars
     
     const params = {
       switch: "on"
@@ -98,7 +100,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
       headers: {
         "Content-Type": "application/json",
         "X-CK-Appid": appid,
-        "X-CK-Nonce": Math.random().toString(36).substring(7),
+        "X-CK-Nonce": nonce,
         "X-CK-Timestamp": timestamp,
         "Authorization": `Bearer ${at}`
       }
