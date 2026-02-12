@@ -30,77 +30,78 @@ export default function LandingPage() {
       
       <PageContainer>
         <div className="space-y-8">
-          <div className="text-center py-8">
-            <div className="inline-flex items-center justify-center rounded-lg overflow-hidden mb-4">
+          <div className="text-center py-12 relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-primary/5 border border-primary/10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+            <div className="inline-flex items-center justify-center rounded-2xl overflow-hidden mb-6 shadow-xl ring-4 ring-background p-1 bg-background">
               <img 
                 src={drewnoLogo} 
                 alt="Village Drewno" 
-                className="h-24 w-24 object-cover"
+                className="h-28 w-28 object-cover rounded-xl"
                 data-testid="img-hero-logo"
               />
             </div>
-            <h1 className="text-3xl font-bold mb-2" data-testid="text-hero-title">
+            <h1 className="text-4xl font-extrabold tracking-tight mb-3 text-foreground" data-testid="text-hero-title">
               Village Drewno
             </h1>
-            <p className="text-muted-foreground max-w-sm mx-auto" data-testid="text-hero-description">
-              Загородный комплекс. Аренда домиков. СПА. Горячая купель. Лучшее место, чтобы отдохнуть в гармонии с природой.
+            <p className="text-lg text-muted-foreground max-w-sm mx-auto leading-relaxed px-4" data-testid="text-hero-description">
+              Загородный комплекс, где природа встречается с комфортом. Отдыхайте красиво.
             </p>
             
             {user && (
-              <div className="mt-4 flex items-center justify-center gap-2">
-                <span className="text-sm text-muted-foreground">Вы вошли как</span>
-                <Badge variant={user.role === "SUPER_ADMIN" ? "destructive" : "secondary"}>
-                  {user.name} ({ROLE_LABELS[user.role] || user.role})
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <Badge variant={user.role === "SUPER_ADMIN" ? "destructive" : "secondary"} className="px-3 py-1 text-xs font-medium uppercase tracking-wider">
+                  {ROLE_LABELS[user.role] || user.role}: {user.name}
                 </Badge>
               </div>
             )}
           </div>
 
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Забронировать</h2>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card 
-              className="hover-elevate cursor-pointer"
+              className="hover-elevate cursor-pointer border-none bg-gradient-to-br from-card to-muted/30 shadow-sm"
               onClick={() => handleGuestAction("spa")}
               data-testid="card-book-spa"
             >
-              <CardContent className="p-5">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-full bg-primary/10 p-3">
-                    <Droplets className="h-6 w-6 text-primary" />
+              <CardContent className="p-6">
+                <div className="flex flex-col gap-4">
+                  <div className="rounded-2xl bg-primary text-primary-foreground p-4 w-fit shadow-lg shadow-primary/20">
+                    <Droplets className="h-8 w-8" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">СПА-комплекс</h3>
-                    <p className="text-sm text-muted-foreground">
-                      СПА, терраса, купель - отдых на любой вкус
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold">СПА-комплекс</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Баня, терраса и горячая купель. Идеальное восстановление сил.
                     </p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-center text-primary font-medium text-sm pt-2">
+                    Забронировать <ChevronRight className="h-4 w-4 ml-1" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card 
-              className="hover-elevate cursor-pointer"
+              className="hover-elevate cursor-pointer border-none bg-gradient-to-br from-card to-muted/30 shadow-sm"
               onClick={() => handleGuestAction("quads")}
               data-testid="card-book-quads"
             >
-              <CardContent className="p-5">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-full bg-status-confirmed/10 p-3">
-                    <Bike className="h-6 w-6 text-status-confirmed" />
+              <CardContent className="p-6">
+                <div className="flex flex-col gap-4">
+                  <div className="rounded-2xl bg-status-confirmed text-primary-foreground p-4 w-fit shadow-lg shadow-status-confirmed/20">
+                    <Bike className="h-8 w-8" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">Квадроциклы</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Захватывающее приключение с нашим инструктором
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold">Квадроциклы</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Лесные маршруты и драйв под присмотром инструктора.
                     </p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-center text-status-confirmed font-medium text-sm pt-2">
+                    Выбрать маршрут <ChevronRight className="h-4 w-4 ml-1" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
-
           </div>
 
           {isStaff && (
