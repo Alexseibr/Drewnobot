@@ -21,21 +21,20 @@ async function getEwelinkClient() {
   }
   
   try {
+    // Correct way to initialize ewelink-api-next for WebAPI
     ewelinkClient = new EWeLink.WebAPI({
-      appId: "dummy", // The library might need this or use defaults
-      appSecret: "dummy",
       region,
-    });
-    
-    await ewelinkClient.login({
       email,
       password,
     });
     
-    console.log("[eWeLink] Logged in successfully");
+    // Test connection by getting user info
+    await ewelinkClient.user.get();
+    console.log("[eWeLink] Authenticated successfully");
     return ewelinkClient;
   } catch (error) {
     console.error("[eWeLink] Login failed:", error);
+    ewelinkClient = null;
     return null;
   }
 }
