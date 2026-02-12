@@ -136,8 +136,8 @@ export default function LandingPage() {
                   </Card>
                 )}
 
-                {/* 2. Квадроциклы (для всех сотрудников) */}
-                {hasRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN") && (
+                {/* 2. Квадроциклы (ТОЛЬКО для инструкторов) */}
+                {hasRole("INSTRUCTOR") && (
                   <Card 
                     className="hover-elevate cursor-pointer border border-status-confirmed/5 bg-card/50 backdrop-blur-sm"
                     onClick={() => setLocation("/instructor")}
@@ -149,7 +149,7 @@ export default function LandingPage() {
                           <Bike className="h-5 w-5 text-status-confirmed" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-bold text-sm">Квадроциклы</h3>
+                          <h3 className="font-bold text-sm">Инструктор</h3>
                           <p className="text-xs text-muted-foreground line-clamp-1">
                             Сеансы и расписание
                           </p>
