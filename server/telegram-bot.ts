@@ -26,13 +26,14 @@ async function getEwelinkClient() {
     
     ewelinkClient = new WebAPI({
       region,
+    });
+    
+    // Explicitly call login with credentials to get the token
+    console.log("[eWeLink] Attempting explicit login with credentials...");
+    await ewelinkClient.login({
       email,
       password,
     });
-    
-    // Explicitly call login to get the token
-    console.log("[eWeLink] Attempting explicit login...");
-    await ewelinkClient.login();
     
     console.log("[eWeLink] Client initialized and logged in");
     return ewelinkClient;
