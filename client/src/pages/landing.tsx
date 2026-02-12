@@ -136,8 +136,8 @@ export default function LandingPage() {
                   </Card>
                 )}
 
-                {/* 2. Квадроциклы (только для инструкторов) */}
-                {hasRole("INSTRUCTOR") && (
+                {/* 2. Квадроциклы (для всех сотрудников) */}
+                {hasRole("INSTRUCTOR", "ADMIN", "OWNER", "SUPER_ADMIN") && (
                   <Card 
                     className="hover-elevate cursor-pointer border border-status-confirmed/5 bg-card/50 backdrop-blur-sm"
                     onClick={() => setLocation("/instructor")}
@@ -149,7 +149,7 @@ export default function LandingPage() {
                           <Bike className="h-5 w-5 text-status-confirmed" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-bold text-sm">Инструктор</h3>
+                          <h3 className="font-bold text-sm">Квадроциклы</h3>
                           <p className="text-xs text-muted-foreground line-clamp-1">
                             Сеансы и расписание
                           </p>
@@ -236,7 +236,7 @@ export default function LandingPage() {
                       <Bell className="h-4 w-4 mr-3" />
                       <div className="text-left">
                         <div className="text-sm font-bold">Уведомления</div>
-                        <div className="text-[10px] opacity-70">Cron и расписание</div>
+                        <div className="text-[10px] opacity-70">Настройка рассылок</div>
                       </div>
                     </Button>
                   </div>
