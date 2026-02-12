@@ -55,10 +55,10 @@ const getMaxGuests = (bookingType: BookingType, spaResource: string, withAddon: 
   }
 };
 
-const PRICES: Record<BookingType, { base: number; guestThreshold?: number; higherPrice?: number }> = {
+const PRICES: Record<BookingType, { base: number }> = {
   bath_only: { base: 150 },
   terrace_only: { base: 90 },
-  tub_only: { base: 150, guestThreshold: 4, higherPrice: 180 },
+  tub_only: { base: 150 },
 };
 
 const ADDON_PRICE = 150;
@@ -213,8 +213,8 @@ export default function SpaBookingPage() {
     }
     const priceConfig = PRICES[selectedType];
     let basePrice = priceConfig.base;
-    if (priceConfig.guestThreshold && guestsCount > priceConfig.guestThreshold) {
-      basePrice = priceConfig.higherPrice || priceConfig.base;
+    if (selectedType === "tub_only" && selectedResource === "SPA1") {
+      basePrice = 180;
     }
     const extraHours = Math.max(0, durationHours - 3);
     let servicesPrice = 0;
@@ -454,9 +454,9 @@ export default function SpaBookingPage() {
                           <Bath className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium">{code === "SPA1" ? "Комплекс №1 (Большой)" : "Комплекс №2 (Малый)"}</p>
+                          <p className="font-medium">{code === "SPA1" ? "Комплекс 1" : "Комплекс 2"}</p>
                           <p className="text-xs text-muted-foreground">
-                            {code === "SPA1" ? "Баня до 6 чел, купель до 10 чел" : "Баня до 6 чел, купель до 6 чел"}
+                            {code === "SPA1" ? "Баня, большая купель" : "Баня, малая купель"}
                           </p>
                         </div>
                         <ArrowRight className="h-5 w-5 text-muted-foreground" />
@@ -478,7 +478,7 @@ export default function SpaBookingPage() {
                 {selectedType === "bath_only" ? <Flame className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
                 <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
                 <span className="text-muted">|</span>
-                <span>{selectedResource === "SPA1" ? "Комплекс №1" : "Комплекс №2"}</span>
+                <span>{selectedResource === "SPA1" ? "Комплекс 1" : "Комплекс 2"}</span>
               </div>
               
               <Card className="overflow-visible">
@@ -549,7 +549,7 @@ export default function SpaBookingPage() {
                 {selectedType !== "terrace_only" && (
                   <>
                     <span className="text-muted">|</span>
-                    <span>{selectedResource === "SPA1" ? "Комплекс №1" : "Комплекс №2"}</span>
+                    <span>{selectedResource === "SPA1" ? "Комплекс 1" : "Комплекс 2"}</span>
                   </>
                 )}
               </div>
