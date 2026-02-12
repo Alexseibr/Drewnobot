@@ -56,24 +56,19 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     const client = await getEwelinkClient();
     if (!client) return { success: false, error: "Failed to connect to eWeLink" };
     
-    // Gate scenario is configured to auto-off, so we only need to send the "on" command.
+    // Final attempt with Pulse mode parameters often used by eWeLink for gate controllers
     console.log("[eWeLink] Sending switch ON command...");
-    // Some multi-channel devices or specific gate controllers use 'switches' array or 'toggle'
-    // Let's try sending everything: 'switch', 'switches', and 'toggle'
-    // Testing outlet 1 (second channel) as well, as sometimes gates are not on outlet 0
     await client.device.setThingStatus({
       type: 1, // device
       id: deviceId.trim(),
       params: { 
+        pulse: "on",
+        pulseWidth: 1000,
         switch: "on",
         switches: [
           { switch: "on", outlet: 0 },
-          { switch: "on", outlet: 1 },
-          { switch: "on", outlet: 2 },
-          { switch: "on", outlet: 3 }
-        ],
-        toggle: 1,
-        trig: 1
+          { switch: "on", outlet: 1 }
+        ]
       }
     });
     
