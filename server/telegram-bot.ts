@@ -44,9 +44,9 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
   // Try to get from process.env first (for production)
   let deviceId = process.env.EWELINK_GATE_DEVICE_ID;
   
-  // In some environments, we might need to trim the value or check if it's actually set
+  console.log("[eWeLink] Attempting to open gate with Device ID:", deviceId ? "SET" : "MISSING");
+
   if (!deviceId || deviceId === "id_вашего_устройства_из_ewelink") {
-    console.warn("[eWeLink] Device ID not found or placeholder used in process.env");
     return { success: false, error: "Device ID not configured" };
   }
   
@@ -58,11 +58,11 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     // We'll send "on" command. If it's a momentary switch, it should work.
     await client.device.setThingStatus({
       type: 1, // device
-      id: deviceId,
+      id: deviceId.trim(),
       params: { switch: "on" }
     });
     
-    console.log("[eWeLink] Gate open command sent");
+    console.log("[eWeLink] Gate open command sent successfully");
     return { success: true };
   } catch (error) {
     console.error("[eWeLink] Failed to open gate:", error);
