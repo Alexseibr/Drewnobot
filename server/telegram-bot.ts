@@ -56,9 +56,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     const client = await getEwelinkClient();
     if (!client) return { success: false, error: "Failed to connect to eWeLink" };
     
-    // For momentary gates, sometimes we need to send "on" then "off" quickly
-    // or the gate expects a different parameter structure.
-    // Let's try sending "on", wait 1s, and send "off" to simulate a button press.
+    // Let's try sending "on", wait 3s, and send "off" to simulate a longer button press.
     console.log("[eWeLink] Sending switch ON command...");
     await client.device.setThingStatus({
       type: 1, // device
@@ -66,8 +64,8 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
       params: { switch: "on" }
     });
     
-    // Brief delay to ensure the gate registers the "pulse"
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Increased delay to 3 seconds for physical relay to register and trigger the gate controller
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     console.log("[eWeLink] Sending switch OFF command...");
     await client.device.setThingStatus({

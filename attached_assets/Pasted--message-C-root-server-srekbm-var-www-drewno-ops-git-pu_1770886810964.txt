@@ -1,0 +1,101 @@
+ :: {"message":"Ворота открыты"}^C
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 7 (delta 5), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 4.30 KiB | 367.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   061c3ec..094c70e  main       -> origin/main
+Updating 061c3ec..094c70e
+Fast-forward
+ ...rewno-ops-git-pull-origin-m_1770886643734.txt | 129 +++++++++++++++++++
+ server/telegram-bot.ts                           |  18 ++-
+ 2 files changed, 144 insertions(+), 3 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-git-pull-origin-m_1770886643734.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (5) ../node_modules/wouter/esm/index.js
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 25.40s
+building server...
+
+  dist/index.cjs  1.4mb ⚠️
+
+⚡ Done in 979ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 12   │ online    │ 0%       │ 18.5mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:215801)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | [eWeLink] Login failed: TypeError: Li.user.get is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215278)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:215801)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | [eWeLink] Login failed: TypeError: Li.user.get is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215278)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:215801)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 11:59:39 AM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 11:59:39 AM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 11:59:39 AM [scheduler]   - Notifications:
+0|drewno-o | 11:59:39 AM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 11:59:39 AM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 11:59:39 AM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 11:59:39 AM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 11:59:39 AM [scheduler]   - Thermostat:
+0|drewno-o | 11:59:39 AM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 11:59:39 AM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 11:59:39 AM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 11:59:39 AM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 11:59:39 AM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 11:59:39 AM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 11:59:39 AM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | [eWeLink] Device ID length: 10
+0|drewno-ops  | [eWeLink] Device ID prefix: 100
+0|drewno-ops  | [eWeLink] Client initialized
+0|drewno-ops  | [eWeLink] Sending switch ON command...
+0|drewno-ops  | [eWeLink] Sending switch OFF command...
+0|drewno-ops  | [eWeLink] Gate pulse sequence completed successfully
+0|drewno-ops  | 11:59:52 AM [express] POST /api/admin/gate/open 200 in 669ms :: {"message":"Ворота открыты"}
+0|drewno-ops  | 12:00:00 PM [scheduler] Sending climate control reminder - ON (12:00)
+0|drewno-ops  | 12:00:00 PM [scheduler] [ThermostatScheduler] Daily prompt (12:00)
+0|drewno-ops  | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-ops  | [ThermostatProvider] Initializing provider: mock
+0|drewno-ops  | [ThermostatProvider] Mock provider initialized for houses 1-4
+0|drewno-ops  | 12:00:00 PM [scheduler] [ThermostatScheduler] Sending dailyprompt for 2026-02-12
+0|drewno-ops  | [Telegram Bot] Tracked message 957 for chat 7511011608
+0|drewno-ops  | [Telegram Bot] Tracked message 958 for chat 2109523139
+0|drewno-ops  | [Telegram Bot] Notified 2 ops admins (ADMIN/OWNER only)
+0|drewno-ops  | [Telegram Bot] Sent thermostat prompt for houses: [ 1, 2, 3, 4 ]
+0|drewno-ops  | 12:00:00 PM [scheduler] [ThermostatScheduler] Sent prompt for houses: 1, 2, 3, 4
