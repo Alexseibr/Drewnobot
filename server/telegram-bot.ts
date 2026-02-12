@@ -11,25 +11,37 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 // Using the Coolkit API v2
 const API_URL = "https://eu-apia.coolkit.cc/v2";
 
+let cachedToken: { at: string; expiresAt: number } | null = null;
+
+function getEwelinkConfig() {
+  const appid = process.env.EWELINK_APP_ID || "";
+  const appsecret = process.env.EWELINK_APP_SECRET || "";
+  const region = (process.env.EWELINK_REGION || "eu").toLowerCase();
+  const email = process.env.EWELINK_EMAIL || "";
+  const password = process.env.EWELINK_PASSWORD || "";
+  const apiUrl = `https://${region}-apia.coolkit.cc/v2`;
+  return { appid, appsecret, region, email, password, apiUrl };
+}
+
 async function loginDirect() {
-  const email = process.env.EWELINK_EMAIL;
-  const password = process.env.EWELINK_PASSWORD;
+  const { appid, appsecret, email, password, apiUrl } = getEwelinkConfig();
   
   if (!email || !password) {
-    console.error("[eWeLink] Missing credentials");
+    console.error("[eWeLink] Missing EWELINK_EMAIL or EWELINK_PASSWORD");
+    return null;
+  }
+  if (!appid || !appsecret) {
+    console.error("[eWeLink] Missing EWELINK_APP_ID or EWELINK_APP_SECRET. Register at https://dev.ewelink.cc/");
     return null;
   }
 
-  try {
-    console.log("[eWeLink] Attempting direct HTTP login...");
-    
-    // Using a more generic App ID that often works for regions like EU/RU
-    const appid = "YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q"; 
-    const appsecret = "4G91qS9D4q9S919qS4G91qS9D4q9S919";
-    const API_URL_LOGIN = "https://eu-apia.coolkit.cc/v2/user/login";
+  if (cachedToken && cachedToken.expiresAt > Date.now()) {
+    return cachedToken.at;
+  }
 
-    const timestamp = Date.now();
-    const nonce = Math.random().toString(36).substring(2, 10);
+  try {
+    console.log("[eWeLink] Attempting login with APP_ID:", appid.substring(0, 8) + "...");
+
     const data = JSON.stringify({
       email,
       password,
@@ -39,83 +51,88 @@ async function loginDirect() {
     const sign = crypto
       .createHmac("sha256", appsecret)
       .update(data)
-      .digest("hex");
+      .digest("base64");
 
-    const response = await axios.post(API_URL_LOGIN, data, {
+    const nonce = crypto.randomBytes(4).toString("hex");
+
+    const response = await axios.post(`${apiUrl}/user/login`, data, {
       headers: {
         "Content-Type": "application/json",
         "X-CK-Appid": appid,
         "X-CK-Nonce": nonce,
-        "X-CK-Timestamp": timestamp,
         "Authorization": `Sign ${sign}`
       }
     });
 
-    console.log("[eWeLink] Direct login response:", JSON.stringify(response.data));
+    console.log("[eWeLink] Login response error code:", response.data?.error, "msg:", response.data?.msg || "ok");
 
-    if (response.data?.error === 0) {
-      return response.data.data.at;
+    if (response.data?.error === 0 && response.data?.data?.at) {
+      cachedToken = {
+        at: response.data.data.at,
+        expiresAt: Date.now() + 23 * 60 * 60 * 1000,
+      };
+      console.log("[eWeLink] Login successful, token cached for 23h");
+      return cachedToken.at;
     }
+    
+    console.error("[eWeLink] Login failed:", response.data?.error, response.data?.msg);
     return null;
   } catch (error: any) {
-    console.error("[eWeLink] Direct login failed:", error.response?.data || error.message);
+    console.error("[eWeLink] Login error:", error.response?.data || error.message);
     return null;
   }
 }
 
 export async function openGate(): Promise<{ success: boolean; error?: string }> {
-  let deviceId = process.env.EWELINK_GATE_DEVICE_ID;
+  const deviceId = process.env.EWELINK_GATE_DEVICE_ID;
   if (!deviceId || deviceId === "id_вашего_устройства_из_ewelink") {
     return { success: false, error: "Device ID not configured" };
   }
   
+  const { appid, apiUrl } = getEwelinkConfig();
+  if (!appid) {
+    return { success: false, error: "EWELINK_APP_ID not configured" };
+  }
+
   try {
     const at = await loginDirect();
     if (!at) {
-      return { success: false, error: "Authentication failed" };
+      return { success: false, error: "Authentication failed - check APP_ID/SECRET at dev.ewelink.cc" };
     }
 
-    console.log("[eWeLink] Sending toggle command via direct API...");
-    
-    const appid = "YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q"; 
-    const appsecret = "4G91qS9D4q9S919qS4G91qS9D4q9S919";
-    const timestamp = Date.now();
-    const nonce = Math.random().toString(36).substring(2, 10);
-    
-    const params = {
-      switch: "on"
-    };
+    console.log("[eWeLink] Sending ON command to device:", deviceId.trim());
 
     const data = JSON.stringify({
       type: 1,
       id: deviceId.trim(),
-      params
+      params: { switch: "on" }
     });
 
-    const sign = crypto
-      .createHmac("sha256", appsecret)
-      .update(data)
-      .digest("hex");
+    const nonce = crypto.randomBytes(4).toString("hex");
 
-    const response = await axios.post(`${API_URL}/device/thing/status`, data, {
+    const response = await axios.post(`${apiUrl}/device/thing/status`, data, {
       headers: {
         "Content-Type": "application/json",
         "X-CK-Appid": appid,
         "X-CK-Nonce": nonce,
-        "X-CK-Timestamp": timestamp,
         "Authorization": `Bearer ${at}`
       }
     });
 
-    console.log("[eWeLink] Direct API response:", JSON.stringify(response.data));
+    console.log("[eWeLink] Device response:", response.data?.error, response.data?.msg || "ok");
 
     if (response.data?.error === 0) {
       return { success: true };
     }
 
+    if (response.data?.error === 401 || response.data?.error === 406) {
+      cachedToken = null;
+      console.log("[eWeLink] Token expired, will re-login on next attempt");
+    }
+
     return { success: false, error: response.data?.msg || "Failed to control device" };
   } catch (error: any) {
-    console.error("[eWeLink] Direct API error:", error.response?.data || error.message);
+    console.error("[eWeLink] Device control error:", error.response?.data || error.message);
     return { success: false, error: String(error.message) };
   }
 }
