@@ -3683,18 +3683,19 @@ export class DatabaseStorage implements IStorage {
     if (existing.length > 0) return;
     
     const defaults: InsertNotificationConfig[] = [
-      { title: "Напоминание о смене", description: "Ежедневное напоминание о начале смены", cadence: "daily", cronExpression: "30 8 * * *", actionType: "shift_reminder", enabled: true },
-      { title: "Сводка по баням", description: "Список бронирований бань на сегодня", cadence: "daily", cronExpression: "0 9 * * *", actionType: "bath_summary", enabled: true },
-      { title: "Климат-контроль ВКЛ", description: "Напоминание о включении климат-контроля", cadence: "daily", cronExpression: "0 12 * * *", actionType: "climate_on", enabled: true },
-      { title: "Климат-контроль ВЫКЛ", description: "Напоминание о выключении климат-контроля", cadence: "daily", cronExpression: "0 14 * * *", actionType: "climate_off", enabled: true },
-      { title: "Напоминание о прачечной", description: "Проверка текстиля для заезда", cadence: "daily", cronExpression: "0 15 * * *", actionType: "laundry_reminder", enabled: true },
-      { title: "Проверка погоды", description: "Проверка прогноза на заморозки", cadence: "daily", cronExpression: "0 18 * * *", actionType: "weather_check", enabled: true },
-      { title: "Ежедневные задачи", description: "Создание ежедневных задач", cadence: "daily", cronExpression: "0 6 * * *", actionType: "daily_tasks", enabled: true },
-      { title: "Еженедельные задачи", description: "Создание еженедельных задач", cadence: "weekly", cronExpression: "0 6 * * 1", actionType: "weekly_tasks", enabled: true },
-      { title: "Ежемесячные задачи", description: "Создание ежемесячных задач", cadence: "monthly", cronExpression: "0 6 1 * *", actionType: "monthly_tasks", enabled: true },
-      { title: "Термостат: Планирование", description: "Запрос планов на день", cadence: "daily", cronExpression: "0 12 * * *", actionType: "thermostat_prompt", enabled: true },
-      { title: "Термостат: Базовая температура", description: "Установка базовых температур", cadence: "daily", cronExpression: "5 12 * * *", actionType: "thermostat_base_temp", enabled: true },
-      { title: "Термостат: Прогрев", description: "Начало прогрева для заездов", cadence: "daily", cronExpression: "30 14 * * *", actionType: "thermostat_heat", enabled: true },
+      { title: "Напоминание о смене", description: "Ежедневное напоминание о начале смены", cadence: "daily", cronExpression: "30 8 * * *", actionType: "shift_reminder", enabled: false },
+      { title: "Сводка по баням", description: "Список бронирований бань на сегодня", cadence: "daily", cronExpression: "0 9 * * *", actionType: "bath_summary", enabled: false },
+      { title: "Климат-контроль ВКЛ", description: "Напоминание о включении климат-контроля", cadence: "daily", cronExpression: "0 12 * * *", actionType: "climate_on", enabled: false },
+      { title: "Климат-контроль ВЫКЛ", description: "Напоминание о выключении климат-контроля", cadence: "daily", cronExpression: "0 14 * * *", actionType: "climate_off", enabled: false },
+      { title: "Напоминание о прачечной", description: "Проверка текстиля для заезда", cadence: "daily", cronExpression: "0 15 * * *", actionType: "laundry_reminder", enabled: false },
+      { title: "Проверка погоды", description: "Проверка прогноза на заморозки", cadence: "daily", cronExpression: "0 18 * * *", actionType: "weather_check", enabled: false },
+      { title: "Ежедневные задачи", description: "Создание ежедневных задач", cadence: "daily", cronExpression: "0 6 * * *", actionType: "daily_tasks", enabled: false },
+      { title: "Еженедельные задачи", description: "Создание еженедельных задач", cadence: "weekly", cronExpression: "0 6 * * 1", actionType: "weekly_tasks", enabled: false },
+      { title: "Ежемесячные задачи", description: "Создание ежемесячных задач", cadence: "monthly", cronExpression: "0 6 1 * *", actionType: "monthly_tasks", enabled: false },
+      { title: "Термостат: Планирование", description: "Запрос планов на день", cadence: "daily", cronExpression: "0 12 * * *", actionType: "thermostat_prompt", enabled: false },
+      { title: "Термостат: Базовая температура", description: "Установка базовых температур", cadence: "daily", cronExpression: "5 12 * * *", actionType: "thermostat_base_temp", enabled: false },
+      { title: "Термостат: Прогрев", description: "Начало прогрева для заездов", cadence: "daily", cronExpression: "30 14 * * *", actionType: "thermostat_heat", enabled: false },
+      { title: "Бронь СПА", description: "Уведомление о новой брони СПА", cadence: "once", cronExpression: "* * * * *", actionType: "spa_booking", enabled: true },
     ];
     
     for (const config of defaults) {
