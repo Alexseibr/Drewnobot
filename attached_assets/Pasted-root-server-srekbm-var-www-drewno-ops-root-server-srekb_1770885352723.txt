@@ -1,0 +1,41 @@
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --linesoption)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |   hint: undefined,
+0|drewno-o |   position: undefined,
+0|drewno-o |   internalPosition: undefined,
+0|drewno-o |   internalQuery: undefined,
+0|drewno-o |   where: undefined,
+0|drewno-o |   schema: undefined,
+0|drewno-o |   table: undefined,
+0|drewno-o |   column: undefined,
+0|drewno-o |   dataType: undefined,
+0|drewno-o |   constraint: undefined,
+0|drewno-o |   file: 'auth.c',
+0|drewno-o |   line: '343',
+0|drewno-o |   routine: 'auth_failed'
+0|drewno-o | }
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 11:35:08 AM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 11:35:08 AM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 11:35:08 AM [scheduler]   - Notifications:
+0|drewno-o | 11:35:08 AM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 11:35:08 AM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 11:35:08 AM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 11:35:08 AM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 11:35:08 AM [scheduler]   - Thermostat:
+0|drewno-o | 11:35:08 AM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 11:35:08 AM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 11:35:08 AM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 11:35:08 AM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 11:35:08 AM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 11:35:08 AM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 11:35:08 AM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | 11:35:44 AM [express] GET /api/ops/today 200 in 82ms :: {"tasks":[{"id":"add0247c-a1b7-4fdc-a66e-184f1aee4389","date":"2026-02-12","type":"other","title":"Утренний обход территории","checklist":["Проверка входа","Осмотр парковки","Проверка освещения"],"status":"open","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.041Z"},{"id":"3dcd44c9-e712-4e3f-bede-740c461b3360","date":"2026-02-12","type":"other","title":"Подготовка дров","checklist":null,"status":"open","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.088Z"},{"id":"af570403-ff4a-4d12-9cef-95e15c93fefd","date":"2026-02-12","type":"trash_prep","title":"Вынос мусора","checklist":null,"status":"open","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.098Z"}],"cottageBookings":[],"bathBookings":[],"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"stats":{"checkInsToday":0,"checkOutsToday":0,"bathsToday":0,"openTasks":3,"cashBalance":16683}}
+0|drewno-ops  | 11:35:44 AM [express] GET /api/auth/me 200 in 5ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-ops  | 11:35:44 AM [express] GET /api/cash/shift/current 200 in 28ms :: {"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"transactions":[],"balance":0}
+0|drewno-ops  | 11:35:46 AM [express] POST /api/admin/gate/open 500 in 4ms :: {"error":"Device ID not configured"}

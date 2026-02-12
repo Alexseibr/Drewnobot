@@ -44,7 +44,9 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
   // Try to get from process.env first (for production)
   let deviceId = process.env.EWELINK_GATE_DEVICE_ID;
   
-  console.log("[eWeLink] Attempting to open gate with Device ID:", deviceId ? "SET" : "MISSING");
+  // LOG THE ACTUAL VALUE (MASKED) TO DEBUG
+  console.log("[eWeLink] Device ID length:", deviceId ? deviceId.length : 0);
+  console.log("[eWeLink] Device ID prefix:", deviceId ? deviceId.substring(0, 3) : "NONE");
 
   if (!deviceId || deviceId === "id_вашего_устройства_из_ewelink") {
     return { success: false, error: "Device ID not configured" };
