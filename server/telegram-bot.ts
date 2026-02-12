@@ -29,14 +29,18 @@ async function loginDirect() {
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
     const API_URL_LOGIN = "https://eu-apia.coolkit.cc/v2/user/login";
 
-    const timestamp = Math.floor(Date.now() / 1000);
-    const nonce = Math.random().toString(36).substring(2, 10); // Exactly 8 chars
+    const timestamp = Math.floor(Date.now());
+    const nonce = Math.random().toString(36).substring(2, 10);
     const data = JSON.stringify({
       email,
       password,
       countryCode: "+375",
     });
 
+    // SIGNATURE CALCULATION:
+    // Some implementations use the appsecret directly as HMAC key
+    // while others use it as a hex-encoded or raw buffer.
+    // Based on eWeLink v2 spec, it's often HMAC-SHA256(data, appsecret)
     const sign = crypto
       .createHmac("sha256", appsecret)
       .update(data)
@@ -80,8 +84,8 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     
     const appid = "4s1pGLh9sW7Lp8su"; 
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
-    const timestamp = Math.floor(Date.now() / 1000);
-    const nonce = Math.random().toString(36).substring(2, 10); // Exactly 8 chars
+    const timestamp = Math.floor(Date.now());
+    const nonce = Math.random().toString(36).substring(2, 10);
     
     const params = {
       switch: "on"
