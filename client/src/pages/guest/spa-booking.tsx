@@ -287,10 +287,14 @@ export default function SpaBookingPage() {
     setIsRequestingContact(true);
     tg.requestContact((success: boolean, result?: any) => {
       setIsRequestingContact(false);
+      console.log("[Telegram WebApp] requestContact result:", success, result);
+      
       if (success) {
-        // Handle both version 6.9+ and fallback formats
-        const contact = result?.responseUnsafe?.contact || result?.contact;
-        if (contact) {
+        // Handle both version 6.9+ and legacy formats
+        // result could be the contact object directly or contain responseUnsafe
+        const contact = result?.responseUnsafe?.contact || result?.contact || result;
+        
+        if (contact && contact.phone_number) {
           setPhone(contact.phone_number || "");
           if (contact.first_name) {
             setFullName(`${contact.first_name} ${contact.last_name || ""}`.trim());
@@ -298,12 +302,20 @@ export default function SpaBookingPage() {
           toast({ title: "Контакт получен", description: "Номер телефона подтверждён" });
           setStep("confirm");
         } else {
-          // If success is true but contact is missing, try to handle gracefully
-          toast({ title: "Контакт подтверждён", description: "Продолжите оформление" });
+          // If success is true but contact data is weirdly missing in the object structure, 
+          // we might still be in a state where the bot will handle it or user needs to manual
+          toast({ 
+            title: "Контакт подтверждён", 
+            description: "Пожалуйста, проверьте данные и завершите бронирование" 
+          });
           setStep("confirm");
         }
       } else {
-        toast({ title: "Не удалось получить номер", description: "Попробуйте ещё раз или введите вручную", variant: "destructive" });
+        toast({ 
+          title: "Не удалось получить номер", 
+          description: "Попробуйте ещё раз или введите номер телефона вручную", 
+          variant: "destructive" 
+        });
       }
     });
   };

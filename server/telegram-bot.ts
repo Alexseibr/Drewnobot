@@ -507,23 +507,14 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
         // Send confirmation with button to continue booking
         await sendMessage(
           chat.id,
-          `Номер телефона подтверждён: ${phone}\n\nНажмите кнопку ниже, чтобы продолжить бронирование:`,
-          {
-            reply_markup: {
-              remove_keyboard: true,
-            },
-          }
-        );
-        
-        await sendMessage(
-          chat.id,
-          "Продолжить бронирование:",
+          `✅ Номер подтвержден: <b>${phone}</b>\n\nНажмите кнопку ниже, чтобы вернуться и завершить бронирование:`,
           {
             reply_markup: {
               inline_keyboard: [
-                [{ text: "📅 Продолжить бронирование", web_app: { url: bookingUrl } }]
-              ]
-            }
+                [{ text: "🔙 Завершить бронирование", web_app: { url: bookingUrl } }]
+              ],
+              remove_keyboard: true,
+            },
           }
         );
       } else {
