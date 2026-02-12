@@ -21,35 +21,30 @@ async function getEwelinkClient() {
   }
   
   try {
-    // Definitive approach for ewelink-api-next in CommonJS
-    const ewelinkModule = (EWeLink as any).default || EWeLink;
-    const WebAPI = ewelinkModule.WebAPI || ewelinkModule;
+    // Ultimate detection for ewelink-api-next in various environments
+    const ewelink = (EWeLink as any).default || EWeLink;
+    let WebAPI = ewelink.WebAPI;
+    
+    // Fallback if WebAPI is not directly on the module
+    if (!WebAPI) {
+      WebAPI = typeof ewelink === 'function' ? ewelink : ewelink.default;
+    }
     
     if (typeof WebAPI !== 'function') {
-      console.error("[eWeLink] WebAPI constructor not found", { type: typeof WebAPI });
+      console.error("[eWeLink] WebAPI constructor not found", { 
+        type: typeof WebAPI,
+        moduleKeys: Object.keys(ewelink)
+      });
       return null;
     }
 
     ewelinkClient = new WebAPI({
       region,
-    });
-    
-    // Explicitly call login with credentials to get the token
-    console.log("[eWeLink] Attempting explicit login with credentials...");
-    const loginRes = await ewelinkClient.login({
       email,
       password,
     });
     
-    console.log("[eWeLink] Login result received:", loginRes ? "yes" : "no");
-    
-    if (loginRes?.data?.at) {
-      console.log("[eWeLink] Manually setting access token");
-      ewelinkClient.at = loginRes.data.at;
-      if (loginRes.data.region) ewelinkClient.region = loginRes.data.region;
-    }
-    
-    console.log("[eWeLink] Client initialized and logged in");
+    console.log("[eWeLink] Client initialized");
     return ewelinkClient;
   } catch (error) {
     console.error("[eWeLink] Login failed:", error);
