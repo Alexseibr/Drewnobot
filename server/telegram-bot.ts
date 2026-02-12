@@ -28,8 +28,11 @@ async function getEwelinkClient() {
       region,
     });
     
+    console.log("[eWeLink] Attempting to get credentials/login...");
+    await conn.getCredentials();
+    
     ewelinkClient = conn;
-    console.log("[eWeLink] Client initialized with ewelink-api");
+    console.log("[eWeLink] Client initialized and authenticated with ewelink-api");
     return ewelinkClient;
   } catch (error) {
     console.error("[eWeLink] Connection failed:", error);
