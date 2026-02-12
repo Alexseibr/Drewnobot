@@ -1,0 +1,92 @@
+root@server-srekbm:/var/www/drewno-ops# git pull origin main && npm run build && pm2 restart 0
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 3.93 KiB | 503.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   be4b78e..362f943  main       -> origin/main
+Updating be4b78e..362f943
+Fast-forward
+ ...rewno-ops-git-pull-origin-m_1770890637537.txt | 103 +++++++++++++++++++
+ server/telegram-bot.ts                           |  45 ++++----
+ 2 files changed, 129 insertions(+), 19 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-git-pull-origin-m_1770890637537.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-CZtiF9QP.css            85.71 kB │ gzip:  14.04kB
+../dist/public/assets/index-mIoHGbrh.js          1,343.37 kB │ gzip: 356.73kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 21.94s
+building server...
+
+  dist/index.cjs  1.4mb ⚠️
+
+⚡ Done in 809ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 31   │ online    │ 0%       │ 26.2mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215419)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:216165)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | [eWeLink] Login failed: TypeError: Ma.login is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215419)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:216199)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | [eWeLink] Login failed: TypeError: Ma.login is not a function
+0|drewno-o |     at pG (/var/www/drewno-ops/dist/index.cjs:70:215419)
+0|drewno-o |     at Ly (/var/www/drewno-ops/dist/index.cjs:70:216199)
+0|drewno-o |     at /var/www/drewno-ops/dist/index.cjs:247:56589
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 1:06:07 PM [scheduler]   - Scheduled task notifications: everyminute
+0|drewno-o | 1:06:07 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 1:06:07 PM [scheduler]   - Notifications:
+0|drewno-o | 1:06:07 PM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 1:06:07 PM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 1:06:07 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 1:06:07 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 1:06:07 PM [scheduler]   - Thermostat:
+0|drewno-o | 1:06:07 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 1:06:07 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 1:06:07 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 1:06:07 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 1:06:07 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 1:06:07 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 1:06:07 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | 1:06:13 PM [express] GET /api/ops/today 200 in 65ms :: {"tasks":[{"id":"3dcd44c9-e712-4e3f-bede-740c461b3360","date":"2026-02-12","type":"other","title":"Подготовка дров","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.088Z"},{"id":"af570403-ff4a-4d12-9cef-95e15c93fefd","date":"2026-02-12","type":"trash_prep","title":"Вынос мусора","checklist":null,"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.098Z"},{"id":"add0247c-a1b7-4fdc-a66e-184f1aee4389","date":"2026-02-12","type":"other","title":"Утренний обход территории","checklist":["Проверка входа","Осмотр парковки","Проверка освещения"],"status":"done","priority":"normal","notified":false,"createdBySystem":true,"meta":null,"createdAt":"2026-02-12T03:00:00.041Z"}],"cottageBookings":[],"bathBookings":[],"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"stats":{"checkInsToday":0,"checkOutsToday":0,"bathsToday":0,"openTasks":0,"cashBalance":16683}}
+0|drewno-ops  | 1:06:13 PM [express] GET /api/cash/shift/current 200 in 29ms :: {"currentShift":{"id":"a72dc17e-5b0d-4695-849c-d754761ccc9e","openedAt":"2025-12-24T21:34:10.408Z","openedBy":"admin","isOpen":true,"visibleToAdmin":true,"cashBox":"main"},"transactions":[],"balance":0}
+0|drewno-ops  | 1:06:13 PM [express] GET /api/auth/me 200 in 27ms :: {"id":"9354fddc-eb32-4d80-8856-ebce7c48c663","telegramId":"374243315","name":"А.А","role":"SUPER_ADMIN"}
+0|drewno-ops  | [eWeLink] Device ID length: 10
+0|drewno-ops  | [eWeLink] Device ID prefix: 100
+0|drewno-ops  | [eWeLink] Client instance created
+0|drewno-ops  | [eWeLink] Sending switch ON command...
+0|drewno-ops  | [eWeLink] Response from API: {"status":200,"responseTime":142,"error":400,"msg":"\"authorization\" with value \"Bearer\" fails to matchthe required pattern: /^Bearer\\s[0-9a-f]+$/","data":{}}
+0|drewno-ops  | [eWeLink] Gate open command sent successfully
+0|drewno-ops  | 1:06:18 PM [express] POST /api/admin/gate/open 200 in 159ms:: {"message":"Ворота открыты"}

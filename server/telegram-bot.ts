@@ -2,7 +2,7 @@ import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 import { storage } from "./storage";
 
-import EWeLink from "ewelink-api-next";
+import ewelinkApi from "ewelink-api";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -21,44 +21,18 @@ async function getEwelinkClient() {
   }
   
   try {
-    // Definitive approach for ewelink-api-next
-    // The library exports a default object containing WebAPI
-    const ewelink = (EWeLink as any).default || EWeLink;
-    const WebAPI = ewelink.WebAPI || ewelink;
-    
-    if (typeof WebAPI !== 'function') {
-      console.error("[eWeLink] WebAPI constructor not found", { 
-        type: typeof WebAPI,
-        keys: Object.keys(ewelink)
-      });
-      return null;
-    }
-
-    // Pass region, email, and password to constructor
-    ewelinkClient = new WebAPI({
-      region,
+    // Switch to the more stable ewelink-api library
+    const conn = new (ewelinkApi as any)({
       email,
       password,
+      region,
     });
     
-    console.log("[eWeLink] Client instance created");
-    
-    // Attempt explicit login to get the token
-    if (typeof ewelinkClient.login === 'function') {
-      console.log("[eWeLink] Attempting explicit login...");
-      const loginRes = await ewelinkClient.login();
-      console.log("[eWeLink] Login response:", JSON.stringify(loginRes));
-      
-      // CRITICAL: Manually extract and set the token if the library failed to do so
-      if (loginRes?.data?.at) {
-        console.log("[eWeLink] Manually setting access token from login response");
-        ewelinkClient.at = loginRes.data.at;
-      }
-    }
-    
+    ewelinkClient = conn;
+    console.log("[eWeLink] Client initialized with ewelink-api");
     return ewelinkClient;
   } catch (error) {
-    console.error("[eWeLink] Login failed:", error);
+    console.error("[eWeLink] Connection failed:", error);
     ewelinkClient = null;
     return null;
   }
@@ -68,9 +42,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
   // Try to get from process.env first (for production)
   let deviceId = process.env.EWELINK_GATE_DEVICE_ID;
   
-  // LOG THE ACTUAL VALUE (MASKED) TO DEBUG
   console.log("[eWeLink] Device ID length:", deviceId ? deviceId.length : 0);
-  console.log("[eWeLink] Device ID prefix:", deviceId ? deviceId.substring(0, 3) : "NONE");
 
   if (!deviceId || deviceId === "id_вашего_устройства_из_ewelink") {
     return { success: false, error: "Device ID not configured" };
@@ -80,25 +52,14 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     const client = await getEwelinkClient();
     if (!client) return { success: false, error: "Failed to connect to eWeLink" };
     
-    // Standard switch toggle format for ewelink-api-next
-    console.log("[eWeLink] Sending switch ON command...");
-    
-    // Force the token if we have it to ensure Authorization header is built correctly
-    const params: any = { switch: "on" };
-    
-    const response = await client.device.setThingStatus({
-      type: 1, // device
-      id: deviceId.trim(),
-      params
-    });
+    console.log("[eWeLink] Sending toggle command via ewelink-api...");
+    // ewelink-api uses setDevicePowerState
+    const response = await client.setDevicePowerState(deviceId.trim(), 'toggle');
     
     console.log("[eWeLink] Response from API:", JSON.stringify(response));
     
-    // Check for success or the specific msg "OK"
-    const isSuccess = response?.error === 0 || response?.status === 200 || response?.msg === "OK" || !response?.error;
-    
-    if (isSuccess) {
-      console.log("[eWeLink] Gate open command sent successfully");
+    if (response?.status === 'ok' || response?.error === 0 || !response?.error) {
+      console.log("[eWeLink] Gate command sent successfully");
       return { success: true };
     } else {
       console.error("[eWeLink] API returned error:", response?.error, response?.msg);
