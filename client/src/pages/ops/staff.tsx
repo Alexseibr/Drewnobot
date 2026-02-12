@@ -131,8 +131,10 @@ export default function StaffPage() {
 
   const todayCleaningLogs = cleaningLogs.filter(l => l.date === today);
   const yesterdayCleaningLogs = cleaningLogs.filter(l => l.date === yesterday);
+  const olderCleaningLogs = cleaningLogs.filter(l => l.date !== today && l.date !== yesterday);
   const todayHourlyLogs = hourlyLogs.filter(l => l.date === today);
   const yesterdayHourlyLogs = hourlyLogs.filter(l => l.date === yesterday);
+  const olderHourlyLogs = hourlyLogs.filter(l => l.date !== today && l.date !== yesterday);
 
   const totalCleaningAmount = cleaningLogs.reduce((sum, log) => sum + log.rate, 0);
   const totalHourlyAmount = hourlyLogs.reduce((sum, log) => sum + log.totalAmount, 0);
@@ -207,6 +209,17 @@ export default function StaffPage() {
                           <SelectContent>
                             <SelectItem value={today}>Сегодня ({todayDisplay})</SelectItem>
                             <SelectItem value={yesterday}>Вчера ({yesterdayDisplay})</SelectItem>
+                            {/* Allow selecting older dates by adding subDays(now, n) if needed, 
+                                or just let them edit since the API allows it now */}
+                            {Array.from({ length: 5 }).map((_, i) => {
+                              const date = subDays(now, i + 2);
+                              const dateStr = format(date, "yyyy-MM-dd");
+                              return (
+                                <SelectItem key={dateStr} value={dateStr}>
+                                  {format(date, "d MMMM", { locale: ru })}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
@@ -263,6 +276,12 @@ export default function StaffPage() {
                     {yesterdayCleaningLogs.map(renderCleaningLog)}
                   </div>
                 )}
+                {olderCleaningLogs.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">Ранее</div>
+                    {olderCleaningLogs.map(renderCleaningLog)}
+                  </div>
+                )}
                 {cleaningLogs.length === 0 && (
                   <p className="text-muted-foreground text-center py-4">Нет записей</p>
                 )}
@@ -301,6 +320,17 @@ export default function StaffPage() {
                           <SelectContent>
                             <SelectItem value={today}>Сегодня ({todayDisplay})</SelectItem>
                             <SelectItem value={yesterday}>Вчера ({yesterdayDisplay})</SelectItem>
+                            {/* Allow selecting older dates by adding subDays(now, n) if needed, 
+                                or just let them edit since the API allows it now */}
+                            {Array.from({ length: 5 }).map((_, i) => {
+                              const date = subDays(now, i + 2);
+                              const dateStr = format(date, "yyyy-MM-dd");
+                              return (
+                                <SelectItem key={dateStr} value={dateStr}>
+                                  {format(date, "d MMMM", { locale: ru })}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
@@ -373,6 +403,12 @@ export default function StaffPage() {
                   <div className="space-y-2">
                     <div className="text-sm font-medium text-muted-foreground">Вчера ({yesterdayDisplay})</div>
                     {yesterdayHourlyLogs.map(renderHourlyLog)}
+                  </div>
+                )}
+                {olderHourlyLogs.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">Ранее</div>
+                    {olderHourlyLogs.map(renderHourlyLog)}
                   </div>
                 )}
                 {hourlyLogs.length === 0 && (
