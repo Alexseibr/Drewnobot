@@ -2,7 +2,67 @@ import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 import { storage } from "./storage";
 
+import EWeLink from "ewelink-api-next";
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+// eWeLink client initialization
+let ewelinkClient: any = null;
+async function getEwelinkClient() {
+  if (ewelinkClient) return ewelinkClient;
+  
+  const email = process.env.EWELINK_EMAIL;
+  const password = process.env.EWELINK_PASSWORD;
+  const region = process.env.EWELINK_REGION || "eu";
+  
+  if (!email || !password) {
+    console.error("[eWeLink] Missing credentials");
+    return null;
+  }
+  
+  try {
+    ewelinkClient = new EWeLink.WebAPI({
+      appId: "dummy", // The library might need this or use defaults
+      appSecret: "dummy",
+      region,
+    });
+    
+    await ewelinkClient.login({
+      email,
+      password,
+    });
+    
+    console.log("[eWeLink] Logged in successfully");
+    return ewelinkClient;
+  } catch (error) {
+    console.error("[eWeLink] Login failed:", error);
+    return null;
+  }
+}
+
+export async function openGate(): Promise<{ success: boolean; error?: string }> {
+  const deviceId = process.env.EWELINK_GATE_DEVICE_ID;
+  if (!deviceId) return { success: false, error: "Device ID not configured" };
+  
+  try {
+    const client = await getEwelinkClient();
+    if (!client) return { success: false, error: "Failed to connect to eWeLink" };
+    
+    // Most gates use a pulse (on then off) or just a toggle
+    // We'll send "on" command. If it's a momentary switch, it should work.
+    await client.device.setThingStatus({
+      type: 1, // device
+      id: deviceId,
+      params: { switch: "on" }
+    });
+    
+    console.log("[eWeLink] Gate open command sent");
+    return { success: true };
+  } catch (error) {
+    console.error("[eWeLink] Failed to open gate:", error);
+    return { success: false, error: String(error) };
+  }
+}
 
 // Store pending contact requests with booking data
 const pendingContactRequests = new Map<string, {
@@ -541,10 +601,60 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
         await handleSpaTemperatureCallback(data, from, message.chat.id);
       }
       
+      // Handle Gate Opening
+      if (data?.startsWith("gate_open:")) {
+        await handleGateOpenCallback(data, from, message.chat.id);
+      }
+      
       await answerCallbackQuery(update.callback_query.id);
     }
   } catch (error) {
     console.error("[Telegram Bot] Error handling update:", error);
+  }
+}
+
+// Handle Gate Open callback
+async function handleGateOpenCallback(
+  data: string,
+  from: { id: number; first_name: string },
+  chatId: number
+) {
+  const bookingId = data.split(":")[1];
+  try {
+    const booking = await storage.getSpaBooking(bookingId);
+    if (!booking) {
+      await sendMessage(chatId, "Бронирование не найдено.");
+      return;
+    }
+
+    // Verify it's within 30 mins of start time or during booking
+    const now = new Date();
+    const [startH, startM] = booking.startTime.split(":").map(Number);
+    const bookingStart = new Date(now);
+    bookingStart.setHours(startH, startM, 0, 0);
+    
+    const thirtyMinsBefore = new Date(bookingStart.getTime() - 30 * 60 * 1000);
+    const bookingEnd = new Date(now);
+    const [endH, endM] = booking.endTime.split(":").map(Number);
+    bookingEnd.setHours(endH, endM, 0, 0);
+
+    if (now < thirtyMinsBefore || now > bookingEnd) {
+      await sendMessage(chatId, "Кнопка открытия ворот станет активна за 30 минут до начала вашего времени.");
+      return;
+    }
+
+    await sendMessage(chatId, "Открываю ворота...");
+    const result = await openGate();
+    
+    if (result.success) {
+      await sendMessage(chatId, "✅ Ворота открыты! Добро пожаловать.");
+      // Notify admins
+      await notifyAdmins(`Гость ${booking.customer.fullName} открыл ворота (бронь ${booking.spaResource} ${booking.startTime})`);
+    } else {
+      await sendMessage(chatId, "❌ Не удалось открыть ворота автоматически. Пожалуйста, позвоните администратору.");
+    }
+  } catch (error) {
+    console.error("[Telegram Bot] Gate callback error:", error);
   }
 }
 
@@ -1627,7 +1737,7 @@ export async function sendSpaAccessInstructions(): Promise<void> {
         let message = `<b>Скоро ваша баня!</b>\n\n`;
         message += `Начало: <b>${booking.startTime}</b>\n\n`;
         message += `<b>Как попасть:</b>\n`;
-        message += `Код на воротах: <code>4444#</code>\n\n`;
+        message += `Когда будете у ворот, нажмите кнопку ниже, чтобы они открылись автоматически.\n\n`;
         message += `<b>Местоположение:</b>\n`;
         message += `<a href="https://yandex.by/maps/-/CHAbU-Yk">Яндекс Карты (Открыть)</a>\n\n`;
         message += `<b>Контакты администратора:</b>\n`;
@@ -1635,7 +1745,13 @@ export async function sendSpaAccessInstructions(): Promise<void> {
         message += `Telegram: @village_drewno_admin\n\n`;
         message += `Приятного отдыха!`;
         
-        await sendMessage(parseInt(telegramId, 10), message);
+        await sendMessage(parseInt(telegramId, 10), message, {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🔓 Я на месте — Открыть ворота", callback_data: `gate_open:${booking.id}` }]
+            ]
+          }
+        });
         console.log(`[Telegram Bot] Sent access instructions to guest ${telegramId}`);
       }
     }
@@ -1761,6 +1877,7 @@ export async function sendSpaMorningReminders(): Promise<void> {
       message += `Услуга: <b>${serviceType}</b>\n`;
       message += `Время: <b>${booking.startTime} - ${booking.endTime}</b>\n`;
       message += `Гости: <b>${booking.guestsCount} чел.</b>\n\n`;
+      message += `За час до начала мы пришлём кнопку для открытия ворот и инструкцию.\n\n`;
       message += `Ждём вас!`;
 
       await sendMessage(parseInt(booking.customer.telegramId!, 10), message);
