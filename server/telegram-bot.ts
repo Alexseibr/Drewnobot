@@ -29,13 +29,14 @@ async function getEwelinkClient() {
     });
     
     console.log("[eWeLink] Attempting login with getCredentials...");
+    // getCredentials() in ewelink-api actually performs the login
     const creds = await conn.getCredentials();
-    console.log("[eWeLink] Credentials received:", creds ? "YES" : "NO");
+    console.log("[eWeLink] Credentials response:", JSON.stringify(creds));
     
-    if (!creds || creds.error) {
-       console.error("[eWeLink] getCredentials failed, trying login...");
-       const loginResult = await conn.login();
-       console.log("[eWeLink] Login result:", JSON.stringify(loginResult));
+    if (creds && creds.error && creds.error !== 0) {
+       console.error("[eWeLink] Authentication failed with error:", creds.error, creds.msg);
+       ewelinkClient = null;
+       return null;
     }
     
     ewelinkClient = conn;
