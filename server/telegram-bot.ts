@@ -21,29 +21,35 @@ async function getEwelinkClient() {
   }
   
   try {
-    // Standard initialization for ewelink-api-next
-    const WebAPI = (EWeLink as any).WebAPI || (EWeLink as any).default?.WebAPI || EWeLink;
+    // Definitive approach for ewelink-api-next in CommonJS
+    const ewelinkModule = (EWeLink as any).default || EWeLink;
+    const WebAPI = ewelinkModule.WebAPI || ewelinkModule;
     
+    if (typeof WebAPI !== 'function') {
+      console.error("[eWeLink] WebAPI constructor not found", { type: typeof WebAPI });
+      return null;
+    }
+
     ewelinkClient = new WebAPI({
       region,
+    });
+    
+    // Explicitly call login with credentials to get the token
+    console.log("[eWeLink] Attempting explicit login with credentials...");
+    const loginRes = await ewelinkClient.login({
       email,
       password,
     });
     
-    // Attempt explicit login to populate the token if method exists
-    if (typeof ewelinkClient.login === 'function') {
-      console.log("[eWeLink] Calling explicit login...");
-      const loginRes = await ewelinkClient.login();
-      console.log("[eWeLink] Login result:", JSON.stringify(loginRes));
-      
-      // If login didn't populate at, try to force it if we have at in loginRes
-      if (loginRes?.data?.at) {
-        (ewelinkClient as any).at = loginRes.data.at;
-        (ewelinkClient as any).region = loginRes.data.region || region;
-      }
+    console.log("[eWeLink] Login result received:", loginRes ? "yes" : "no");
+    
+    if (loginRes?.data?.at) {
+      console.log("[eWeLink] Manually setting access token");
+      ewelinkClient.at = loginRes.data.at;
+      if (loginRes.data.region) ewelinkClient.region = loginRes.data.region;
     }
     
-    console.log("[eWeLink] Client initialized");
+    console.log("[eWeLink] Client initialized and logged in");
     return ewelinkClient;
   } catch (error) {
     console.error("[eWeLink] Login failed:", error);
