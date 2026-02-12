@@ -22,20 +22,11 @@ async function getEwelinkClient() {
   
   try {
     // Standard initialization for commonjs environments
-    const WebAPI = (EWeLink as any).WebAPI || (EWeLink as any).default?.WebAPI || EWeLink;
+    const ewelink = (EWeLink as any).default || EWeLink;
     
-    ewelinkClient = new WebAPI({
-      region,
-    });
+    ewelinkClient = new ewelink(email, password, region);
     
-    // Explicitly call login with credentials to get the token
-    console.log("[eWeLink] Attempting explicit login with credentials...");
-    await ewelinkClient.login({
-      email,
-      password,
-    });
-    
-    console.log("[eWeLink] Client initialized and logged in");
+    console.log("[eWeLink] Client initialized with credentials");
     return ewelinkClient;
   } catch (error) {
     console.error("[eWeLink] Login failed:", error);
@@ -60,19 +51,13 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     const client = await getEwelinkClient();
     if (!client) return { success: false, error: "Failed to connect to eWeLink" };
     
-    // Final attempt with Pulse mode parameters often used by eWeLink for gate controllers
+    // Simplified command based on ewelink-api-next documentation for switch devices
     console.log("[eWeLink] Sending switch ON command...");
     const response = await client.device.setThingStatus({
       type: 1, // device
       id: deviceId.trim(),
       params: { 
-        pulse: "on",
-        pulseWidth: 1000,
-        switch: "on",
-        switches: [
-          { switch: "on", outlet: 0 },
-          { switch: "on", outlet: 1 }
-        ]
+        switch: "on"
       }
     });
     
