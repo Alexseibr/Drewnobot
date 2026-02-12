@@ -21,8 +21,9 @@ async function getEwelinkClient() {
   }
   
   try {
-    // Robust detection of the WebAPI constructor for ewelink-api-next
-    const WebAPI = (EWeLink as any).WebAPI || (EWeLink as any).default?.WebAPI || (EWeLink as any).default || EWeLink;
+    // Definitive approach for ewelink-api-next in CommonJS
+    const ewelinkModule = (EWeLink as any).default || EWeLink;
+    const WebAPI = ewelinkModule.WebAPI || ewelinkModule;
     
     if (typeof WebAPI !== 'function') {
       console.error("[eWeLink] WebAPI constructor not found", { type: typeof WebAPI });
