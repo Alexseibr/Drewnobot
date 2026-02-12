@@ -23,13 +23,12 @@ async function loginDirect() {
   try {
     console.log("[eWeLink] Attempting direct HTTP login...");
     
-    // Using a known working APP_ID and SECRET for eWeLink mobile app simulation
-    // This is the official App ID for the Android/iOS app which has broad access
+    // Using the official App ID for the Android/iOS app which has broad access
     const appid = "4s1pGLh9sW7Lp8su"; 
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
     const API_URL_LOGIN = "https://eu-apia.coolkit.cc/v2/user/login";
 
-    const timestamp = Math.floor(Date.now());
+    const timestamp = Date.now();
     const nonce = Math.random().toString(36).substring(2, 10);
     const data = JSON.stringify({
       email,
@@ -80,7 +79,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     
     const appid = "4s1pGLh9sW7Lp8su"; 
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
-    const timestamp = Math.floor(Date.now());
+    const timestamp = Date.now();
     const nonce = Math.random().toString(36).substring(2, 10);
     
     const params = {
