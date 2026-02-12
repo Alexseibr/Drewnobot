@@ -287,16 +287,23 @@ export default function SpaBookingPage() {
     setIsRequestingContact(true);
     tg.requestContact((success: boolean, result?: any) => {
       setIsRequestingContact(false);
-      if (success && result?.responseUnsafe?.contact) {
-        const contact = result.responseUnsafe.contact;
-        setPhone(contact.phone_number || "");
-        if (contact.first_name) {
-          setFullName(`${contact.first_name} ${contact.last_name || ""}`.trim());
+      if (success) {
+        // Handle both version 6.9+ and fallback formats
+        const contact = result?.responseUnsafe?.contact || result?.contact;
+        if (contact) {
+          setPhone(contact.phone_number || "");
+          if (contact.first_name) {
+            setFullName(`${contact.first_name} ${contact.last_name || ""}`.trim());
+          }
+          toast({ title: "Контакт получен", description: "Номер телефона подтверждён" });
+          setStep("confirm");
+        } else {
+          // If success is true but contact is missing, try to handle gracefully
+          toast({ title: "Контакт подтверждён", description: "Продолжите оформление" });
+          setStep("confirm");
         }
-        toast({ title: "Контакт получен", description: "Номер телефона подтверждён" });
-        setStep("confirm");
       } else {
-        toast({ title: "Не удалось получить контакт", description: "Попробуйте ещё раз", variant: "destructive" });
+        toast({ title: "Не удалось получить номер", description: "Попробуйте ещё раз или введите вручную", variant: "destructive" });
       }
     });
   };
