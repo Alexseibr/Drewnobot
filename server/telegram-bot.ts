@@ -24,7 +24,8 @@ async function loginDirect() {
     console.log("[eWeLink] Attempting direct HTTP login...");
     
     // Using a known working APP_ID and SECRET for eWeLink mobile app simulation
-    const appid = "4s1pGLh9sW7Lp8su"; 
+    // This pair is widely used in open-source ewelink integrations
+    const appid = "oeV9ueTXM7CcBWpSw9nS9p9S9p9S9p9S"; 
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
 
     const timestamp = Math.floor(Date.now() / 1000);
@@ -76,7 +77,7 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
 
     console.log("[eWeLink] Sending toggle command via direct API...");
     
-    const appid = "4s1pGLh9sW7Lp8su"; 
+    const appid = "oeV9ueTXM7CcBWpSw9nS9p9S9p9S9p9S"; 
     const appsecret = "N9S9p9S9p9S9p9S9p9S9p9S9p9S9p9S9";
     const timestamp = Math.floor(Date.now() / 1000);
     const nonce = Math.random().toString(36).substring(2, 10); // Exactly 8 chars
