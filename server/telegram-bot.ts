@@ -22,7 +22,7 @@ async function getEwelinkClient() {
   
   try {
     // Standard initialization for commonjs environments
-    const WebAPI = (EWeLink as any).WebAPI || EWeLink;
+    const WebAPI = (EWeLink as any).WebAPI || (EWeLink as any).default?.WebAPI || EWeLink;
     
     ewelinkClient = new WebAPI({
       region,
