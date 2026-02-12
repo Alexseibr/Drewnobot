@@ -47,12 +47,7 @@ const BOOKING_TYPES: { value: BookingType; label: string; description: string; i
 const getMaxGuests = (bookingType: BookingType, spaResource: string, withAddon: boolean): number => {
   const isComplex1 = spaResource === "SPA1";
   if (bookingType === "terrace_only") return 12;
-  
-  if (withAddon) {
-    // This is essentially bath_with_tub
-    return isComplex1 ? 10 : 6;
-  }
-
+  if (withAddon) return isComplex1 ? 10 : 6;
   switch (bookingType) {
     case "bath_only": return 6;
     case "tub_only": return isComplex1 ? 6 : 4;
@@ -66,8 +61,7 @@ const PRICES: Record<BookingType, { base: number; guestThreshold?: number; highe
   tub_only: { base: 150, guestThreshold: 4, higherPrice: 180 },
 };
 
-const ADDON_BATH_PRICE = 150;
-const ADDON_TUB_PRICE = 150;
+const ADDON_PRICE = 150;
 const EXTRA_HOUR_PRICE = 30;
 const ADDITIONAL_SERVICES = {
   grill: { name: "Аренда мангала", price: 15 },
@@ -100,7 +94,6 @@ export default function SpaBookingPage() {
     }
   }, [user]);
 
-  // Handle return from bot with contact data
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const phoneFromBot = params.get("phone");
@@ -124,13 +117,8 @@ export default function SpaBookingPage() {
       if (params.get("withAddon")) setWithServiceAddon(params.get("withAddon") === "true");
       if (durationFromBot) setDurationHours(parseInt(durationFromBot) || 3);
       if (guestsFromBot) setGuestsCount(parseInt(guestsFromBot) || 2);
-      
-      // Go to confirm step since we have verified phone
       setStep("confirm");
-      
-      // Clean URL
       window.history.replaceState({}, "", window.location.pathname);
-      
       toast({
         title: "Контакт подтверждён",
         description: "Проверьте данные и подтвердите бронирование",
@@ -163,20 +151,13 @@ export default function SpaBookingPage() {
       if (!selectedDate || !selectedTime || !selectedResource) {
         throw new Error("Заполните все обязательные поля");
       }
-
       const endHour = parseInt(selectedTime.split(":")[0]) + durationHours;
       const endTime = `${endHour.toString().padStart(2, "0")}:00`;
-      
       const storedAuth = localStorage.getItem("drewno-auth");
       const authToken = storedAuth ? JSON.parse(storedAuth).token : null;
-      
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (authToken) {
-        headers["x-verify-token"] = authToken;
-      }
-      
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authToken) headers["x-verify-token"] = authToken;
+
       const response = await fetch("/api/guest/spa-bookings", {
         method: "POST",
         headers,
@@ -189,20 +170,14 @@ export default function SpaBookingPage() {
           durationHours,
           guestsCount,
           options: { grill, charcoal },
-          customer: {
-            fullName,
-            phone,
-            telegramId: user?.telegramId,
-          },
+          customer: { fullName, phone, telegramId: user?.telegramId },
           comment: comment || undefined,
         }),
       });
-      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Ошибка бронирования");
       }
-      
       return response.json();
     },
     onSuccess: () => {
@@ -219,30 +194,33 @@ export default function SpaBookingPage() {
     },
   });
 
+  const getServiceLabel = () => {
+    const base = BOOKING_TYPES.find(t => t.value === selectedType)?.label || "";
+    if (withServiceAddon) {
+      return selectedType === "bath_only" ? `${base} + Купель` : `${base} + Баня`;
+    }
+    return base;
+  };
+
   const calculatePrice = () => {
+    if (withServiceAddon) {
+      const base = guestsCount >= 9 ? 330 : 300;
+      const extraHours = Math.max(0, durationHours - 3);
+      let servicesPrice = 0;
+      if (grill) servicesPrice += ADDITIONAL_SERVICES.grill.price;
+      if (charcoal) servicesPrice += ADDITIONAL_SERVICES.charcoal.price;
+      return base + extraHours * EXTRA_HOUR_PRICE + servicesPrice;
+    }
     const priceConfig = PRICES[selectedType];
     let basePrice = priceConfig.base;
-
-    // Handle cross-sell addon price
-    if (withServiceAddon) {
-      if (selectedType === "bath_only") basePrice += ADDON_TUB_PRICE;
-      if (selectedType === "tub_only") basePrice += ADDON_BATH_PRICE;
-    }
-
-    // Special case for combined booking price threshold
-    if (withServiceAddon) {
-      if (guestsCount > 9) basePrice = 330;
-      else basePrice = 300;
-    } else if (priceConfig.guestThreshold && guestsCount > priceConfig.guestThreshold) {
+    if (priceConfig.guestThreshold && guestsCount > priceConfig.guestThreshold) {
       basePrice = priceConfig.higherPrice || priceConfig.base;
     }
-
     const extraHours = Math.max(0, durationHours - 3);
-    const extraHoursPrice = extraHours * EXTRA_HOUR_PRICE;
     let servicesPrice = 0;
     if (grill) servicesPrice += ADDITIONAL_SERVICES.grill.price;
     if (charcoal) servicesPrice += ADDITIONAL_SERVICES.charcoal.price;
-    return basePrice + extraHoursPrice + servicesPrice;
+    return basePrice + extraHours * EXTRA_HOUR_PRICE + servicesPrice;
   };
 
   const calculateEndTime = () => {
@@ -254,39 +232,29 @@ export default function SpaBookingPage() {
 
   const getMaxDuration = (startTime: string): number => {
     if (!startTime) return 5;
-    // Get maxDuration from API if available
     const slot = availability?.find(
       s => s.spaResource === selectedResource && s.startTime === startTime
     );
-    if (slot?.maxDuration) {
-      return slot.maxDuration;
-    }
-    // Fallback to closing time calculation
+    if (slot?.maxDuration) return slot.maxDuration;
     const startHour = parseInt(startTime.split(":")[0]);
     return Math.min(5, CLOSE_HOUR - startHour);
   };
 
   const handleRequestContact = async () => {
     const tg = (window as any).Telegram?.WebApp;
-    
-    // Check if requestContact is supported (version 6.9+)
     const version = tg?.version || "6.0";
     const versionNum = parseFloat(version);
     const supportsRequestContact = versionNum >= 6.9 && typeof tg?.requestContact === 'function';
-    
+
     if (!supportsRequestContact) {
-      // For older versions or non-Telegram browsers, ask server to send contact request via bot
       const userId = tg?.initDataUnsafe?.user?.id;
-      
       if (!userId) {
-        // Not in Telegram WebApp - show manual phone input hint
         toast({
           title: "Введите номер вручную",
           description: "Откройте приложение через Telegram для автоматической подгрузки номера",
         });
         return;
       }
-      
       const bookingData = {
         date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
         time: selectedTime,
@@ -295,36 +263,23 @@ export default function SpaBookingPage() {
         duration: durationHours,
         guests: guestsCount,
       };
-      
       try {
         const response = await fetch("/api/guest/request-contact", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, bookingData }),
         });
-        
         if (response.ok) {
           toast({
             title: "Проверьте чат с ботом",
             description: "Нажмите кнопку 'Поделиться номером' в чате @Drewno_bot",
           });
-          // Close WebApp to show bot chat
-          if (tg?.close) {
-            tg.close();
-          }
+          if (tg?.close) tg.close();
         } else {
-          toast({
-            title: "Ошибка",
-            description: "Не удалось отправить запрос. Попробуйте позже.",
-            variant: "destructive",
-          });
+          toast({ title: "Ошибка", description: "Не удалось отправить запрос. Попробуйте позже.", variant: "destructive" });
         }
       } catch (e) {
-        toast({
-          title: "Ошибка",
-          description: "Не удалось отправить запрос",
-          variant: "destructive",
-        });
+        toast({ title: "Ошибка", description: "Не удалось отправить запрос", variant: "destructive" });
       }
       return;
     }
@@ -338,32 +293,12 @@ export default function SpaBookingPage() {
         if (contact.first_name) {
           setFullName(`${contact.first_name} ${contact.last_name || ""}`.trim());
         }
-        toast({
-          title: "Контакт получен",
-          description: "Номер телефона подтверждён",
-        });
+        toast({ title: "Контакт получен", description: "Номер телефона подтверждён" });
         setStep("confirm");
       } else {
-        toast({
-          title: "Не удалось получить контакт",
-          description: "Попробуйте ещё раз",
-          variant: "destructive",
-        });
+        toast({ title: "Не удалось получить контакт", description: "Попробуйте ещё раз", variant: "destructive" });
       }
     });
-  };
-
-  const getDateClassName = (date: Date) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    const dayData = allAvailability?.find(d => d.date === dateStr);
-    
-    if (dayData?.fullyBooked) {
-      return "bg-red-500 text-white hover:bg-red-600";
-    }
-    if (dayData?.hasBookings) {
-      return "bg-orange-200 dark:bg-orange-800 hover:bg-orange-300 dark:hover:bg-orange-700";
-    }
-    return "";
   };
 
   const stepTitles: Record<Step, string> = {
@@ -376,6 +311,8 @@ export default function SpaBookingPage() {
     confirm: "Проверка",
     success: "Готово",
   };
+
+  const maxGuests = getMaxGuests(selectedType, selectedResource, withServiceAddon);
 
   if (step === "success") {
     return (
@@ -396,10 +333,7 @@ export default function SpaBookingPage() {
               <CardContent className="p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Услуга</span>
-                  <span className="font-medium">
-                    {BOOKING_TYPES.find(t => t.value === selectedType)?.label}
-                    {withServiceAddon && (selectedType === "bath_only" ? " + Купель" : " + Баня")}
-                  </span>
+                  <span className="font-medium">{getServiceLabel()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Дата</span>
@@ -437,13 +371,13 @@ export default function SpaBookingPage() {
       <PageContainer>
         <div className="space-y-6">
           <div className="flex items-center justify-center gap-1">
-            {["service", "calendar", "time", "details", "confirm"].map((s, i) => (
+            {(["service", "complex", "addons", "calendar", "time", "details", "confirm"] as Step[]).map((s, i, arr) => (
               <div 
                 key={s} 
                 className={cn(
                   "h-1.5 rounded-full transition-all",
                   s === step ? "w-8 bg-primary" : "w-4 bg-muted",
-                  ["service", "calendar", "time", "details", "confirm"].indexOf(step) > i && "bg-primary/50"
+                  arr.indexOf(step) > i && "bg-primary/50"
                 )} 
               />
             ))}
@@ -451,7 +385,7 @@ export default function SpaBookingPage() {
 
           {step === "service" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {BOOKING_TYPES.map(({ value, label, description, icon: Icon }) => (
                   <Card
                     key={value}
@@ -461,17 +395,25 @@ export default function SpaBookingPage() {
                     )}
                     onClick={() => {
                       setSelectedType(value);
-                      setStep("calendar");
+                      setWithServiceAddon(false);
+                      if (value === "terrace_only") {
+                        setSelectedResource("SPA1");
+                        setStep("calendar");
+                      } else {
+                        setStep("complex");
+                      }
                     }}
                     data-testid={`card-type-${value}`}
                   >
-                    <CardContent className="p-4 text-center">
-                      <Icon className={cn(
-                        "h-8 w-8 mx-auto mb-2",
-                        selectedType === value ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <p className="font-medium text-sm">{label}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{description}</p>
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="p-3 rounded-full bg-muted">
+                        <Icon className="h-7 w-7 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-base">{label}</p>
+                        <p className="text-sm text-muted-foreground">{description}</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
                     </CardContent>
                   </Card>
                 ))}
@@ -479,11 +421,137 @@ export default function SpaBookingPage() {
             </div>
           )}
 
-          {step === "calendar" && (
+          {step === "complex" && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Flame className="h-4 w-4" />
+                {selectedType === "bath_only" ? <Flame className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
                 <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+              </div>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">Выберите СПА комплекс</CardTitle>
+                  <CardDescription>У нас два отдельных комплекса</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {["SPA1", "SPA2"].map((code) => (
+                    <div
+                      key={code}
+                      className={cn(
+                        "p-4 rounded-lg border cursor-pointer transition-all",
+                        selectedResource === code ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                      )}
+                      onClick={() => {
+                        setSelectedResource(code);
+                        setStep("addons");
+                      }}
+                      data-testid={`card-spa-${code}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "p-2 rounded-full",
+                          selectedResource === code ? "bg-primary text-primary-foreground" : "bg-muted"
+                        )}>
+                          <Bath className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{code === "SPA1" ? "Комплекс №1 (Большой)" : "Комплекс №2 (Малый)"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {code === "SPA1" ? "Баня до 6 чел, купель до 10 чел" : "Баня до 6 чел, купель до 6 чел"}
+                          </p>
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+              <Button variant="ghost" className="w-full" onClick={() => setStep("service")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Назад к выбору услуги
+              </Button>
+            </div>
+          )}
+
+          {step === "addons" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+                {selectedType === "bath_only" ? <Flame className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
+                <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                <span className="text-muted">|</span>
+                <span>{selectedResource === "SPA1" ? "Комплекс №1" : "Комплекс №2"}</span>
+              </div>
+              
+              <Card className="overflow-visible">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {selectedType === "bath_only" ? <Droplets className="h-5 w-5 text-primary" /> : <Flame className="h-5 w-5 text-primary" />}
+                    Добавить {selectedType === "bath_only" ? "купель" : "баню"}?
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedType === "bath_only" 
+                      ? "Горячая купель на дровах — идеальное дополнение к бане" 
+                      : "Жаркая баня — идеальное дополнение к купели"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {selectedType === "bath_only" ? "Горячая купель" : "Жаркая баня"}
+                      </span>
+                      <span className="font-bold text-primary">+{ADDON_PRICE} BYN</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedType === "bath_only" 
+                        ? "Купель на дровах, до " + (selectedResource === "SPA1" ? "10" : "6") + " человек"
+                        : "Русская баня, до 6 человек"}
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1" 
+                      onClick={() => {
+                        setWithServiceAddon(false);
+                        setStep("calendar");
+                      }}
+                      data-testid="button-skip-addon"
+                    >
+                      Нет, спасибо
+                    </Button>
+                    <Button 
+                      className="flex-1" 
+                      onClick={() => {
+                        setWithServiceAddon(true);
+                        setStep("calendar");
+                      }}
+                      data-testid="button-add-addon"
+                    >
+                      Да, добавить
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button variant="ghost" className="w-full" onClick={() => setStep("complex")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Назад к выбору комплекса
+              </Button>
+            </div>
+          )}
+
+          {step === "calendar" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+                {selectedType === "bath_only" ? <Flame className="h-4 w-4" /> : selectedType === "tub_only" ? <Droplets className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                <span>{getServiceLabel()}</span>
+                {selectedType !== "terrace_only" && (
+                  <>
+                    <span className="text-muted">|</span>
+                    <span>{selectedResource === "SPA1" ? "Комплекс №1" : "Комплекс №2"}</span>
+                  </>
+                )}
               </div>
               <Card>
                 <CardHeader className="pb-2">
@@ -491,9 +559,6 @@ export default function SpaBookingPage() {
                     <CalendarIcon className="h-5 w-5" />
                     Выберите дату
                   </CardTitle>
-                  <CardDescription>
-                    Оранжевый — есть брони, красный — всё занято
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Calendar
@@ -501,9 +566,7 @@ export default function SpaBookingPage() {
                     selected={selectedDate}
                     onSelect={(date) => {
                       setSelectedDate(date);
-                      if (date) {
-                        setStep("time");
-                      }
+                      if (date) setStep("time");
                     }}
                     disabled={(date) => {
                       const today = startOfDay(new Date());
@@ -549,109 +612,75 @@ export default function SpaBookingPage() {
                   />
                 </CardContent>
               </Card>
-              <Button variant="ghost" className="w-full" onClick={() => setStep("service")}>
+              <Button variant="ghost" className="w-full" onClick={() => selectedType === "terrace_only" ? setStep("service") : setStep("addons")}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Назад к выбору услуги
+                Назад
               </Button>
             </div>
           )}
 
           {step === "time" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                 <div className="flex items-center gap-2">
                   <CalendarIcon className="h-4 w-4" />
                   <span>{selectedDate && format(selectedDate, "d MMM", { locale: ru })}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Flame className="h-4 w-4" />
-                  <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                  {selectedType === "bath_only" ? <Flame className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
+                  <span>{getServiceLabel()}</span>
                 </div>
               </div>
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Выберите СПА комплекс</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Время начала
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {["SPA1", "SPA2"].map((code) => (
-                    <div
-                      key={code}
-                      className={cn(
-                        "p-3 rounded-lg border cursor-pointer transition-all",
-                        selectedResource === code ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                      )}
-                      onClick={() => setSelectedResource(code)}
-                      data-testid={`card-spa-${code}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Droplets className={cn(
-                          "h-5 w-5",
-                          selectedResource === code ? "text-primary" : "text-muted-foreground"
-                        )} />
-                        <div>
-                          <p className="font-medium">Комплекс {code.slice(3)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {code === "SPA1" ? "Большая купель (до 6 чел.)" : "Малая купель (до 4 чел.)"}
-                          </p>
-                        </div>
-                      </div>
+                <CardContent>
+                  {loadingAvailability ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
-                  ))}
+                  ) : (
+                    <div className="grid grid-cols-4 gap-2">
+                      {timeSlots.map((time) => {
+                        const slot = availability?.find(
+                          s => s.spaResource === selectedResource && s.startTime === time
+                        );
+                        const isAvailable = slot?.available ?? true;
+                        const isTooSoon = selectedDate && isToday(selectedDate) && !isSlotAvailableForToday(time, MIN_HOURS_ADVANCE_SPA);
+                        const isDisabled = !isAvailable || isTooSoon;
+
+                        return (
+                          <Button
+                            key={time}
+                            variant={selectedTime === time ? "default" : "outline"}
+                            size="sm"
+                            disabled={isDisabled}
+                            onClick={() => {
+                              setSelectedTime(time);
+                              setStep("details");
+                            }}
+                            className={cn(
+                              isDisabled && "opacity-40 line-through text-muted-foreground bg-muted cursor-not-allowed"
+                            )}
+                            data-testid={`button-time-${time}`}
+                          >
+                            {time}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {selectedResource && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Время начала
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingAvailability ? (
-                      <div className="flex justify-center py-4">
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-4 gap-2">
-                        {timeSlots.map((time) => {
-                          const slot = availability?.find(
-                            s => s.spaResource === selectedResource && s.startTime === time
-                          );
-                          const isAvailable = slot?.available ?? true;
-                          const isTooSoon = selectedDate && isToday(selectedDate) && !isSlotAvailableForToday(time, MIN_HOURS_ADVANCE_SPA);
-                          const isDisabled = !isAvailable || isTooSoon;
-
-                          return (
-                            <Button
-                              key={time}
-                              variant={selectedTime === time ? "default" : "outline"}
-                              size="sm"
-                              disabled={isDisabled}
-                              onClick={() => {
-                                setSelectedTime(time);
-                                setStep("details");
-                              }}
-                              className={cn(
-                                isDisabled && "opacity-40 line-through text-muted-foreground bg-muted cursor-not-allowed"
-                              )}
-                              data-testid={`button-time-${time}`}
-                            >
-                              {time}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
               <Button variant="ghost" className="w-full" onClick={() => setStep("calendar")}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Назад
+                Назад к календарю
               </Button>
             </div>
           )}
@@ -660,7 +689,7 @@ export default function SpaBookingPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                 <span>{selectedDate && format(selectedDate, "d MMM", { locale: ru })}</span>
-                <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                <span>{getServiceLabel()}</span>
                 <span>{selectedTime}</span>
               </div>
 
@@ -671,8 +700,8 @@ export default function SpaBookingPage() {
                 <CardContent>
                   <div className="flex items-center justify-center gap-3">
                     {[3, 4, 5].map((hours) => {
-                      const maxDuration = getMaxDuration(selectedTime);
-                      const isDisabled = hours > maxDuration;
+                      const maxDur = getMaxDuration(selectedTime);
+                      const isDisabled = hours > maxDur;
                       return (
                         <Button
                           key={hours}
@@ -715,11 +744,8 @@ export default function SpaBookingPage() {
                     <Button
                       size="icon"
                       variant="outline"
-                      onClick={() => {
-                        const maxGuests = getMaxGuests(selectedType, selectedResource);
-                        setGuestsCount(Math.min(maxGuests, guestsCount + 1));
-                      }}
-                      disabled={guestsCount >= getMaxGuests(selectedType, selectedResource)}
+                      onClick={() => setGuestsCount(Math.min(maxGuests, guestsCount + 1))}
+                      disabled={guestsCount >= maxGuests}
                       data-testid="button-guests-plus"
                     >
                       <Plus className="h-4 w-4" />
@@ -760,7 +786,7 @@ export default function SpaBookingPage() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Услуга</span>
-                    <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                    <span>{getServiceLabel()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Время</span>
@@ -859,7 +885,7 @@ export default function SpaBookingPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Услуга</span>
-                    <span>{BOOKING_TYPES.find(t => t.value === selectedType)?.label}</span>
+                    <span>{getServiceLabel()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Время</span>
