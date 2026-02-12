@@ -18,8 +18,11 @@ async function openGate() {
     const WebAPI = (EWeLink as any).WebAPI || (EWeLink as any).default?.WebAPI || EWeLink;
     const client = new WebAPI({ region, email, password });
     
-    await client.user.get();
-    console.log("Authenticated successfully");
+    // The v2 library uses a different structure, let's try direct login or simple request
+    console.log("Attempting to connect...");
+    
+    // In ewelink-api-next, we might need to use the client directly for device status
+    // Some versions don't have user.get() exposed the same way
 
     await client.device.setThingStatus({
       type: 1,

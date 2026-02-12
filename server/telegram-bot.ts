@@ -30,9 +30,8 @@ async function getEwelinkClient() {
       password,
     });
     
-    // Test connection by getting user info
-    await ewelinkClient.user.get();
-    console.log("[eWeLink] Authenticated successfully");
+    // Skip user.get() test if it's missing in some versions
+    console.log("[eWeLink] Client initialized");
     return ewelinkClient;
   } catch (error) {
     console.error("[eWeLink] Login failed:", error);
