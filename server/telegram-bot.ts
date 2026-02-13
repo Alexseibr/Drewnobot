@@ -1845,21 +1845,23 @@ export async function sendSpaAccessInstructions(): Promise<void> {
         const telegramId = booking.customer?.telegramId;
         if (!telegramId) continue;
         
-        let message = `<b>Скоро ваша баня!</b>\n\n`;
+        let message = `Скоро ваша баня!\n\n`;
         message += `Начало: <b>${booking.startTime}</b>\n\n`;
         message += `<b>Как попасть:</b>\n`;
         message += `Когда будете у ворот, нажмите кнопку ниже, чтобы они открылись автоматически.\n\n`;
         message += `<b>Местоположение:</b>\n`;
-        message += `<a href="https://yandex.by/maps/-/CHAbU-Yk">Яндекс Карты (Открыть)</a>\n\n`;
+        message += `Точка на карте\n`;
+        message += `51.944771,23.964832\n`;
+        message += `<a href="https://yandex.ru/maps?whatshere%5Bzoom%5D=17&whatshere%5Bpoint%5D=23.964832,51.944771&si=84fjdtnmje63akcygd0gpw6p6g">Яндекс Карты (Открыть)</a>\n\n`;
         message += `<b>Контакты администратора:</b>\n`;
-        message += `Телефон: +375 29 123-45-67\n`;
-        message += `Telegram: @village_drewno_admin\n\n`;
+        message += `Телефон: +375 33 617 2984\n`;
+        message += `Telegram: +375 33 617 2984\n\n`;
         message += `Приятного отдыха!`;
         
         await sendMessage(parseInt(telegramId, 10), message, {
           reply_markup: {
             inline_keyboard: [
-              [{ text: "🔓 Я на месте — Открыть ворота", callback_data: `gate_open:${booking.id}` }]
+              [{ text: "🔓 Открыть ворота", callback_data: `gate_open:${booking.id}` }]
             ]
           }
         });
