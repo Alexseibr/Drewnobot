@@ -2553,6 +2553,51 @@ export async function registerRoutes(
     }
   });
 
+  // eWeLink OAuth2.0: Get authorization URL
+  app.get("/api/ewelink/auth", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    const { getEwelinkOAuthUrl } = await import("./telegram-bot");
+    const { url } = getEwelinkOAuthUrl();
+    res.redirect(url);
+  });
+
+  // eWeLink OAuth2.0: Callback
+  app.get("/api/ewelink/callback", async (req, res) => {
+    const code = req.query.code as string;
+    const state = req.query.state as string;
+    if (!code) {
+      return res.status(400).send("Missing authorization code");
+    }
+    try {
+      const { handleEwelinkCallback, validateOAuthState } = await import("./telegram-bot");
+      if (!state || !validateOAuthState(state)) {
+        return res.status(400).send(`<html><body style="font-family:sans-serif;text-align:center;padding:40px;"><h2>Ошибка безопасности</h2><p>Недействительный параметр state. Пожалуйста, начните авторизацию заново.</p></body></html>`);
+      }
+      const success = await handleEwelinkCallback(code);
+      if (success) {
+        res.send(`<html><body style="font-family:sans-serif;text-align:center;padding:40px;"><h2>eWeLink авторизация успешна!</h2><p>Теперь управление воротами работает через приложение.</p><p>Можно закрыть эту страницу.</p></body></html>`);
+      } else {
+        res.status(500).send(`<html><body style="font-family:sans-serif;text-align:center;padding:40px;"><h2>Ошибка авторизации</h2><p>Не удалось получить токен. Попробуйте ещё раз.</p></body></html>`);
+      }
+    } catch (error) {
+      console.error("[eWeLink] Callback error:", error);
+      res.status(500).send("Authorization failed");
+    }
+  });
+
+  // eWeLink OAuth2.0: Check status
+  app.get("/api/ewelink/status", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
+    try {
+      const settings = await storage.getSiteSettings();
+      const tokens = (settings as any)?.ewelinkTokens;
+      res.json({ 
+        authorized: !!tokens?.accessToken,
+        expiresAt: tokens?.expiresAt || null,
+      });
+    } catch (error) {
+      res.json({ authorized: false });
+    }
+  });
+
   // Admin: Open gate manually
   app.post("/api/admin/gate/open", authMiddleware, requireRole("ADMIN", "OWNER", "SUPER_ADMIN"), async (req, res) => {
     try {

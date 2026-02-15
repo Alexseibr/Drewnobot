@@ -692,6 +692,7 @@ export const siteSettingsSchema = z.object({
   adminChatId: z.string().optional(),
   ownerChatId: z.string().optional(),
   instructorChatId: z.string().optional(),
+  ewelinkTokens: z.any().optional(),
 });
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
 
@@ -1411,6 +1412,7 @@ export const siteSettingsTable = pgTable("site_settings", {
   adminChatId: text("admin_chat_id"),
   ownerChatId: text("owner_chat_id"),
   instructorChatId: text("instructor_chat_id"),
+  ewelinkTokens: jsonb("ewelink_tokens"),
 });
 
 // ============ BLOCKED DATES TABLE ============

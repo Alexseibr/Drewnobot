@@ -1514,6 +1514,7 @@ export class DatabaseStorage implements IStorage {
         adminChatId: rows[0].adminChatId || undefined,
         ownerChatId: rows[0].ownerChatId || undefined,
         instructorChatId: rows[0].instructorChatId || undefined,
+        ewelinkTokens: rows[0].ewelinkTokens as any || undefined,
       };
     }
     return {
@@ -1537,6 +1538,7 @@ export class DatabaseStorage implements IStorage {
     if (updates.adminChatId !== undefined) updateData.adminChatId = updates.adminChatId;
     if (updates.ownerChatId !== undefined) updateData.ownerChatId = updates.ownerChatId;
     if (updates.instructorChatId !== undefined) updateData.instructorChatId = updates.instructorChatId;
+    if ((updates as any).ewelinkTokens !== undefined) updateData.ewelinkTokens = (updates as any).ewelinkTokens;
     
     if (rows[0]) {
       await db.update(siteSettingsTable).set(updateData).where(eq(siteSettingsTable.id, rows[0].id));

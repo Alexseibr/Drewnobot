@@ -7,80 +7,170 @@ import crypto from "crypto";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// eWeLink API constants for pure HTTP approach
-// Using the Coolkit API v2
-const API_URL = "https://eu-apia.coolkit.cc/v2";
+// ============ eWeLink OAuth2.0 Integration ============
 
-let cachedToken: { at: string; expiresAt: number } | null = null;
+interface EwelinkTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+
+let cachedOAuthToken: EwelinkTokens | null = null;
+const pendingOAuthStates = new Map<string, number>();
+
+const EWELINK_REDIRECT_URL = "https://d.drewno.by/api/ewelink/callback";
 
 function getEwelinkConfig() {
   const appid = process.env.EWELINK_APP_ID || "";
   const appsecret = process.env.EWELINK_APP_SECRET || "";
   const region = (process.env.EWELINK_REGION || "eu").toLowerCase();
-  const email = process.env.EWELINK_EMAIL || "";
-  const password = process.env.EWELINK_PASSWORD || "";
   const apiUrl = `https://${region}-apia.coolkit.cc/v2`;
-  return { appid, appsecret, region, email, password, apiUrl };
+  return { appid, appsecret, region, apiUrl };
 }
 
-async function loginDirect() {
-  const { appid, appsecret, email, password, apiUrl } = getEwelinkConfig();
-  
-  if (!email || !password) {
-    console.error("[eWeLink] Missing EWELINK_EMAIL or EWELINK_PASSWORD");
-    return null;
+export function getEwelinkOAuthUrl(): { url: string; state: string } {
+  const { appid } = getEwelinkConfig();
+  const state = crypto.randomBytes(16).toString("hex");
+  pendingOAuthStates.set(state, Date.now() + 600000);
+  for (const [k, v] of pendingOAuthStates) {
+    if (v < Date.now()) pendingOAuthStates.delete(k);
   }
-  if (!appid || !appsecret) {
-    console.error("[eWeLink] Missing EWELINK_APP_ID or EWELINK_APP_SECRET. Register at https://dev.ewelink.cc/");
-    return null;
-  }
+  const redirectUrl = encodeURIComponent(EWELINK_REDIRECT_URL);
+  const url = `https://c2ccdn.coolkit.cc/oauth/index.html?clientId=${appid}&redirectUrl=${redirectUrl}&grantType=authorization_code&state=${state}`;
+  return { url, state };
+}
 
-  if (cachedToken && cachedToken.expiresAt > Date.now()) {
-    return cachedToken.at;
+export function validateOAuthState(state: string): boolean {
+  const expiry = pendingOAuthStates.get(state);
+  if (!expiry || expiry < Date.now()) {
+    pendingOAuthStates.delete(state);
+    return false;
   }
+  pendingOAuthStates.delete(state);
+  return true;
+}
+
+async function exchangeCodeForToken(code: string): Promise<EwelinkTokens | null> {
+  const { appid, appsecret, apiUrl } = getEwelinkConfig();
 
   try {
-    console.log("[eWeLink] Attempting login with APP_ID:", appid.substring(0, 8) + "...");
-
-    const data = JSON.stringify({
-      email,
-      password,
-      countryCode: "+375",
-    });
-
-    const sign = crypto
-      .createHmac("sha256", appsecret)
-      .update(data)
-      .digest("base64");
-
-    const nonce = crypto.randomBytes(4).toString("hex");
-
-    const response = await axios.post(`${apiUrl}/user/login`, data, {
+    console.log("[eWeLink OAuth] Exchanging code for token...");
+    const response = await axios.post(`${apiUrl}/user/oauth/token`, {
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: EWELINK_REDIRECT_URL,
+      client_id: appid,
+      client_secret: appsecret,
+    }, {
       headers: {
         "Content-Type": "application/json",
         "X-CK-Appid": appid,
-        "X-CK-Nonce": nonce,
-        "Authorization": `Sign ${sign}`
       }
     });
 
-    console.log("[eWeLink] Login response error code:", response.data?.error, "msg:", response.data?.msg || "ok");
+    console.log("[eWeLink OAuth] Token response:", response.data?.error, response.data?.msg || "ok");
 
-    if (response.data?.error === 0 && response.data?.data?.at) {
-      cachedToken = {
-        at: response.data.data.at,
-        expiresAt: Date.now() + 23 * 60 * 60 * 1000,
+    if (response.data?.error === 0 && response.data?.data?.accessToken) {
+      const tokens: EwelinkTokens = {
+        accessToken: response.data.data.accessToken,
+        refreshToken: response.data.data.refreshToken,
+        expiresAt: Date.now() + (response.data.data.expiresIn || 2592000) * 1000,
       };
-      console.log("[eWeLink] Login successful, token cached for 23h");
-      return cachedToken.at;
+      cachedOAuthToken = tokens;
+      await saveEwelinkTokens(tokens);
+      console.log("[eWeLink OAuth] Token obtained and saved successfully");
+      return tokens;
     }
-    
-    console.error("[eWeLink] Login failed:", response.data?.error, response.data?.msg);
+
+    console.error("[eWeLink OAuth] Token exchange failed:", JSON.stringify(response.data));
     return null;
   } catch (error: any) {
-    console.error("[eWeLink] Login error:", error.response?.data || error.message);
+    console.error("[eWeLink OAuth] Token exchange error:", error.response?.data || error.message);
     return null;
   }
+}
+
+async function refreshAccessToken(refreshToken: string): Promise<EwelinkTokens | null> {
+  const { appid, appsecret, apiUrl } = getEwelinkConfig();
+
+  try {
+    console.log("[eWeLink OAuth] Refreshing access token...");
+    const response = await axios.post(`${apiUrl}/user/oauth/token`, {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: appid,
+      client_secret: appsecret,
+    }, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-CK-Appid": appid,
+      }
+    });
+
+    if (response.data?.error === 0 && response.data?.data?.accessToken) {
+      const tokens: EwelinkTokens = {
+        accessToken: response.data.data.accessToken,
+        refreshToken: response.data.data.refreshToken || refreshToken,
+        expiresAt: Date.now() + (response.data.data.expiresIn || 2592000) * 1000,
+      };
+      cachedOAuthToken = tokens;
+      await saveEwelinkTokens(tokens);
+      console.log("[eWeLink OAuth] Token refreshed successfully");
+      return tokens;
+    }
+
+    console.error("[eWeLink OAuth] Token refresh failed:", JSON.stringify(response.data));
+    return null;
+  } catch (error: any) {
+    console.error("[eWeLink OAuth] Token refresh error:", error.response?.data || error.message);
+    return null;
+  }
+}
+
+async function saveEwelinkTokens(tokens: EwelinkTokens): Promise<void> {
+  try {
+    await storage.updateSiteSettings({ ewelinkTokens: tokens } as any);
+  } catch (e) {
+    console.error("[eWeLink OAuth] Failed to save tokens:", e);
+  }
+}
+
+async function loadEwelinkTokens(): Promise<EwelinkTokens | null> {
+  if (cachedOAuthToken && cachedOAuthToken.expiresAt > Date.now()) {
+    return cachedOAuthToken;
+  }
+
+  try {
+    const settings = await storage.getSiteSettings();
+    const tokens = (settings as any)?.ewelinkTokens;
+    if (tokens?.accessToken) {
+      cachedOAuthToken = tokens;
+      return tokens;
+    }
+  } catch (e) {
+    console.error("[eWeLink OAuth] Failed to load tokens:", e);
+  }
+  return null;
+}
+
+async function getValidAccessToken(): Promise<string | null> {
+  let tokens = await loadEwelinkTokens();
+  if (!tokens) {
+    console.error("[eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth");
+    return null;
+  }
+
+  if (tokens.expiresAt < Date.now() + 86400000) {
+    tokens = await refreshAccessToken(tokens.refreshToken);
+    if (!tokens) return null;
+  }
+
+  return tokens.accessToken;
+}
+
+export async function handleEwelinkCallback(code: string): Promise<boolean> {
+  const tokens = await exchangeCodeForToken(code);
+  return !!tokens;
 }
 
 export async function openGate(): Promise<{ success: boolean; error?: string }> {
@@ -95,22 +185,20 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
   }
 
   try {
-    const at = await loginDirect();
+    const at = await getValidAccessToken();
     if (!at) {
-      return { success: false, error: "Authentication failed - check APP_ID/SECRET at dev.ewelink.cc" };
+      return { success: false, error: "eWeLink не авторизован. Владелец должен пройти авторизацию." };
     }
 
     console.log("[eWeLink] Sending ON command to device:", deviceId.trim());
 
-    const data = JSON.stringify({
+    const nonce = crypto.randomBytes(4).toString("hex");
+
+    const response = await axios.post(`${apiUrl}/device/thing/status`, {
       type: 1,
       id: deviceId.trim(),
       params: { switch: "on" }
-    });
-
-    const nonce = crypto.randomBytes(4).toString("hex");
-
-    const response = await axios.post(`${apiUrl}/device/thing/status`, data, {
+    }, {
       headers: {
         "Content-Type": "application/json",
         "X-CK-Appid": appid,
@@ -126,8 +214,8 @@ export async function openGate(): Promise<{ success: boolean; error?: string }> 
     }
 
     if (response.data?.error === 401 || response.data?.error === 406) {
-      cachedToken = null;
-      console.log("[eWeLink] Token expired, will re-login on next attempt");
+      cachedOAuthToken = null;
+      console.log("[eWeLink] Token expired, will refresh on next attempt");
     }
 
     return { success: false, error: response.data?.msg || "Failed to control device" };
