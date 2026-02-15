@@ -1,0 +1,135 @@
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-166-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+Failed to automatically attach to an Ubuntu Pro subscription 14 time(s).
+The failure was due to: "Unable to determine cloud platform.".
+The next attempt is scheduled for 2026-02-18T13:52:00+03:00.
+You can try manually with `sudo pro auto-attach`.
+
+New release '24.04.4 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+Last login: Fri Feb 13 22:13:00 2026 from 31.173.81.106
+root@server-srekbm:~# # Перейти в папку проекта (уточните путь)
+root@server-srekbm:~# cd /var/www/drewno-opsroot@server-srekbm:/var/www/drewno-ops# # илиroot@server-srekbm:/var/www/drewno-ops# cd /home/drewno/app-bash: cd: /home/drewno/app: No such file or directory
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Затем подтянуть изменения
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 9 (delta 6), reused 9 (delta 6),pack-reused 0 (from 0)
+Unpacking objects: 100% (9/9), 106.81 KiB | 635.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   2927989..bb47749  main       -> origin/main
+Updating 2927989..bb47749
+Fast-forward
+ .../image_1771177503322.png    | Bin 0 -> 86197 bytes
+ .../image_1771180349268.png    | Bin 0 -> 33543 bytes
+ 2 files changed, 0 insertions(+), 0 deletions(-)
+ create mode 100644 attached_assets/image_1771177503322.png
+ create mode 100644 attached_assets/image_1771180349268.png
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Установить зависимости
+root@server-srekbm:/var/www/drewno-ops# npm install
+
+up to date, audited 640 packages in 4s
+
+131 packages are looking for funding
+  run `npm fund` for details
+
+4 vulnerabilities (1 moderate, 3 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Собрать проект
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author tofix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html      1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-DvL4bvTR.css     89.76 kB │ gzip:  14.52 kB
+../dist/public/assets/index-BbGivI6r.js  1,344.47 kB │ gzip: 357.17 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning viabuild.chunkSizeWarningLimit.
+✓ built in 23.52s
+building server...
+
+  dist/index.cjs  1.5mb ⚠️
+
+⚡ Done in 1493ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Перезапустить
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 52   │ online    │ 0%       │ 24.2mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# echo 'EWELINK_APP_ID=7SmxVWjeyH5KwcFpeMC4TLC2Y8Ob5Guv'
+ >> .env && echo 'EWELINK_APP_SECRET=4MHExFApiZ
+bGFRrSSYCRCfAMrr6Md0di' >> .env && pm2 restart0
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [0](ids: [ '0' ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 53   │ online    │ 0%       │ 25.9mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | [eWeLink] API returned error: 406Authentication failed
+0|drewno-o | [eWeLink] API returned error: 406Authentication failed
+0|drewno-o | [eWeLink] getCredentials failed, trying login...
+0|drewno-o | [eWeLink] Connection failed: TypeError: n.login is not a function
+0|drewno-o |     at sG (/var/www/drewno-ops/dist/index.cjs:70:215457)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o |     at async jy (/var/www/drewno-ops/dist/index.cjs:70:216008)
+0|drewno-o |     at async /var/www/drewno-ops/dist/index.cjs:247:56583
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | [eWeLink] Login failed: 407 the path of request is not allowed with appid:7SmxVWjeyH5KwcFpeMC4TLC2Y8Ob5Guv
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 10:06:41 PM [scheduler]   - Thermostat:
+0|drewno-o | 10:06:41 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 10:06:41 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 10:06:41 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 10:06:41 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 10:06:41 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 10:06:41 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 10:06:41 PM [scheduler] [ThermostatScheduler] Houses initialized
+0|drewno-o | [Telegram Bot] Tracked message 1009 for chat 374243315
+0|drewno-o | 10:06:59 PM [express] POST /api/telegram/webhook 200 in 212ms :: {"ok":true}
+0|drewno-o | [Telegram Bot] Tracked message 1010 for chat 374243315
+0|drewno-o | [eWeLink] Attempting login with APP_ID: 7SmxVWje...
+0|drewno-o | [eWeLink] Login response error code: 407 msg: the path of request is not allowedwith appid:7SmxVWjeyH5KwcFpeMC4TLC2Y8Ob5Guv
+0|drewno-o | [Telegram Bot] Tracked message 1011 for chat 374243315
+0|drewno-o | 10:07:01 PM [express] POST /api/telegram/webhook 200 in 679ms :: {"ok":true}
