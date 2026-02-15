@@ -1,0 +1,151 @@
+ access instructions to send...^C
+root@server-srekbm:/var/www/drewno-ops# # Перейти в папку проекта (уточните путь)
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+root@server-srekbm:/var/www/drewno-ops# # или
+root@server-srekbm:/var/www/drewno-ops# cd /home/drewno/app
+-bash: cd: /home/drewno/app: No such file or directory
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Затем подтянуть изменения
+root@server-srekbm:/var/www/drewno-ops# git pull origin main
+remote: Enumerating objects: 23, done.
+remote: Counting objects: 100% (23/23), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 15 (delta 11), reused 15 (delta 11), pack-reused 0 (from 0)
+Unpacking objects: 100% (15/15), 66.60 KiB | 582.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   bb47749..179ee69  main       -> origin/main
+Updating bb47749..179ee69
+Fast-forward
+ ...-166-gene_1771182449700.txt | 135 +++++
+ .../image_1771182568679.png    | Bin 0 -> 68788 bytes
+ server/database-storage.ts     |   2 +
+ server/routes.ts               |  45 ++
+ server/telegram-bot.ts         | 196 ++++++--
+ shared/schema.ts               |   2 +
+ 6 files changed, 326 insertions(+), 54 deletions(-)
+ create mode 100644 attached_assets/Pasted-Welcome-to-Ubuntu-22-04-5-LTS-GNU-Linux-5-15-0-166-gene_1771182449700.txt
+ create mode 100644 attached_assets/image_1771182568679.png
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Установить зависимости
+root@server-srekbm:/var/www/drewno-ops# npm install
+
+up to date, audited 640 packages in 3s
+
+131 packages are looking for funding
+  run `npm fund` for details
+
+4 vulnerabilities (1 moderate, 3 high)
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Собрать проект
+root@server-srekbm:/var/www/drewno-ops# npm run build
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (4) src/App.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author tofix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html      1.07 kB │ gzip:   0.60 kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-DvL4bvTR.css     89.76 kB │ gzip:  14.52 kB
+../dist/public/assets/index-BbGivI6r.js  1,344.47 kB │ gzip: 357.17 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning viabuild.chunkSizeWarningLimit.
+✓ built in 19.41s
+building server...
+
+  dist/index.cjs  1.5mb ⚠️
+
+⚡ Done in 880ms
+root@server-srekbm:/var/www/drewno-ops#
+root@server-srekbm:/var/www/drewno-ops# # Перезапустить
+root@server-srekbm:/var/www/drewno-ops# pm2 restart drewno-ops
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 54   │ online    │ 0%       │ 18.4mb   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | [eWeLink] API returned error: 406Authentication failed
+0|drewno-o | [eWeLink] API returned error: 406Authentication failed
+0|drewno-o | [eWeLink] getCredentials failed, trying login...
+0|drewno-o | [eWeLink] Connection failed: TypeError: n.login is not a function
+0|drewno-o |     at sG (/var/www/drewno-ops/dist/index.cjs:70:215457)
+0|drewno-o |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-o |     at async jy (/var/www/drewno-ops/dist/index.cjs:70:216008)
+0|drewno-o |     at async /var/www/drewno-ops/dist/index.cjs:247:56583
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | [eWeLink] Authentication failed with error: 407 appid is unauthorized! YzfeftUVcZ6twZw1OoVKPRFYTrGEg01Q
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | Error: ENOENT: no such file or directory, stat '/var/www/drewno-ops/dist/public/index.html'
+0|drewno-o | [eWeLink] Login failed: 407 the path of request is not allowed with appid:7SmxVWjeyH5KwcFpeMC4TLC2Y8Ob5Guv
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 10:21:25 PM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 10:21:25 PM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 10:21:25 PM [scheduler]   - Notifications:
+0|drewno-o | 10:21:25 PM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 10:21:25 PM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 10:21:25 PM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 10:21:25 PM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 10:21:25 PM [scheduler]   - Thermostat:
+0|drewno-o | 10:21:25 PM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 10:21:25 PM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 10:21:25 PM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 10:21:25 PM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 10:21:25 PM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 10:21:25 PM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 10:21:25 PM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | [Telegram Bot] Tracked message1012 for chat 374243315
+0|drewno-ops  | [eWeLink OAuth] Failed to loadtokens: error: column "ewelink_tokens" does not exist
+0|drewno-ops  |     at /var/www/drewno-ops/dist/index.cjs:64:13330
+0|drewno-ops  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-ops  |     at async /var/www/drewno-ops/dist/index.cjs:70:37918
+0|drewno-ops  |     at async jp.getSiteSettings (/var/www/drewno-ops/dist/index.cjs:70:112209)
+0|drewno-ops  |     at async Lte (/var/www/drewno-ops/dist/index.cjs:81:9337)
+0|drewno-ops  |     at async qte (/var/www/drewno-ops/dist/index.cjs:81:9517)
+0|drewno-ops  |     at async Ub (/var/www/drewno-ops/dist/index.cjs:81:10110)
+0|drewno-ops  |     at async Wte (/var/www/drewno-ops/dist/index.cjs:103:1864)
+0|drewno-ops  |     at async $b (/var/www/drewno-ops/dist/index.cjs:103:1143)
+0|drewno-ops  |     at async /var/www/drewno-ops/dist/index.cjs:260:116710 {
+0|drewno-ops  |   length: 115,
+0|drewno-ops  |   severity: 'ERROR',
+0|drewno-ops  |   code: '42703',
+0|drewno-ops  |   detail: undefined,
+0|drewno-ops  |   hint: undefined,
+0|drewno-ops  |   position: '136',
+0|drewno-ops  |   internalPosition: undefined,
+0|drewno-ops  |   internalQuery: undefined,
+0|drewno-ops  |   where: undefined,
+0|drewno-ops  |   schema: undefined,
+0|drewno-ops  |   table: undefined,
+0|drewno-ops  |   column: undefined,
+0|drewno-ops  |   dataType: undefined,
+0|drewno-ops  |   constraint: undefined,
+0|drewno-ops  |   file: 'parse_relation.c',
+0|drewno-ops  |   line: '3647',
+0|drewno-ops  |   routine: 'errorMissingColumn'
+0|drewno-ops  | }
+0|drewno-ops  | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-ops  | [Telegram Bot] Tracked message1013 for chat 374243315
+0|drewno-ops  | 10:22:17 PM [express] POST /api/telegram/webhook 200 in 464ms :: {"ok":true}
