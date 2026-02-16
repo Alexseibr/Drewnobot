@@ -62,7 +62,7 @@ async function exchangeCodeForToken(code: string): Promise<EwelinkTokens | null>
       code,
       redirect_uri: EWELINK_REDIRECT_URL,
       client_id: appid,
-      client_secret: appsecret,
+      client_secret: "4MHExFApiZbGFRrSSYCRCfAMrr6Md0di",
     }, {
       headers: {
         "Content-Type": "application/json",
