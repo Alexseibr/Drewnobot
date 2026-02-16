@@ -37,8 +37,9 @@ export function getEwelinkOAuthUrl(): { url: string; state: string } {
   }
 
   const redirectUrl = encodeURIComponent(EWELINK_REDIRECT_URL);
-  // Use the specific global OAuth endpoint for eWeLink to avoid 503 errors and regional blocks
-  const url = `https://oauth.ewelink.cc/v2/user/oauth/index.html?clientId=${appid}&redirectUrl=${redirectUrl}&state=${state}`;
+  // Use the China-specific URL as a fallback if the global one is blocked or 530'ing
+  // Sometimes apia.coolkit.cc works better in Belarus/CIS region
+  const url = `https://apia.coolkit.cn/v2/user/oauth/index.html?clientId=${appid}&redirectUrl=${redirectUrl}&state=${state}`;
   return { url, state };
 }
 
