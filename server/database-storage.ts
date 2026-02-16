@@ -1503,19 +1503,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSiteSettings(): Promise<SiteSettings> {
-    const rows = await db.select().from(siteSettingsTable);
-    if (rows[0]) {
-      return {
-        id: rows[0].id,
-        geofenceCenter: rows[0].geofenceCenter as any,
-        geofenceRadiusM: rows[0].geofenceRadiusM,
-        closeTime: rows[0].closeTime,
-        timezone: rows[0].timezone,
-        adminChatId: rows[0].adminChatId || undefined,
-        ownerChatId: rows[0].ownerChatId || undefined,
-        instructorChatId: rows[0].instructorChatId || undefined,
-        ewelinkTokens: rows[0].ewelinkTokens as any || undefined,
-      };
+    try {
+      const rows = await db.select().from(siteSettingsTable);
+      if (rows[0]) {
+        return {
+          id: rows[0].id,
+          geofenceCenter: rows[0].geofenceCenter as any,
+          geofenceRadiusM: rows[0].geofenceRadiusM,
+          closeTime: rows[0].closeTime,
+          timezone: rows[0].timezone,
+          adminChatId: rows[0].adminChatId || undefined,
+          ownerChatId: rows[0].ownerChatId || undefined,
+          instructorChatId: rows[0].instructorChatId || undefined,
+          ewelinkTokens: rows[0].ewelinkTokens as any || undefined,
+        };
+      }
+    } catch (err: any) {
+      if (err?.code === '42703') {
+        const rows = await db.execute(
+          sql`SELECT id, geofence_center, geofence_radius_m, close_time, timezone, admin_chat_id, owner_chat_id, instructor_chat_id FROM site_settings LIMIT 1`
+        );
+        if (rows.rows && rows.rows[0]) {
+          const r = rows.rows[0] as any;
+          try {
+            await db.execute(sql`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS ewelink_tokens jsonb`);
+            console.log("[DB] Auto-added ewelink_tokens column to site_settings");
+          } catch {}
+          return {
+            id: r.id,
+            geofenceCenter: r.geofence_center as any,
+            geofenceRadiusM: r.geofence_radius_m,
+            closeTime: r.close_time,
+            timezone: r.timezone,
+            adminChatId: r.admin_chat_id || undefined,
+            ownerChatId: r.owner_chat_id || undefined,
+            instructorChatId: r.instructor_chat_id || undefined,
+          };
+        }
+      } else {
+        throw err;
+      }
     }
     return {
       id: "settings-1",

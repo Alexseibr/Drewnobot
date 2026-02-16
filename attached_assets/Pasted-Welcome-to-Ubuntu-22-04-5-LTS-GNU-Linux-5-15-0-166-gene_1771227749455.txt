@@ -1,0 +1,92 @@
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-166-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+Failed to automatically attach to an Ubuntu Pro subscription 14 time(s).
+The failure was due to: "Unable to determine cloud platform.".
+The next attempt is scheduled for 2026-02-18T13:52:00+03:00.
+You can try manually with `sudo pro auto-attach`.
+
+New release '24.04.4 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+Last login: Sun Feb 15 21:59:57 2026 from 178.120.6.5
+root@server-srekbm:~# # Логи
+root@server-srekbm:~# pm2 logs obmen24
+[TAILING] Tailing last 15 lines for [obmen24] process (change the value with --lines option)
+
+
+^C
+root@server-srekbm:~# ^C
+root@server-srekbm:~# # Просмотр логов в реальном времени
+root@server-srekbm:~# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |   hint: undefined,
+0|drewno-o |   position: '136',
+0|drewno-o |   internalPosition: undefined,
+0|drewno-o |   internalQuery: undefined,
+0|drewno-o |   where: undefined,
+0|drewno-o |   schema: undefined,
+0|drewno-o |   table: undefined,
+0|drewno-o |   column: undefined,
+0|drewno-o |   dataType: undefined,
+0|drewno-o |   constraint: undefined,
+0|drewno-o |   file: 'parse_relation.c',
+0|drewno-o |   line: '3647',
+0|drewno-o |   routine: 'errorMissingColumn'
+0|drewno-o | }
+0|drewno-o | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-o | 10:41:18 AM [express] GET /api/.env 404 in 2ms
+0|drewno-o | [Telegram Bot] Tracked message 1015 for chat 374243315
+0|drewno-o | 10:41:23 AM [express] POST /api/telegram/webhook 200 in 437ms :: {"ok":true}
+0|drewno-o | 10:41:35 AM [express] GET /api/.env 404 in 1ms
+
+0|drewno-ops  | [Telegram Bot] Tracked message 1016 for chat 374243315
+0|drewno-ops  | [eWeLink OAuth] Failed to load tokens: error: column "ewelink_tokens" does not exist
+0|drewno-ops  |     at /var/www/drewno-ops/dist/index.cjs:64:13330
+0|drewno-ops  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+0|drewno-ops  |     at async /var/www/drewno-ops/dist/index.cjs:70:37918
+0|drewno-ops  |     at async jp.getSiteSettings (/var/www/drewno-ops/dist/index.cjs:70:112209)
+0|drewno-ops  |     at async Lte (/var/www/drewno-ops/dist/index.cjs:81:9337)
+0|drewno-ops  |     at async qte (/var/www/drewno-ops/dist/index.cjs:81:9517)
+0|drewno-ops  |     at async Ub (/var/www/drewno-ops/dist/index.cjs:81:10110)
+0|drewno-ops  |     at async Wte (/var/www/drewno-ops/dist/index.cjs:103:1864)
+0|drewno-ops  |     at async $b (/var/www/drewno-ops/dist/index.cjs:103:1143)
+0|drewno-ops  |     at async /var/www/drewno-ops/dist/index.cjs:260:116710 {
+0|drewno-ops  |   length: 115,
+0|drewno-ops  |   severity: 'ERROR',
+0|drewno-ops  |   code: '42703',
+0|drewno-ops  |   detail: undefined,
+0|drewno-ops  |   hint: undefined,
+0|drewno-ops  |   position: '136',
+0|drewno-ops  |   internalPosition: undefined,
+0|drewno-ops  |   internalQuery: undefined,
+0|drewno-ops  |   where: undefined,
+0|drewno-ops  |   schema: undefined,
+0|drewno-ops  |   table: undefined,
+0|drewno-ops  |   column: undefined,
+0|drewno-ops  |   dataType: undefined,
+0|drewno-ops  |   constraint: undefined,
+0|drewno-ops  |   file: 'parse_relation.c',
+0|drewno-ops  |   line: '3647',
+0|drewno-ops  |   routine: 'errorMissingColumn'
+0|drewno-ops  | }
+0|drewno-ops  | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-ops  | [Telegram Bot] Tracked message 1017 for chat 374243315
+0|drewno-ops  | 10:41:39 AM [express] POST /api/telegram/webhook 200 in 369ms :: {"ok":true}
