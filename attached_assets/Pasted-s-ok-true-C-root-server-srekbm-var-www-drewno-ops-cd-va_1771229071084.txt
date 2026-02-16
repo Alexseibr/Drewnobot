@@ -1,0 +1,103 @@
+s :: {"ok":true}^C
+root@server-srekbm:/var/www/drewno-ops# cd /var/www/drewno-ops
+git pull origin main
+npm run build
+pm2 restart drewno-ops
+remote: Enumerating objects: 10, done.
+remote: Counting objects: 100% (10/10), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 6 (delta 4), reused 6 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (6/6), 3.21 KiB | 205.00 KiB/s, done.
+From https://github.com/Alexseibr/Drewnobot
+ * branch            main       -> FETCH_HEAD
+   2c7145f..40dbe12  main       -> origin/main
+Updating 2c7145f..40dbe12
+Fast-forward
+ ...rewno-ops-root-server-srekb_1771228263717.txt | 136 +++++++++++++++++++
+ server/database-storage.ts                       |  43 +++---
+ 2 files changed, 158 insertions(+), 21 deletions(-)
+ create mode 100644 attached_assets/Pasted-root-server-srekbm-var-www-drewno-ops-root-server-srekb_1771228263717.txt
+
+> rest-express@1.0.0 build
+> tsx script/build.ts
+
+building client...
+vite v7.3.0 building client environment for production...
+transforming (1) src/main.tsx
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 3222 modules transformed.
+../dist/public/index.html                            1.07 kB │ gzip:   0.60kB
+../dist/public/assets/drewno-logo-Bw8WbCk8.webp    328.56 kB
+../dist/public/assets/index-DvL4bvTR.css            89.76 kB │ gzip:  14.52kB
+../dist/public/assets/index-BbGivI6r.js          1,344.47 kB │ gzip: 357.17kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 24.68s
+building server...
+
+  dist/index.cjs  1.5mb ⚠️
+
+⚡ Done in 1162ms
+Use --update-env to update environment variables
+[PM2] Applying action restartProcessId on app [drewno-ops](ids: [ 0 ])
+[PM2] [drewno-ops](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory  │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ drewno-ops         │ fork     │ 57   │ online    │ 0%       │ 25.7mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |   internalQuery: undefined,
+0|drewno-o |   where: undefined,
+0|drewno-o |   schema: undefined,
+0|drewno-o |   table: undefined,
+0|drewno-o |   column: undefined,
+0|drewno-o |   dataType: undefined,
+0|drewno-o |   constraint: undefined,
+0|drewno-o |   file: 'parse_relation.c',
+0|drewno-o |   line: '3647',
+0|drewno-o |   routine: 'errorMissingColumn'
+0|drewno-o | }
+0|drewno-o | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-o | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-o | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-o | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 10:54:14 AM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 10:54:14 AM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 10:54:14 AM [scheduler]   - Notifications:
+0|drewno-o | 10:54:14 AM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 10:54:14 AM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 10:54:14 AM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 10:54:14 AM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 10:54:14 AM [scheduler]   - Thermostat:
+0|drewno-o | 10:54:14 AM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 10:54:14 AM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 10:54:14 AM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 10:54:14 AM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 10:54:14 AM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 10:54:14 AM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 10:54:14 AM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-ops  | [Telegram Bot] Tracked message 1025 for chat 374243315
+0|drewno-ops  | 10:55:03 AM [express] POST /api/telegram/webhook 200 in 245ms :: {"ok":true}
+0|drewno-ops  | [Telegram Bot] Tracked message 1026 for chat 374243315
+0|drewno-ops  | [DB] Error in getSiteSettings: column "ewelink_tokens" doesnot exist
+0|drewno-ops  | [DB] ewelink_tokens column missing, attempting to query other fields
+0|drewno-ops  | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-ops  | [Telegram Bot] Tracked message 1027 for chat 374243315
+0|drewno-ops  | 10:55:04 AM [express] POST /api/telegram/webhook 200 in 255ms :: {"ok":true}
+0|drewno-ops  | [Telegram Bot] Checking for SPA access instructions to send...
+0|drewno-ops  | [Telegram Bot] Tracked message 1028 for chat 374243315
+0|drewno-ops  | [DB] Error in getSiteSettings: column "ewelink_tokens" doesnot exist
+0|drewno-ops  | [DB] ewelink_tokens column missing, attempting to query other fields
+0|drewno-ops  | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-ops  | [Telegram Bot] Tracked message 1029 for chat 374243315
+0|drewno-ops  | 11:04:22 AM [express] POST /api/telegram/webhook 200 in 374ms :: {"ok":true}

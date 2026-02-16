@@ -1520,29 +1520,26 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (err: any) {
       console.error("[DB] Error in getSiteSettings:", err.message);
-      // If column is missing or any other DB error, return defaults but don't crash
-      if (err?.code === '42703') {
-        console.warn("[DB] ewelink_tokens column missing, attempting to query other fields");
-        try {
-          const rows = await db.execute(
-            sql`SELECT id, geofence_center, geofence_radius_m, close_time, timezone, admin_chat_id, owner_chat_id, instructor_chat_id FROM site_settings LIMIT 1`
-          );
-          if (rows.rows && rows.rows[0]) {
-            const r = rows.rows[0] as any;
-            return {
-              id: r.id,
-              geofenceCenter: r.geofence_center as any,
-              geofenceRadiusM: r.geofence_radius_m,
-              closeTime: r.close_time,
-              timezone: r.timezone,
-              adminChatId: r.admin_chat_id || undefined,
-              ownerChatId: r.owner_chat_id || undefined,
-              instructorChatId: r.instructor_chat_id || undefined,
-            };
-          }
-        } catch (innerErr) {
-          console.error("[DB] Fallback query failed:", innerErr);
-        }
+      // Fallback for missing column or other DB issues
+      const result = await db.execute(sql`
+        SELECT id, geofence_center, geofence_radius_m, close_time, timezone, admin_chat_id, owner_chat_id, instructor_chat_id 
+        FROM site_settings 
+        LIMIT 1
+      `);
+      
+      if (result.rows && result.rows[0]) {
+        const r = result.rows[0] as any;
+        return {
+          id: r.id,
+          geofenceCenter: r.geofence_center as any,
+          geofenceRadiusM: r.geofence_radius_m,
+          closeTime: r.close_time,
+          timezone: r.timezone,
+          adminChatId: r.admin_chat_id || undefined,
+          ownerChatId: r.owner_chat_id || undefined,
+          instructorChatId: r.instructor_chat_id || undefined,
+          ewelinkTokens: undefined,
+        };
       }
     }
     return {
