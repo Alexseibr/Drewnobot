@@ -1568,16 +1568,52 @@ export class DatabaseStorage implements IStorage {
     if ((updates as any).ewelinkTokens !== undefined) updateData.ewelinkTokens = (updates as any).ewelinkTokens;
     
     if (rows[0]) {
-      await db.update(siteSettingsTable).set(updateData).where(eq(siteSettingsTable.id, rows[0].id));
+      try {
+        await db.update(siteSettingsTable).set(updateData).where(eq(siteSettingsTable.id, rows[0].id));
+      } catch (err: any) {
+        if (err?.code === '42703' && updateData.ewelinkTokens !== undefined) {
+          // If update failed due to missing ewelink_tokens, try adding it and update again
+          try {
+            await db.execute(sql`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS ewelink_tokens jsonb`);
+            console.log("[DB] Auto-added ewelink_tokens column during update");
+            await db.update(siteSettingsTable).set(updateData).where(eq(siteSettingsTable.id, rows[0].id));
+          } catch (retryErr) {
+            // If still failing, update other fields only
+            const { ewelinkTokens, ...otherData } = updateData;
+            if (Object.keys(otherData).length > 0) {
+              await db.update(siteSettingsTable).set(otherData).where(eq(siteSettingsTable.id, rows[0].id));
+            }
+          }
+        } else {
+          throw err;
+        }
+      }
     } else {
-      await db.insert(siteSettingsTable).values({
+      // Logic for insert...
+      const insertData = {
         id: "settings-1",
         ...updateData,
         geofenceCenter: updateData.geofenceCenter || current.geofenceCenter,
         geofenceRadiusM: updateData.geofenceRadiusM || current.geofenceRadiusM,
         closeTime: updateData.closeTime || current.closeTime,
         timezone: updateData.timezone || current.timezone,
-      });
+      };
+
+      try {
+        await db.insert(siteSettingsTable).values(insertData);
+      } catch (err: any) {
+        if (err?.code === '42703') {
+          try {
+            await db.execute(sql`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS ewelink_tokens jsonb`);
+            await db.insert(siteSettingsTable).values(insertData);
+          } catch {
+            const { ewelinkTokens, ...otherInsertData } = insertData;
+            await db.insert(siteSettingsTable).values(otherInsertData as any);
+          }
+        } else {
+          throw err;
+        }
+      }
     }
     return this.getSiteSettings();
   }

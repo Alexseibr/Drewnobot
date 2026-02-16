@@ -1,0 +1,45 @@
+root@server-srekbm:/var/www/drewno-ops# # Просмотр логов в реальном времени
+root@server-srekbm:/var/www/drewno-ops# pm2 logs drewno-ops
+[TAILING] Tailing last 15 lines for [drewno-ops] process (change the value with --lines option)
+/root/.pm2/logs/drewno-ops-error.log last 15 lines:
+0|drewno-o |   hint: undefined,
+0|drewno-o |   position: '136',
+0|drewno-o |   internalPosition: undefined,
+0|drewno-o |   internalQuery: undefined,
+0|drewno-o |   where: undefined,
+0|drewno-o |   schema: undefined,
+0|drewno-o |   table: undefined,
+0|drewno-o |   column: undefined,
+0|drewno-o |   dataType: undefined,
+0|drewno-o |   constraint: undefined,
+0|drewno-o |   file: 'parse_relation.c',
+0|drewno-o |   line: '3647',
+0|drewno-o |   routine: 'errorMissingColumn'
+0|drewno-o | }
+0|drewno-o | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+
+/root/.pm2/logs/drewno-ops-out.log last 15 lines:
+0|drewno-o | 10:46:40 AM [scheduler]   - Scheduled task notifications: every minute
+0|drewno-o | 10:46:40 AM [scheduler]   - Nightly chat cleanup: 03:00 daily
+0|drewno-o | 10:46:40 AM [scheduler]   - Notifications:
+0|drewno-o | 10:46:40 AM [scheduler]     - Bath summary: 09:00 daily
+0|drewno-o | 10:46:40 AM [scheduler]     - Climate ON: 12:00 daily
+0|drewno-o | 10:46:40 AM [scheduler]     - Climate OFF: 14:00 daily
+0|drewno-o | 10:46:40 AM [scheduler]     - Laundry check-in: 15:00 daily
+0|drewno-o | 10:46:40 AM [scheduler]   - Thermostat:
+0|drewno-o | 10:46:40 AM [scheduler]     - Prompt: 12:00 daily
+0|drewno-o | 10:46:40 AM [scheduler]     - Base temps: 12:05 daily
+0|drewno-o | 10:46:40 AM [scheduler]     - Heating: 14:30 daily
+0|drewno-o | 10:46:40 AM [scheduler]   - SPA Guest Notifications:
+0|drewno-o | 10:46:40 AM [scheduler]     - Morning reminder: 09:00 daily
+0|drewno-o | 10:46:40 AM [scheduler]     - Access instructions: every 5 min
+0|drewno-o | 10:46:40 AM [scheduler] [ThermostatScheduler] Houses initialized
+
+0|drewno-ops  | [Telegram Bot] Tracked message 1018 for chat 374243315
+0|drewno-ops  | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-ops  | [Telegram Bot] Tracked message 1019 for chat 374243315
+0|drewno-ops  | 10:47:45 AM [express] POST /api/telegram/webhook 200 in 417ms :: {"ok":true}
+0|drewno-ops  | [Telegram Bot] Tracked message 1020 for chat 374243315
+0|drewno-ops  | [eWeLink OAuth] No tokens found. Owner must authorize at /api/ewelink/auth
+0|drewno-ops  | [Telegram Bot] Tracked message 1021 for chat 374243315
+0|drewno-ops  | 10:47:48 AM [express] POST /api/telegram/webhook 200 in 314ms :: {"ok":true}
