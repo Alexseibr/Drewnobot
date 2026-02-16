@@ -37,8 +37,8 @@ export function getEwelinkOAuthUrl(): { url: string; state: string } {
   }
 
   const redirectUrl = encodeURIComponent(EWELINK_REDIRECT_URL);
-  // Use ewelink.cc which is more stable for global accounts and handles CORS better
-  const url = `https://c2ccdn.coolkit.cc/oauth/index.html?clientId=${appid}&redirectUrl=${redirectUrl}&state=${state}`;
+  // Use the specific global OAuth endpoint for eWeLink to avoid 503 errors and regional blocks
+  const url = `https://oauth.ewelink.cc/v2/user/oauth/index.html?clientId=${appid}&redirectUrl=${redirectUrl}&state=${state}`;
   return { url, state };
 }
 
