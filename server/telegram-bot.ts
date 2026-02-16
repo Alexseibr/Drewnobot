@@ -37,8 +37,8 @@ export function getEwelinkOAuthUrl(): { url: string; state: string } {
   }
 
   const redirectUrl = encodeURIComponent(EWELINK_REDIRECT_URL);
-  // Use apia.coolkit.cc which is more reliable for international (non-China) accounts and CORS
-  const url = `https://apia.coolkit.cc/v2/user/oauth/index.html?clientId=${appid}&redirectUrl=${redirectUrl}&grantType=authorization_code&state=${state}`;
+  // Use ewelink.cc which is more stable for global accounts and handles CORS better
+  const url = `https://c2ccdn.coolkit.cc/oauth/index.html?clientId=${appid}&redirectUrl=${redirectUrl}&state=${state}`;
   return { url, state };
 }
 
