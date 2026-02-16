@@ -2554,10 +2554,15 @@ export async function registerRoutes(
   });
 
   // eWeLink OAuth2.0: Get authorization URL
-  app.get("/api/ewelink/auth", authMiddleware, requireRole("OWNER", "SUPER_ADMIN"), async (req, res) => {
-    const { getEwelinkOAuthUrl } = await import("./telegram-bot");
-    const { url } = getEwelinkOAuthUrl();
-    res.redirect(url);
+  app.get("/api/ewelink/auth", async (req, res) => {
+    try {
+      const { getEwelinkOAuthUrl } = await import("./telegram-bot");
+      const { url } = getEwelinkOAuthUrl();
+      res.redirect(url);
+    } catch (err) {
+      console.error("[eWeLink OAuth] Error generating auth URL:", err);
+      res.status(500).send("Ошибка при генерации ссылки авторизации");
+    }
   });
 
   // eWeLink OAuth2.0: Callback
