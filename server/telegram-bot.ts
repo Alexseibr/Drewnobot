@@ -892,7 +892,7 @@ async function handleSalaryReportCallback(
         continue;
       }
 
-      // Group by worker
+      // Group by worker (for summary)
       const workerData = new Map<string, {
         id: string;
         name: string;
@@ -900,12 +900,24 @@ async function handleSalaryReportCallback(
         hourlyMinutes: number;
       }>();
 
+      // Group by date → worker → { cleanings[], hourlyMinutes }
+      const dayData = new Map<string, Map<string, {
+        name: string;
+        cleanings: string[];
+        hourlyMinutes: number;
+      }>>();
+
       for (const log of cleaningLogs) {
         if (!workerData.has(log.workerId)) {
           workerData.set(log.workerId, { id: log.workerId, name: log.workerName, units: new Map(), hourlyMinutes: 0 });
         }
         const wd = workerData.get(log.workerId)!;
         wd.units.set(log.unitCode, (wd.units.get(log.unitCode) || 0) + 1);
+
+        if (!dayData.has(log.date)) dayData.set(log.date, new Map());
+        const dayWorkers = dayData.get(log.date)!;
+        if (!dayWorkers.has(log.workerId)) dayWorkers.set(log.workerId, { name: log.workerName, cleanings: [], hourlyMinutes: 0 });
+        dayWorkers.get(log.workerId)!.cleanings.push(unitLabels[log.unitCode] || log.unitCode);
       }
 
       for (const log of hourlyLogs) {
@@ -913,8 +925,14 @@ async function handleSalaryReportCallback(
           workerData.set(log.workerId, { id: log.workerId, name: log.workerName, units: new Map(), hourlyMinutes: 0 });
         }
         workerData.get(log.workerId)!.hourlyMinutes += log.durationMinutes;
+
+        if (!dayData.has(log.date)) dayData.set(log.date, new Map());
+        const dayWorkers = dayData.get(log.date)!;
+        if (!dayWorkers.has(log.workerId)) dayWorkers.set(log.workerId, { name: log.workerName, cleanings: [], hourlyMinutes: 0 });
+        dayWorkers.get(log.workerId)!.hourlyMinutes += log.durationMinutes;
       }
 
+      // === SUMMARY MESSAGE ===
       let report = `📊 *Отчёт за ${monthLabel}*\n`;
       report += `━━━━━━━━━━━━━━━━━━━\n`;
       let grandTotal = 0;
@@ -966,6 +984,43 @@ async function handleSalaryReportCallback(
       report += `🏆 Всего: *${parseFloat(grandTotal.toFixed(2))} р.*`;
 
       await sendMessage(chatId, report, { parse_mode: "Markdown" });
+
+      // === DAILY BREAKDOWN MESSAGE(S) ===
+      const sortedDates = Array.from(dayData.keys()).sort();
+      if (sortedDates.length > 0) {
+        let dailyReport = `📅 *По дням — ${monthLabel}*\n━━━━━━━━━━━━━━━━━━━\n`;
+
+        for (const date of sortedDates) {
+          const dayNum = date.split("-")[2];
+          const dayWorkers = dayData.get(date)!;
+          let dayLine = `\n*${dayNum}:*\n`;
+
+          for (const [, dw] of dayWorkers.entries()) {
+            let workerLine = `  ${dw.name}`;
+            if (dw.cleanings.length > 0) {
+              workerLine += `: ${dw.cleanings.join(", ")}`;
+            }
+            if (dw.hourlyMinutes > 0) {
+              const h = Math.floor(dw.hourlyMinutes / 60);
+              const m = dw.hourlyMinutes % 60;
+              workerLine += ` | ⏱ ${h > 0 ? h + " ч" : ""}${m > 0 ? " " + m + " мин" : ""}`.trim();
+            }
+            dayLine += workerLine + "\n";
+          }
+
+          // Send in chunks if approaching Telegram's 4096 limit
+          if ((dailyReport + dayLine).length > 3800) {
+            await sendMessage(chatId, dailyReport, { parse_mode: "Markdown" });
+            dailyReport = dayLine;
+          } else {
+            dailyReport += dayLine;
+          }
+        }
+
+        if (dailyReport.trim()) {
+          await sendMessage(chatId, dailyReport, { parse_mode: "Markdown" });
+        }
+      }
     }
   } catch (err) {
     console.error("[SalaryReport] Error:", err);
