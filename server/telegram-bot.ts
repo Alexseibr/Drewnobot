@@ -840,15 +840,21 @@ async function handleSalaryReportCallback(
 
   const now = new Date();
 
-  // Build list of months: current + previous
-  const months: Array<{ key: string; label: string }> = [];
-  for (let offset = 0; offset <= 1; offset++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    months.push({
-      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      label: format(d, "LLLL yyyy", { locale: ru }),
-    });
-  }
+  // Previous full month
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthKey = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}`;
+  const prevMonthLastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  const prevMonthLabel = `${format(prevMonthDate, "LLLL yyyy", { locale: ru })} (1–${prevMonthLastDay})`;
+
+  // Current month up to today
+  const curMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  const curMonthKey = `${curMonthDate.getFullYear()}-${String(curMonthDate.getMonth() + 1).padStart(2, "0")}`;
+  const curMonthLabel = `${format(curMonthDate, "LLLL yyyy", { locale: ru })} (1–${now.getDate()})`;
+
+  const months: Array<{ key: string; label: string }> = [
+    { key: prevMonthKey, label: prevMonthLabel },
+    { key: curMonthKey, label: curMonthLabel },
+  ];
 
   await sendMessage(chatId, `⏳ Формирую отчёты...`);
 
