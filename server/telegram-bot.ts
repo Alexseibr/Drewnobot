@@ -527,6 +527,12 @@ function getStaffKeyboard(role: string) {
         web_app: { url: `${webAppUrl}/owner/staff` }
       }
     ]);
+    keyboard.push([
+      {
+        text: "📊 Расчёт зарплаты",
+        callback_data: "salary_report"
+      }
+    ]);
   }
   
   
@@ -780,6 +786,11 @@ export async function handleTelegramUpdate(update: TelegramUpdate) {
       if (data === "admin_open_gate") {
         await handleAdminGateOpenCallback(from, message.chat.id);
       }
+
+      // Handle Salary Report
+      if (data === "salary_report") {
+        await handleSalaryReportCallback(from, message.chat.id);
+      }
       
       await answerCallbackQuery(update.callback_query.id);
     }
@@ -812,6 +823,124 @@ async function handleAdminGateOpenCallback(
     }
   } catch (error) {
     console.error("[Telegram Bot] Admin gate callback error:", error);
+  }
+}
+
+// Handle Salary Report callback
+async function handleSalaryReportCallback(
+  from: { id: number; first_name: string },
+  chatId: number
+) {
+  const telegramId = from.id.toString();
+  const user = await storage.getUserByTelegramId(telegramId);
+  if (!user || !user.isActive || !["OWNER", "SUPER_ADMIN"].includes(user.role)) {
+    await sendMessage(chatId, "У вас нет прав для просмотра отчёта по зарплате.");
+    return;
+  }
+
+  // Calculate previous month
+  const now = new Date();
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const monthKey = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}`;
+  const monthLabel = format(prevMonth, "LLLL yyyy", { locale: ru });
+
+  await sendMessage(chatId, `⏳ Формирую отчёт за ${monthLabel}...`);
+
+  try {
+    const cleaningLogs = await storage.getCleaningLogsForMonth(monthKey);
+    const hourlyLogs = await storage.getHourlyLogsForMonth(monthKey);
+
+    if (cleaningLogs.length === 0 && hourlyLogs.length === 0) {
+      await sendMessage(chatId, `📊 За ${monthLabel} данных нет.`);
+      return;
+    }
+
+    // Group cleaning logs by worker and unit
+    const workerData = new Map<string, {
+      name: string;
+      units: Map<string, { count: number; rateSum: number }>;
+      hourlyMinutes: number;
+      hourlyAmount: number;
+    }>();
+
+    for (const log of cleaningLogs) {
+      if (!workerData.has(log.workerId)) {
+        workerData.set(log.workerId, {
+          name: log.workerName,
+          units: new Map(),
+          hourlyMinutes: 0,
+          hourlyAmount: 0,
+        });
+      }
+      const wd = workerData.get(log.workerId)!;
+      const unitStats = wd.units.get(log.unitCode) || { count: 0, rateSum: 0 };
+      unitStats.count++;
+      unitStats.rateSum += log.rate;
+      wd.units.set(log.unitCode, unitStats);
+    }
+
+    for (const log of hourlyLogs) {
+      if (!workerData.has(log.workerId)) {
+        workerData.set(log.workerId, {
+          name: log.workerName,
+          units: new Map(),
+          hourlyMinutes: 0,
+          hourlyAmount: 0,
+        });
+      }
+      const wd = workerData.get(log.workerId)!;
+      wd.hourlyMinutes += log.durationMinutes;
+      wd.hourlyAmount += log.totalAmount;
+    }
+
+    const unitOrder = ["D1", "D2", "D3", "D4", "SPA1", "SPA2"];
+    const unitLabels: Record<string, string> = {
+      D1: "Домик 1", D2: "Домик 2", D3: "Домик 3", D4: "Домик 4",
+      SPA1: "Баня 1", SPA2: "Баня 2",
+    };
+
+    let report = `📊 *Зарплата за ${monthLabel}*\n`;
+    report += `━━━━━━━━━━━━━━━━━━━\n`;
+
+    let grandTotal = 0;
+
+    for (const [, wd] of workerData.entries()) {
+      let workerTotal = 0;
+      report += `\n👤 *${wd.name}*\n`;
+
+      // Cleaning by unit
+      const sortedUnits = unitOrder.filter(u => wd.units.has(u));
+      if (sortedUnits.length > 0) {
+        report += `🧹 Уборки:\n`;
+        for (const unitCode of sortedUnits) {
+          const us = wd.units.get(unitCode)!;
+          const avgRate = Math.round(us.rateSum / us.count);
+          const total = us.rateSum;
+          report += `  ${unitLabels[unitCode] || unitCode}: ${us.count} × ${avgRate} = *${total} BYN*\n`;
+          workerTotal += total;
+        }
+      }
+
+      // Hourly work
+      if (wd.hourlyMinutes > 0) {
+        const hours = Math.floor(wd.hourlyMinutes / 60);
+        const mins = wd.hourlyMinutes % 60;
+        const timeStr = mins > 0 ? `${hours}ч ${mins}м` : `${hours}ч`;
+        report += `⏱ Почасовая: ${timeStr} = *${Math.round(wd.hourlyAmount)} BYN*\n`;
+        workerTotal += wd.hourlyAmount;
+      }
+
+      report += `💰 Итого: *${Math.round(workerTotal)} BYN*\n`;
+      grandTotal += workerTotal;
+    }
+
+    report += `\n━━━━━━━━━━━━━━━━━━━\n`;
+    report += `🏆 Всего к выплате: *${Math.round(grandTotal)} BYN*`;
+
+    await sendMessage(chatId, report, { parse_mode: "Markdown" });
+  } catch (err) {
+    console.error("[SalaryReport] Error:", err);
+    await sendMessage(chatId, "Ошибка при формировании отчёта. Попробуйте позже.");
   }
 }
 
