@@ -858,9 +858,8 @@ async function handleSalaryReportCallback(
     // Group cleaning logs by worker and unit
     const workerData = new Map<string, {
       name: string;
-      units: Map<string, { count: number; rateSum: number }>;
+      units: Map<string, number>;
       hourlyMinutes: number;
-      hourlyAmount: number;
     }>();
 
     for (const log of cleaningLogs) {
@@ -869,14 +868,10 @@ async function handleSalaryReportCallback(
           name: log.workerName,
           units: new Map(),
           hourlyMinutes: 0,
-          hourlyAmount: 0,
         });
       }
       const wd = workerData.get(log.workerId)!;
-      const unitStats = wd.units.get(log.unitCode) || { count: 0, rateSum: 0 };
-      unitStats.count++;
-      unitStats.rateSum += log.rate;
-      wd.units.set(log.unitCode, unitStats);
+      wd.units.set(log.unitCode, (wd.units.get(log.unitCode) || 0) + 1);
     }
 
     for (const log of hourlyLogs) {
@@ -885,57 +880,51 @@ async function handleSalaryReportCallback(
           name: log.workerName,
           units: new Map(),
           hourlyMinutes: 0,
-          hourlyAmount: 0,
         });
       }
       const wd = workerData.get(log.workerId)!;
       wd.hourlyMinutes += log.durationMinutes;
-      wd.hourlyAmount += log.totalAmount;
     }
 
-    const unitOrder = ["D1", "D2", "D3", "D4", "SPA1", "SPA2"];
     const unitLabels: Record<string, string> = {
       D1: "Домик 1", D2: "Домик 2", D3: "Домик 3", D4: "Домик 4",
       SPA1: "Баня 1", SPA2: "Баня 2",
     };
 
-    let report = `📊 *Зарплата за ${monthLabel}*\n`;
+    let report = `📊 *Отчёт за ${monthLabel}*\n`;
     report += `━━━━━━━━━━━━━━━━━━━\n`;
 
-    let grandTotal = 0;
-
     for (const [, wd] of workerData.entries()) {
-      let workerTotal = 0;
       report += `\n👤 *${wd.name}*\n`;
 
-      // Cleaning by unit
-      const sortedUnits = unitOrder.filter(u => wd.units.has(u));
-      if (sortedUnits.length > 0) {
-        report += `🧹 Уборки:\n`;
-        for (const unitCode of sortedUnits) {
-          const us = wd.units.get(unitCode)!;
-          const avgRate = Math.round(us.rateSum / us.count);
-          const total = us.rateSum;
-          report += `  ${unitLabels[unitCode] || unitCode}: ${us.count} × ${avgRate} = *${total} BYN*\n`;
-          workerTotal += total;
+      // Cleanings by unit (count only)
+      const cottageUnits = ["D1", "D2", "D3", "D4"].filter(u => wd.units.has(u));
+      const bathUnits = ["SPA1", "SPA2"].filter(u => wd.units.has(u));
+
+      if (cottageUnits.length > 0) {
+        report += `🏠 Домики:\n`;
+        for (const unitCode of cottageUnits) {
+          report += `  ${unitLabels[unitCode]}: *${wd.units.get(unitCode)} уб.*\n`;
         }
       }
 
-      // Hourly work
+      if (bathUnits.length > 0) {
+        report += `🛁 Бани:\n`;
+        for (const unitCode of bathUnits) {
+          report += `  ${unitLabels[unitCode]}: *${wd.units.get(unitCode)} уб.*\n`;
+        }
+      }
+
+      // Hourly work (hours and minutes only, no money)
       if (wd.hourlyMinutes > 0) {
         const hours = Math.floor(wd.hourlyMinutes / 60);
         const mins = wd.hourlyMinutes % 60;
-        const timeStr = mins > 0 ? `${hours}ч ${mins}м` : `${hours}ч`;
-        report += `⏱ Почасовая: ${timeStr} = *${Math.round(wd.hourlyAmount)} BYN*\n`;
-        workerTotal += wd.hourlyAmount;
+        const timeStr = mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`;
+        report += `⏱ Почасовая: *${timeStr}*\n`;
       }
-
-      report += `💰 Итого: *${Math.round(workerTotal)} BYN*\n`;
-      grandTotal += workerTotal;
     }
 
-    report += `\n━━━━━━━━━━━━━━━━━━━\n`;
-    report += `🏆 Всего к выплате: *${Math.round(grandTotal)} BYN*`;
+    report += `\n━━━━━━━━━━━━━━━━━━━`;
 
     await sendMessage(chatId, report, { parse_mode: "Markdown" });
   } catch (err) {
