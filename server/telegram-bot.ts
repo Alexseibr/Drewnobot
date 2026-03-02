@@ -888,43 +888,68 @@ async function handleSalaryReportCallback(
 
     const unitLabels: Record<string, string> = {
       D1: "Домик 1", D2: "Домик 2", D3: "Домик 3", D4: "Домик 4",
-      SPA1: "Баня 1", SPA2: "Баня 2",
+      SPA1: "Баня лево", SPA2: "Баня право",
     };
+
+    // Fixed rates per unit
+    const unitRates: Record<string, number> = {
+      D1: 12, D2: 12, D3: 12, D4: 18,
+      SPA1: 12, SPA2: 12,
+    };
+
+    const HOURLY_RATE = 8; // BYN per full hour, proportional for partial
 
     let report = `📊 *Отчёт за ${monthLabel}*\n`;
     report += `━━━━━━━━━━━━━━━━━━━\n`;
 
+    let grandTotal = 0;
+
     for (const [, wd] of workerData.entries()) {
       report += `\n👤 *${wd.name}*\n`;
+      let workerTotal = 0;
 
-      // Cleanings by unit (count only)
+      // Cleanings by unit
       const cottageUnits = ["D1", "D2", "D3", "D4"].filter(u => wd.units.has(u));
       const bathUnits = ["SPA1", "SPA2"].filter(u => wd.units.has(u));
 
       if (cottageUnits.length > 0) {
         report += `🏠 Домики:\n`;
         for (const unitCode of cottageUnits) {
-          report += `  ${unitLabels[unitCode]}: *${wd.units.get(unitCode)} уб.*\n`;
+          const count = wd.units.get(unitCode)!;
+          const rate = unitRates[unitCode];
+          const total = count * rate;
+          report += `  ${unitLabels[unitCode]}: ${count} × ${rate} = *${total} р.*\n`;
+          workerTotal += total;
         }
       }
 
       if (bathUnits.length > 0) {
         report += `🛁 Бани:\n`;
         for (const unitCode of bathUnits) {
-          report += `  ${unitLabels[unitCode]}: *${wd.units.get(unitCode)} уб.*\n`;
+          const count = wd.units.get(unitCode)!;
+          const rate = unitRates[unitCode];
+          const total = count * rate;
+          report += `  ${unitLabels[unitCode]}: ${count} × ${rate} = *${total} р.*\n`;
+          workerTotal += total;
         }
       }
 
-      // Hourly work (hours and minutes only, no money)
+      // Hourly work — proportional (e.g. 90 min = 8 * 1.5 = 12)
       if (wd.hourlyMinutes > 0) {
         const hours = Math.floor(wd.hourlyMinutes / 60);
         const mins = wd.hourlyMinutes % 60;
         const timeStr = mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`;
-        report += `⏱ Почасовая: *${timeStr}*\n`;
+        const hourlyAmount = parseFloat(((wd.hourlyMinutes / 60) * HOURLY_RATE).toFixed(2));
+        report += `⏱ Почасовая: ${timeStr} × ${HOURLY_RATE} р/ч = *${hourlyAmount} р.*\n`;
+        workerTotal += hourlyAmount;
       }
+
+      report += `💰 Итого: *${parseFloat(workerTotal.toFixed(2))} р.*\n`;
+      grandTotal += workerTotal;
     }
 
-    report += `\n━━━━━━━━━━━━━━━━━━━`;
+    report += `\n━━━━━━━━━━━━━━━━━━━\n`;
+    report += `🏆 Всего к выплате: *${parseFloat(grandTotal.toFixed(2))} р.*`;
 
     await sendMessage(chatId, report, { parse_mode: "Markdown" });
   } catch (err) {
